@@ -1,0 +1,32 @@
+{
+  "archive_sha256": "10a590dbfd81cf45a21025d6c4ce99617fca35590c65d38e745a6313b0ef66a7",
+  "files": [
+    {
+      "filename": "赛题数据说明.docx",
+      "sha256": "893a7dbd8ef34788bc1ad06dca381460ea0589b265c5be7074fbec0314396339"
+    },
+    {
+      "filename": "[POP资审]资审关单场景话术V1.0.xlsx",
+      "sha256": "37a872e8cf0ec4abec9851b33a5bec66f57c97466cffc147baef2b270b3f0b6a",
+      "sheets": [
+        "工作表1",
+        "场景汇总",
+        "京麦驳回场景",
+        "电话场景"
+      ],
+      "main_channel_counts_D13_D80": {
+        "电话": 54,
+        "京麦驳回": 14
+      }
+    },
+    {
+      "filename": "驳回外呼QA.xlsx",
+      "sha256": "3c72df2043c5ff813096d301bb76bd193cf3e7dfa47ec37e0af2e216e12de559",
+      "sheets": [
+        "驳回话术（开头语+驳回话术+结束语）",
+        "高频QA",
+        "特殊场景"
+      ]
+    }
+  ]
+}

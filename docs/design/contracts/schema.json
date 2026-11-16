@@ -1,0 +1,1937 @@
+{
+  "$defs": {
+    "AcceptedTurn": {
+      "additionalProperties": false,
+      "properties": {
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "turn_id",
+        "generation_id"
+      ],
+      "title": "AcceptedTurn",
+      "type": "object"
+    },
+    "ActionCommand": {
+      "additionalProperties": false,
+      "description": "仅服务端构造；工具守门查库验证decision、confirmation、权限和revision。",
+      "properties": {
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "decision_id": {
+          "format": "uuid",
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "operation_id": {
+          "format": "uuid",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "reject_application",
+            "create_callback",
+            "create_followup",
+            "writeback"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "idempotency_key": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Idempotency Key",
+          "type": "string"
+        },
+        "confirmation_ref": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confirmation Ref"
+        },
+        "evidence_refs": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "payload": {
+          "discriminator": {
+            "mapping": {
+              "create_callback": "#/$defs/CallbackPayload",
+              "create_followup": "#/$defs/FollowupPayload",
+              "reject_application": "#/$defs/RejectPayload",
+              "writeback": "#/$defs/WritebackPayload"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/RejectPayload"
+            },
+            {
+              "$ref": "#/$defs/CallbackPayload"
+            },
+            {
+              "$ref": "#/$defs/FollowupPayload"
+            },
+            {
+              "$ref": "#/$defs/WritebackPayload"
+            }
+          ],
+          "title": "Payload"
+        }
+      },
+      "required": [
+        "session_id",
+        "application_id",
+        "case_revision",
+        "decision_id",
+        "operation_id",
+        "kind",
+        "idempotency_key",
+        "evidence_refs",
+        "payload"
+      ],
+      "title": "ActionCommand",
+      "type": "object"
+    },
+    "AgentDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "reply_text": {
+          "title": "Reply Text",
+          "type": "string"
+        },
+        "proposed_action": {
+          "enum": [
+            "none",
+            "reject_application",
+            "create_callback",
+            "create_followup",
+            "writeback"
+          ],
+          "title": "Proposed Action",
+          "type": "string"
+        },
+        "evidence_message_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Evidence Message Ids",
+          "type": "array"
+        },
+        "knowledge_entry_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Knowledge Entry Ids",
+          "type": "array"
+        },
+        "next_state": {
+          "enum": [
+            "CASE_READY",
+            "ROUTING",
+            "OPENING",
+            "VERIFYING",
+            "EXPLAINING",
+            "QA",
+            "CALLBACK_PENDING",
+            "CLOSING",
+            "ACTION_READY",
+            "EXECUTING",
+            "RECONCILING",
+            "WRITEBACK_PENDING",
+            "CLOSED",
+            "MANUAL_REVIEW"
+          ],
+          "title": "Next State",
+          "type": "string"
+        },
+        "action_payload": {
+          "anyOf": [
+            {
+              "discriminator": {
+                "mapping": {
+                  "create_callback": "#/$defs/CallbackPayload",
+                  "create_followup": "#/$defs/FollowupPayload",
+                  "reject_application": "#/$defs/RejectPayload",
+                  "writeback": "#/$defs/WritebackPayload"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/RejectPayload"
+                },
+                {
+                  "$ref": "#/$defs/CallbackPayload"
+                },
+                {
+                  "$ref": "#/$defs/FollowupPayload"
+                },
+                {
+                  "$ref": "#/$defs/WritebackPayload"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Action Payload"
+        }
+      },
+      "required": [
+        "reply_text",
+        "proposed_action",
+        "evidence_message_ids",
+        "knowledge_entry_ids",
+        "next_state"
+      ],
+      "title": "AgentDecision",
+      "type": "object"
+    },
+    "ApiError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "operation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Id"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable",
+        "request_id"
+      ],
+      "title": "ApiError",
+      "type": "object"
+    },
+    "ApplicationView": {
+      "additionalProperties": false,
+      "properties": {
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "company_hint": {
+          "title": "Company Hint",
+          "type": "string"
+        }
+      },
+      "required": [
+        "application_id",
+        "label",
+        "company_hint"
+      ],
+      "title": "ApplicationView",
+      "type": "object"
+    },
+    "CallRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "record_id": {
+          "format": "uuid",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "record_revision": {
+          "minimum": 1,
+          "title": "Record Revision",
+          "type": "integer"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "contact_status": {
+          "enum": [
+            "verified",
+            "wrong_person",
+            "refused",
+            "no_answer",
+            "disconnected",
+            "not_required"
+          ],
+          "title": "Contact Status",
+          "type": "string"
+        },
+        "explanation_status": {
+          "enum": [
+            "not_started",
+            "partial",
+            "completed",
+            "unknown",
+            "not_required"
+          ],
+          "title": "Explanation Status",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "rectification_items": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rectification Items",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "operation_refs": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Operation Refs",
+          "type": "array"
+        },
+        "strategy_version": {
+          "title": "Strategy Version",
+          "type": "string"
+        },
+        "rule_version": {
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "knowledge_version": {
+          "title": "Knowledge Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "record_id",
+        "record_revision",
+        "session_id",
+        "application_id",
+        "case_revision",
+        "contact_status",
+        "explanation_status",
+        "reason_codes",
+        "rectification_items",
+        "source_refs",
+        "operation_refs",
+        "strategy_version",
+        "rule_version",
+        "knowledge_version"
+      ],
+      "title": "CallRecord",
+      "type": "object"
+    },
+    "CallbackConfirmation": {
+      "additionalProperties": false,
+      "properties": {
+        "confirmation_id": {
+          "format": "uuid",
+          "title": "Confirmation Id",
+          "type": "string"
+        },
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "evidence_message_id": {
+          "format": "uuid",
+          "title": "Evidence Message Id",
+          "type": "string"
+        },
+        "window_start": {
+          "format": "date-time",
+          "title": "Window Start",
+          "type": "string"
+        },
+        "window_end": {
+          "format": "date-time",
+          "title": "Window End",
+          "type": "string"
+        },
+        "timezone": {
+          "const": "Asia/Shanghai",
+          "default": "Asia/Shanghai",
+          "title": "Timezone",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "revoked_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Revoked At"
+        }
+      },
+      "required": [
+        "confirmation_id",
+        "application_id",
+        "case_revision",
+        "evidence_message_id",
+        "window_start",
+        "window_end",
+        "expires_at"
+      ],
+      "title": "CallbackConfirmation",
+      "type": "object"
+    },
+    "CallbackPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "create_callback",
+          "title": "Type",
+          "type": "string"
+        },
+        "confirmation_id": {
+          "format": "uuid",
+          "title": "Confirmation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "confirmation_id"
+      ],
+      "title": "CallbackPayload",
+      "type": "object"
+    },
+    "Capabilities": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "default": true,
+          "title": "Text",
+          "type": "boolean"
+        },
+        "voice": {
+          "default": false,
+          "title": "Voice",
+          "type": "boolean"
+        },
+        "model": {
+          "const": "fake",
+          "default": "fake",
+          "title": "Model",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "0.3.0",
+          "default": "0.3.0",
+          "title": "Schema Version",
+          "type": "string"
+        }
+      },
+      "title": "Capabilities",
+      "type": "object"
+    },
+    "CreateSession": {
+      "additionalProperties": false,
+      "properties": {
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "voice",
+            "text"
+          ],
+          "title": "Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "application_id",
+        "mode"
+      ],
+      "title": "CreateSession",
+      "type": "object"
+    },
+    "EndRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "reason": {
+          "default": "user_ended",
+          "maxLength": 100,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "title": "EndRequest",
+      "type": "object"
+    },
+    "Event": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "0.3.0",
+          "default": "0.3.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "operation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Id"
+        },
+        "seq": {
+          "minimum": 1,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "state_revision": {
+          "minimum": 0,
+          "title": "State Revision",
+          "type": "integer"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "strategy_version": {
+          "title": "Strategy Version",
+          "type": "string"
+        },
+        "knowledge_version": {
+          "title": "Knowledge Version",
+          "type": "string"
+        },
+        "payload": {
+          "discriminator": {
+            "mapping": {
+              "generation.finished": "#/$defs/GenerationFinished",
+              "knowledge.used": "#/$defs/KnowledgeUsed",
+              "metric.recorded": "#/$defs/MetricRecorded",
+              "operation.updated": "#/$defs/OperationUpdated",
+              "session.ended": "#/$defs/SessionEnded",
+              "state.changed": "#/$defs/StateChanged",
+              "text.delta": "#/$defs/TextDelta",
+              "turn.interrupted": "#/$defs/TurnInterrupted",
+              "turn.started": "#/$defs/TurnStarted"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StateChanged"
+            },
+            {
+              "$ref": "#/$defs/TurnStarted"
+            },
+            {
+              "$ref": "#/$defs/OperationUpdated"
+            },
+            {
+              "$ref": "#/$defs/KnowledgeUsed"
+            },
+            {
+              "$ref": "#/$defs/TextDelta"
+            },
+            {
+              "$ref": "#/$defs/TurnInterrupted"
+            },
+            {
+              "$ref": "#/$defs/MetricRecorded"
+            },
+            {
+              "$ref": "#/$defs/SessionEnded"
+            },
+            {
+              "$ref": "#/$defs/GenerationFinished"
+            }
+          ],
+          "title": "Payload"
+        }
+      },
+      "required": [
+        "event_id",
+        "session_id",
+        "seq",
+        "state_revision",
+        "occurred_at",
+        "strategy_version",
+        "knowledge_version",
+        "payload"
+      ],
+      "title": "Event",
+      "type": "object"
+    },
+    "FollowupPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "create_followup",
+          "title": "Type",
+          "type": "string"
+        },
+        "reason_code": {
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "related_operation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Related Operation Id"
+        },
+        "suggested_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Suggested At"
+        }
+      },
+      "required": [
+        "type",
+        "reason_code"
+      ],
+      "title": "FollowupPayload",
+      "type": "object"
+    },
+    "GenerationFinished": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "generation.finished",
+          "title": "Type",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "completed",
+            "interrupted",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "status",
+        "message_id"
+      ],
+      "title": "GenerationFinished",
+      "type": "object"
+    },
+    "InterruptRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "client_event_id": {
+          "format": "uuid",
+          "title": "Client Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "generation_id",
+        "client_event_id"
+      ],
+      "title": "InterruptRequest",
+      "type": "object"
+    },
+    "Interrupted": {
+      "additionalProperties": false,
+      "properties": {
+        "applied": {
+          "title": "Applied",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "applied"
+      ],
+      "title": "Interrupted",
+      "type": "object"
+    },
+    "KnowledgeEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "entry_id": {
+          "format": "uuid",
+          "title": "Entry Id",
+          "type": "string"
+        },
+        "knowledge_version": {
+          "title": "Knowledge Version",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "routing_rule",
+            "script",
+            "qa",
+            "scenario"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "scenario_id": {
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "taxonomy": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Taxonomy",
+          "type": "array"
+        },
+        "scope": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Scope",
+          "type": "array"
+        },
+        "channel": {
+          "enum": [
+            "phone",
+            "jingmai",
+            "unspecified"
+          ],
+          "title": "Channel",
+          "type": "string"
+        },
+        "required_slots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Slots",
+          "type": "array"
+        },
+        "approved_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Approved Text"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "quarantined",
+            "approved"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "issue_codes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Issue Codes",
+          "type": "array"
+        },
+        "reviewer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reviewer"
+        }
+      },
+      "required": [
+        "entry_id",
+        "knowledge_version",
+        "kind",
+        "scenario_id",
+        "scope",
+        "channel",
+        "required_slots",
+        "source_refs",
+        "status",
+        "issue_codes"
+      ],
+      "title": "KnowledgeEntry",
+      "type": "object"
+    },
+    "KnowledgeUsed": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "knowledge.used",
+          "title": "Type",
+          "type": "string"
+        },
+        "entry_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Entry Ids",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "entry_ids",
+        "source_refs"
+      ],
+      "title": "KnowledgeUsed",
+      "type": "object"
+    },
+    "LoginRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "username": {
+          "default": "demo",
+          "enum": [
+            "demo",
+            "other"
+          ],
+          "title": "Username",
+          "type": "string"
+        },
+        "password": {
+          "title": "Password",
+          "type": "string"
+        }
+      },
+      "required": [
+        "password"
+      ],
+      "title": "LoginRequest",
+      "type": "object"
+    },
+    "LoginResult": {
+      "additionalProperties": false,
+      "properties": {
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner"
+      ],
+      "title": "LoginResult",
+      "type": "object"
+    },
+    "MessageView": {
+      "additionalProperties": false,
+      "properties": {
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "user",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "completed",
+            "generating",
+            "interrupted",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "playback_status": {
+          "default": "not_applicable",
+          "enum": [
+            "not_applicable",
+            "unknown"
+          ],
+          "title": "Playback Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_id",
+        "turn_id",
+        "generation_id",
+        "role",
+        "text",
+        "status"
+      ],
+      "title": "MessageView",
+      "type": "object"
+    },
+    "MetricRecorded": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "metric.recorded",
+          "title": "Type",
+          "type": "string"
+        },
+        "name": {
+          "enum": [
+            "model_ttft",
+            "speech_end_to_text",
+            "speech_end_to_playback"
+          ],
+          "title": "Name",
+          "type": "string"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "outcome": {
+          "enum": [
+            "success",
+            "timeout",
+            "cancelled",
+            "missing"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "clock_domain": {
+          "title": "Clock Domain",
+          "type": "string"
+        },
+        "measurement_method": {
+          "title": "Measurement Method",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "name",
+        "outcome",
+        "clock_domain",
+        "measurement_method"
+      ],
+      "title": "MetricRecorded",
+      "type": "object"
+    },
+    "ModelMessage": {
+      "additionalProperties": false,
+      "properties": {
+        "role": {
+          "enum": [
+            "system",
+            "user",
+            "assistant"
+          ],
+          "title": "Role",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "content"
+      ],
+      "title": "ModelMessage",
+      "type": "object"
+    },
+    "ModelRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "messages": {
+          "items": {
+            "$ref": "#/$defs/ModelMessage"
+          },
+          "title": "Messages",
+          "type": "array"
+        },
+        "fixture_response": {
+          "title": "Fixture Response",
+          "type": "string"
+        }
+      },
+      "required": [
+        "messages",
+        "fixture_response"
+      ],
+      "title": "ModelRequest",
+      "type": "object"
+    },
+    "OperationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "format": "uuid",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "succeeded",
+            "failed",
+            "unknown",
+            "not_found_yet"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "resource_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resource Id"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApiError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation_id",
+        "status",
+        "updated_at"
+      ],
+      "title": "OperationResult",
+      "type": "object"
+    },
+    "OperationUpdated": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "operation.updated",
+          "title": "Type",
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/OperationResult"
+        }
+      },
+      "required": [
+        "type",
+        "result"
+      ],
+      "title": "OperationUpdated",
+      "type": "object"
+    },
+    "RejectPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "reject_application",
+          "title": "Type",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "written_text": {
+          "minLength": 1,
+          "title": "Written Text",
+          "type": "string"
+        },
+        "knowledge_entry_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Knowledge Entry Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "type",
+        "reason_codes",
+        "written_text",
+        "knowledge_entry_ids"
+      ],
+      "title": "RejectPayload",
+      "type": "object"
+    },
+    "ReviewCase": {
+      "additionalProperties": false,
+      "properties": {
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "merchant_id": {
+          "format": "uuid",
+          "title": "Merchant Id",
+          "type": "string"
+        },
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "scenario_id": {
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "review_conclusion": {
+          "enum": [
+            "rejected",
+            "pending",
+            "approved"
+          ],
+          "title": "Review Conclusion",
+          "type": "string"
+        },
+        "slots": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Slots",
+          "type": "object"
+        },
+        "submission_attempt": {
+          "minimum": 1,
+          "title": "Submission Attempt",
+          "type": "integer"
+        },
+        "call_attempt": {
+          "minimum": 0,
+          "title": "Call Attempt",
+          "type": "integer"
+        },
+        "callback_requested": {
+          "title": "Callback Requested",
+          "type": "boolean"
+        },
+        "complaint_risk": {
+          "title": "Complaint Risk",
+          "type": "boolean"
+        },
+        "synthetic": {
+          "const": true,
+          "default": true,
+          "title": "Synthetic",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "application_id",
+        "merchant_id",
+        "case_revision",
+        "scenario_id",
+        "review_conclusion",
+        "slots",
+        "submission_attempt",
+        "call_attempt",
+        "callback_requested",
+        "complaint_risk"
+      ],
+      "title": "ReviewCase",
+      "type": "object"
+    },
+    "RoutingDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "decision_id": {
+          "format": "uuid",
+          "title": "Decision Id",
+          "type": "string"
+        },
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "route": {
+          "enum": [
+            "phone",
+            "jingmai",
+            "manual"
+          ],
+          "title": "Route",
+          "type": "string"
+        },
+        "reason_codes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reason Codes",
+          "type": "array"
+        },
+        "rule_version": {
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "required_evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "decision_id",
+        "application_id",
+        "case_revision",
+        "route",
+        "reason_codes",
+        "rule_version",
+        "required_evidence"
+      ],
+      "title": "RoutingDecision",
+      "type": "object"
+    },
+    "SessionContext": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "generation_epoch": {
+          "minimum": 0,
+          "title": "Generation Epoch",
+          "type": "integer"
+        },
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "state_revision": {
+          "minimum": 0,
+          "title": "State Revision",
+          "type": "integer"
+        },
+        "strategy_version": {
+          "title": "Strategy Version",
+          "type": "string"
+        },
+        "rule_version": {
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "knowledge_version": {
+          "title": "Knowledge Version",
+          "type": "string"
+        },
+        "model_version": {
+          "title": "Model Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "turn_id",
+        "generation_id",
+        "generation_epoch",
+        "application_id",
+        "case_revision",
+        "state_revision",
+        "strategy_version",
+        "rule_version",
+        "knowledge_version",
+        "model_version"
+      ],
+      "title": "SessionContext",
+      "type": "object"
+    },
+    "SessionEnded": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "session.ended",
+          "title": "Type",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "reason"
+      ],
+      "title": "SessionEnded",
+      "type": "object"
+    },
+    "SessionView": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "state": {
+          "enum": [
+            "CASE_READY",
+            "ROUTING",
+            "OPENING",
+            "VERIFYING",
+            "EXPLAINING",
+            "QA",
+            "CALLBACK_PENDING",
+            "CLOSING",
+            "ACTION_READY",
+            "EXECUTING",
+            "RECONCILING",
+            "WRITEBACK_PENDING",
+            "CLOSED",
+            "MANUAL_REVIEW"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "state_revision": {
+          "minimum": 0,
+          "title": "State Revision",
+          "type": "integer"
+        },
+        "route": {
+          "enum": [
+            "phone",
+            "jingmai",
+            "manual"
+          ],
+          "title": "Route",
+          "type": "string"
+        },
+        "last_event_seq": {
+          "minimum": 0,
+          "title": "Last Event Seq",
+          "type": "integer"
+        },
+        "operations": {
+          "items": {
+            "$ref": "#/$defs/OperationResult"
+          },
+          "title": "Operations",
+          "type": "array"
+        },
+        "verified": {
+          "default": false,
+          "title": "Verified",
+          "type": "boolean"
+        },
+        "busy": {
+          "default": false,
+          "title": "Busy",
+          "type": "boolean"
+        },
+        "ended": {
+          "default": false,
+          "title": "Ended",
+          "type": "boolean"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "remedy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Remedy"
+        },
+        "messages": {
+          "items": {
+            "$ref": "#/$defs/MessageView"
+          },
+          "title": "Messages",
+          "type": "array"
+        },
+        "record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CallRecord"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "session_id",
+        "application_id",
+        "case_revision",
+        "state",
+        "state_revision",
+        "route",
+        "last_event_seq",
+        "operations"
+      ],
+      "title": "SessionView",
+      "type": "object"
+    },
+    "SourceRef": {
+      "additionalProperties": false,
+      "properties": {
+        "file_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "File Sha256",
+          "type": "string"
+        },
+        "sheet": {
+          "title": "Sheet",
+          "type": "string"
+        },
+        "row": {
+          "minimum": 1,
+          "title": "Row",
+          "type": "integer"
+        },
+        "columns": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Columns",
+          "type": "array"
+        }
+      },
+      "required": [
+        "file_sha256",
+        "sheet",
+        "row",
+        "columns"
+      ],
+      "title": "SourceRef",
+      "type": "object"
+    },
+    "StartSession": {
+      "additionalProperties": false,
+      "properties": {
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "expected_revision"
+      ],
+      "title": "StartSession",
+      "type": "object"
+    },
+    "StateChanged": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "state.changed",
+          "title": "Type",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "CASE_READY",
+            "ROUTING",
+            "OPENING",
+            "VERIFYING",
+            "EXPLAINING",
+            "QA",
+            "CALLBACK_PENDING",
+            "CLOSING",
+            "ACTION_READY",
+            "EXECUTING",
+            "RECONCILING",
+            "WRITEBACK_PENDING",
+            "CLOSED",
+            "MANUAL_REVIEW"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "state"
+      ],
+      "title": "StateChanged",
+      "type": "object"
+    },
+    "TextDelta": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "text.delta",
+          "title": "Type",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "channel": {
+          "const": "text_mode",
+          "default": "text_mode",
+          "title": "Channel",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "title": "TextDelta",
+      "type": "object"
+    },
+    "TextTurn": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "maxLength": 8000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "client_event_id": {
+          "format": "uuid",
+          "title": "Client Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "client_event_id"
+      ],
+      "title": "TextTurn",
+      "type": "object"
+    },
+    "TurnInput": {
+      "additionalProperties": false,
+      "properties": {
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 8000,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "asr",
+            "text"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "final": {
+          "const": true,
+          "default": true,
+          "title": "Final",
+          "type": "boolean"
+        },
+        "provider_binding_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Binding Id"
+        },
+        "provider_turn_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Turn Id"
+        }
+      },
+      "required": [
+        "message_id",
+        "text",
+        "source"
+      ],
+      "title": "TurnInput",
+      "type": "object"
+    },
+    "TurnInterrupted": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "turn.interrupted",
+          "title": "Type",
+          "type": "string"
+        },
+        "invalidated_generation_id": {
+          "format": "uuid",
+          "title": "Invalidated Generation Id",
+          "type": "string"
+        },
+        "new_epoch": {
+          "minimum": 1,
+          "title": "New Epoch",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type",
+        "invalidated_generation_id",
+        "new_epoch"
+      ],
+      "title": "TurnInterrupted",
+      "type": "object"
+    },
+    "TurnStarted": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "turn.started",
+          "title": "Type",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "message_id"
+      ],
+      "title": "TurnStarted",
+      "type": "object"
+    },
+    "WritebackPayload": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "writeback",
+          "title": "Type",
+          "type": "string"
+        },
+        "record_id": {
+          "format": "uuid",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "record_revision": {
+          "minimum": 1,
+          "title": "Record Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type",
+        "record_id",
+        "record_revision"
+      ],
+      "title": "WritebackPayload",
+      "type": "object"
+    }
+  },
+  "title": "JD POP contracts 0.3.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

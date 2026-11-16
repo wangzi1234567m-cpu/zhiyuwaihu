@@ -1,0 +1,19 @@
+{
+  "schema_version": "0.1.0",
+  "event_id": "00000000-0000-4000-8000-000000000121",
+  "session_id": "00000000-0000-4000-8000-000000000001",
+  "seq": 21,
+  "occurred_at": "2026-11-16T10:01:03Z",
+  "state_revision": 5,
+  "turn_id": "00000000-0000-4000-8000-000000000002",
+  "generation_id": "00000000-0000-4000-8000-000000000003",
+  "operation_id": null,
+  "trace_id": "trace-demo",
+  "strategy_version_id": "strategy-baseline-1",
+  "source": "server",
+  "payload": {
+    "type": "turn.interrupted",
+    "reason": "user_barge_in",
+    "playback_status": "unknown"
+  }
+}

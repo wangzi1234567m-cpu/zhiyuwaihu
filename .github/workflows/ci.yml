@@ -1,0 +1,53 @@
+name: checks
+on: [push, pull_request]
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: zhiyu
+          POSTGRES_PASSWORD: local-dev-only
+          POSTGRES_DB: zhiyu_test
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U zhiyu -d zhiyu_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://zhiyu:local-dev-only@localhost:5432/zhiyu_test
+      APP_ENV: test
+      RUN_DB_TESTS: '1'
+      PUBLIC_ORIGIN: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: pip install -r backend/requirements.lock
+      - run: npm ci --prefix frontend
+      - run: python scripts/export_contracts.py && npm run types --prefix frontend
+      - run: git diff --exit-code -- docs/design/contracts/schema.json docs/design/contracts/openapi.json frontend/app/api.generated.ts
+      - run: alembic -c backend/alembic.ini upgrade head
+      - run: python -m pytest backend/tests
+        env: {PYTHONPATH: backend}
+      - run: npm run typecheck --prefix frontend && npm run build --prefix frontend
+      - run: |
+          python scripts/reset_test_db.py
+          uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log > backend.log 2>&1 &
+        env: {PYTHONPATH: backend}
+      - run: npm run start --prefix frontend > frontend.log 2>&1 &
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: |
+          python scripts/wait_ready.py
+          npm run test:e2e --prefix frontend
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: failure-evidence
+          path: |
+            frontend/test-results
+            backend.log
+            frontend.log

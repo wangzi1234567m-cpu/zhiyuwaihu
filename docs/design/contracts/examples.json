@@ -1,0 +1,151 @@
+{
+  "CreateSession": {
+    "application_id": "00000000-0000-4000-8000-000000000001",
+    "mode": "text"
+  },
+  "ReviewCase": {
+    "application_id": "00000000-0000-4000-8000-000000000001",
+    "merchant_id": "00000000-0000-4000-8000-000000000002",
+    "case_revision": 1,
+    "scenario_id": "demo.authorization_missing",
+    "review_conclusion": "rejected",
+    "slots": {
+      "company_name": "演示商家甲",
+      "brand_name": "模拟品牌甲"
+    },
+    "submission_attempt": 1,
+    "call_attempt": 0,
+    "callback_requested": false,
+    "complaint_risk": false,
+    "synthetic": true
+  },
+  "RoutingDecision": {
+    "decision_id": "00000000-0000-4000-8000-000000000003",
+    "application_id": "00000000-0000-4000-8000-000000000001",
+    "case_revision": 1,
+    "route": "phone",
+    "reason_codes": [
+      "PHONE_SCENARIO"
+    ],
+    "rule_version": "demo-r1",
+    "required_evidence": [
+      "recipient_verified",
+      "reason_explained"
+    ]
+  },
+  "SessionContext": {
+    "session_id": "00000000-0000-4000-8000-000000000004",
+    "turn_id": "00000000-0000-4000-8000-000000000005",
+    "generation_id": "00000000-0000-4000-8000-000000000006",
+    "generation_epoch": 0,
+    "application_id": "00000000-0000-4000-8000-000000000001",
+    "case_revision": 1,
+    "state_revision": 3,
+    "strategy_version": "p1",
+    "rule_version": "demo-r1",
+    "knowledge_version": "demo-k1",
+    "model_version": "mock-v1"
+  },
+  "TurnInput": {
+    "message_id": "00000000-0000-4000-8000-000000000007",
+    "text": "我是演示商家甲的联系人，请介绍需要补充的材料。",
+    "source": "text",
+    "final": true
+  },
+  "CallbackConfirmation": {
+    "confirmation_id": "00000000-0000-4000-8000-000000000008",
+    "application_id": "00000000-0000-4000-8000-000000000001",
+    "case_revision": 1,
+    "evidence_message_id": "00000000-0000-4000-8000-000000000009",
+    "window_start": "2026-11-17T02:00:00Z",
+    "window_end": "2026-11-17T02:30:00Z",
+    "timezone": "Asia/Shanghai",
+    "expires_at": "2026-11-17T02:00:00Z"
+  },
+  "ActionCommand": {
+    "session_id": "00000000-0000-4000-8000-000000000004",
+    "application_id": "00000000-0000-4000-8000-000000000001",
+    "case_revision": 1,
+    "decision_id": "00000000-0000-4000-8000-000000000003",
+    "operation_id": "00000000-0000-4000-8000-000000000010",
+    "kind": "create_callback",
+    "idempotency_key": "demo:application1:r1:callback:confirmation8",
+    "confirmation_ref": "00000000-0000-4000-8000-000000000008",
+    "evidence_refs": [
+      "00000000-0000-4000-8000-000000000009"
+    ],
+    "payload": {
+      "type": "create_callback",
+      "confirmation_id": "00000000-0000-4000-8000-000000000008"
+    }
+  },
+  "OperationResult": {
+    "operation_id": "00000000-0000-4000-8000-000000000010",
+    "status": "unknown",
+    "updated_at": "2026-11-16T06:00:00Z"
+  },
+  "AgentDecision": {
+    "reply_text": "这里是模拟商户服务演示。",
+    "proposed_action": "none",
+    "evidence_message_ids": [],
+    "knowledge_entry_ids": [],
+    "next_state": "VERIFYING"
+  },
+  "CallRecord": {
+    "record_id": "00000000-0000-4000-8000-000000000011",
+    "record_revision": 1,
+    "session_id": "00000000-0000-4000-8000-000000000004",
+    "application_id": "00000000-0000-4000-8000-000000000001",
+    "case_revision": 1,
+    "contact_status": "verified",
+    "explanation_status": "partial",
+    "reason_codes": [
+      "CALLBACK_REQUESTED"
+    ],
+    "rectification_items": [],
+    "source_refs": [],
+    "operation_refs": [
+      "00000000-0000-4000-8000-000000000010"
+    ],
+    "strategy_version": "p1",
+    "rule_version": "demo-r1",
+    "knowledge_version": "demo-k1"
+  },
+  "Event": {
+    "schema_version": "0.3.0",
+    "event_id": "00000000-0000-4000-8000-000000000012",
+    "session_id": "00000000-0000-4000-8000-000000000004",
+    "turn_id": "00000000-0000-4000-8000-000000000005",
+    "generation_id": "00000000-0000-4000-8000-000000000006",
+    "operation_id": "00000000-0000-4000-8000-000000000010",
+    "seq": 4,
+    "state_revision": 3,
+    "occurred_at": "2026-11-16T06:00:00Z",
+    "strategy_version": "p1",
+    "knowledge_version": "demo-k1",
+    "payload": {
+      "type": "operation.updated",
+      "result": {
+        "operation_id": "00000000-0000-4000-8000-000000000010",
+        "status": "unknown",
+        "updated_at": "2026-11-16T06:00:00Z"
+      }
+    }
+  },
+  "SessionView": {
+    "session_id": "00000000-0000-4000-8000-000000000004",
+    "application_id": "00000000-0000-4000-8000-000000000001",
+    "case_revision": 1,
+    "state": "RECONCILING",
+    "state_revision": 3,
+    "route": "phone",
+    "last_event_seq": 4,
+    "operations": [
+      {
+        "operation_id": "00000000-0000-4000-8000-000000000010",
+        "status": "unknown",
+        "updated_at": "2026-11-16T06:00:00Z"
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "operation_id": "00000000-0000-4000-8000-000000000005",
+  "status": "succeeded",
+  "provider_reference": "mock-order-1",
+  "order_id": "00000000-0000-4000-8000-000000000009",
+  "provider_status": "submitted",
+  "error_code": null,
+  "retryable": false,
+  "as_of": "2026-11-16T10:01:04Z"
+}

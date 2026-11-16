@@ -1,0 +1,43 @@
+{
+  "session_id": "00000000-0000-4000-8000-000000000001",
+  "record_revision": 1,
+  "outcome": "submitted",
+  "business_state": "WRITEBACK_PENDING",
+  "identity_status": "verified",
+  "needs": {
+    "desired_plan_id": "family_59",
+    "max_monthly_price_minor": 5900,
+    "preference": null
+  },
+  "quote_id": "00000000-0000-4000-8000-000000000004",
+  "confirmation_id": "00000000-0000-4000-8000-000000000006",
+  "submit_operation_id": "00000000-0000-4000-8000-000000000005",
+  "order_id": "00000000-0000-4000-8000-000000000009",
+  "order_status": "submitted",
+  "result_delivery_status": "unknown",
+  "strategy_version_id": "strategy-baseline-1",
+  "rule_version": "mock-rules-1",
+  "data_version": "mock-data-1",
+  "model_config_version": "deepseek-flash-nonthinking-1",
+  "state_path": [
+    "OPENING",
+    "VERIFYING",
+    "DISCOVERING",
+    "QUOTING",
+    "AWAITING_CONFIRMATION",
+    "SUBMITTING",
+    "RECONCILING",
+    "RESULT_READY",
+    "WRITEBACK_PENDING"
+  ],
+  "failure_categories": [
+    "tool_provider"
+  ],
+  "pending_actions": [
+    "writeback"
+  ],
+  "compliance_checks": {
+    "verified_before_sensitive_query": true,
+    "confirmed_before_dispatch": true
+  }
+}
