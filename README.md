@@ -6,6 +6,8 @@
 
 ## 先看哪里
 
+- [翟雯模块联调说明](docs/zhai-integration.md)，含私有数据转换、审核导入与 Mock 故障用例。
+
 - [当前实现与三人接入说明](docs/implementation.md)：模块入口、0.3契约和未实现范围。
 - [完整项目设计](docs/design/README.md)：业务目标、状态机、数据与RSI设计。
 - [魏鼎承交付](docs/design/handoffs/wei.md)／[翟雯交付](docs/design/handoffs/zhai.md)。

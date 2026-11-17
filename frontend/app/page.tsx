@@ -7,6 +7,7 @@ type Application = components['schemas']['ApplicationView'];
 type Accepted = components['schemas']['AcceptedTurn'];
 type Event = components['schemas']['Event'];
 const stateLabels: Record<string,string> = {CASE_READY:'待开始',OPENING:'开场',VERIFYING:'核验身份',QA:'整改问答',ACTION_READY:'准备处理',EXECUTING:'处理中',RECONCILING:'结果待查证',WRITEBACK_PENDING:'等待回写',CLOSED:'已完成',CLOSING:'结束中',MANUAL_REVIEW:'需人工处理'};
+const routeLabels = {phone: '电话说明', jingmai: '京麦书面告知', manual: '人工处理'};
 const operationLabels: Record<string,string> = {pending:'处理中',unknown:'结果待确认',not_found_yet:'尚未查到结果',succeeded:'模拟处理成功',failed:'处理失败'};
 
 async function api<T>(path: string, body?: unknown, key?: string): Promise<T> {
@@ -73,7 +74,10 @@ export default function Home() {
             const delta=event.payload.text;
             if(event.generation_id===generation.current) setLive(x=>x+delta);
           } else if(event.payload.type==='turn.interrupted') {
-            if(event.payload.invalidated_generation_id===generation.current) setLive('');
+            if(event.payload.invalidated_generation_id===generation.current) {
+              generation.current = null;
+              setLive('');
+            }
           }
           if(['generation.finished','operation.updated','session.ended'].includes(event.payload.type)) {
             refresh().catch(e=>setError(String(e)));
@@ -114,7 +118,15 @@ export default function Home() {
     <header><div><p className="eyebrow">智语外呼 / 开发联调</p><h1>商户资质告知助手</h1><p>合成数据 · 文本模式 · 不执行真实外呼</p></div><span className="badge">语音未配置</span></header>
     {error && <div role="alert" className="error">{error}</div>}
     {!logged ? <section className="login"><h2>进入演示环境</h2><p>使用本地配置的演示密码。默认值见启动说明。</p><form onSubmit={e=>{e.preventDefault();run(async()=>{await api('/dev/login',{username:'demo',password});await initialize();});}}><label>演示密码<input aria-label="演示密码" type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={submitting}>登录</button></form></section> : <div className="grid">
-      <aside><h2>合成任务</h2><label>选择申请单<select value={selected} onChange={e=>setSelected(e.target.value)}>{applications.map(a=><option key={a.application_id} value={a.application_id}>{a.label} · {a.company_hint}</option>)}</select></label><button disabled={submitting||!selected||!!view?.busy} onClick={()=>run(create)}>创建会话</button><p className="hint">身份输入：我是演示商家1（按所选商家编号调整）</p><p className="hint">之后可问“补齐材料一定必过吗”，再说“明白了”。</p><hr/><h2>业务事实</h2><p>状态：{view ? stateLabels[view.state] ?? view.state : '尚未创建'}</p><p>身份：{view?.verified?'已核对':'尚未核对'}</p>{view?.reason && <p>原因：{view.reason}</p>}{view?.remedy && <p>整改：{view.remedy}</p>}{view?.operations.map(o=><p key={o.operation_id} data-testid="operation-status">{operationLabels[o.status]}{o.resource_id && <small>{o.resource_id}</small>}</p>)}{view?.record && <p data-testid="writeback">通话记录已回写</p>}</aside>
+      <aside><h2>合成任务</h2><label>选择申请单<select value={selected} onChange={e=>setSelected(e.target.value)}>{applications.map(a=><option key={a.application_id} value={a.application_id}>{a.label} · {a.company_hint}</option>)}</select></label><button disabled={submitting||!selected||!!view?.busy} onClick={()=>run(create)}>创建会话</button><p className="hint">身份输入：我是演示商家1（按所选商家编号调整）</p><p className="hint">之后可问“补齐材料一定必过吗”，再说“明白了”。</p><hr/><h2>业务事实</h2><p>状态：{view ? stateLabels[view.state] ?? view.state : '尚未创建'}</p><p>身份：{view?.verified?'已核对':'尚未核对'}</p>{view && <p>关单渠道：{routeLabels[view.route]}</p>}
+      {view?.verified && view.reason && <p>原因：{view.reason}</p>}
+      {view?.verified && view.remedy && <p>整改：{view.remedy}</p>}
+      {view?.verified && !!view.record?.source_refs.length && <section aria-label="审核依据">
+        <h3>审核依据</h3>
+        <ul>{view.record.source_refs.map((ref, index) => <li key={index}>
+          {ref.sheet} · 第 {ref.row} 行 <small title={ref.file_sha256}>{ref.file_sha256.slice(0, 12)}</small>
+        </li>)}</ul>
+      </section>}{view?.operations.map(o=><p key={o.operation_id} data-testid="operation-status">{operationLabels[o.status]}{o.resource_id && <small>{o.resource_id}</small>}</p>)}{view?.record && <p data-testid="writeback">通话记录已回写</p>}</aside>
       <section className="conversation"><div className="toolbar"><h2>文本会话</h2><span>{sid?(connecting?'事件连接中':'已连接'):'待连接'}</span></div><div className="actions"><button disabled={!view||view.state!=='CASE_READY'||submitting} onClick={()=>run(start)}>开始</button><button disabled={!view?.busy||!view.generation_id||submitting} onClick={()=>run(async()=>{await api(`/sessions/${sid}/interruptions`,{generation_id:view!.generation_id,client_event_id:crypto.randomUUID()});setView(await api<View>(`/sessions/${sid}`));setLive('');})}>打断</button><button disabled={!view||view.ended||submitting} onClick={()=>run(async()=>{setView(await api<View>(`/sessions/${sid}/end`,{reason:'user_ended'}));setLive('');})}>结束</button></div>
       <div className="messages" aria-live="polite">{!view?.messages?.length && <p className="empty">创建会话后点击开始，AI 会主动开场。</p>}{view?.messages?.map(m=><article key={m.message_id} className={m.role}><strong>{m.role==='user'?'商户':'AI'}</strong><p>{m.text || '…'}</p>{m.status==='interrupted'&&<small>已打断</small>}{m.status==='failed'&&<small>生成失败，可重试</small>}</article>)}{live && <article className="assistant"><strong>AI · 正在回复</strong><p>{live}</p></article>}</div>
       <form className="composer" onSubmit={e=>{e.preventDefault();run(send);}}><input aria-label="商户回复" placeholder="输入商户回复；新输入会打断旧生成" value={input} onChange={e=>setInput(e.target.value)} disabled={!view||view.ended||view.state==='CASE_READY'}/><button disabled={!view||view.ended||view.state==='CASE_READY'||submitting||!input.trim()}>发送</button></form></section>

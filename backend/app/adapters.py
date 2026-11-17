@@ -2,7 +2,7 @@ import asyncio
 from sqlalchemy import select
 from .config import settings
 from .contracts import *
-from .db import Session, Application, Knowledge, Effect, Record, Operation, now
+from .db import Session, Application, Knowledge, Effect, Record, Operation, Confirmation, now
 
 class DomainError(Exception):
     def __init__(self, code: str, message: str, status: int = 409):
@@ -84,31 +84,69 @@ class MockBusiness:
         self.fault = 'none'  # Only tests/dev administration may set this.
 
     async def execute(self, command):
+        # Cancellation before this checkpoint cannot create a business effect.
         await asyncio.sleep(0)
-        if self.fault == 'persistent_unknown':
-            return OperationResult(operation_id=command.operation_id, status='unknown', updated_at=now())
-        if self.fault == 'write_failure':
-            return OperationResult(operation_id=command.operation_id, status='failed', updated_at=now())
         with Session.begin() as db:
-            operation = db.scalar(select(Operation).where(Operation.id == str(command.operation_id)).with_for_update())
-            if operation is None:
+            operation = db.scalar(select(Operation).where(
+                Operation.id == str(command.operation_id)).with_for_update())
+            if (operation is None or operation.key != command.idempotency_key
+                    or operation.session_id != str(command.session_id)):
                 raise DomainError('NO_OPERATION', '操作未登记')
+            if ActionCommand.model_validate(operation.data['command']) != command:
+                raise DomainError('OPERATION_CONFLICT', '操作与已登记命令不一致')
+
             effect = db.get(Effect, command.idempotency_key)
             if effect is None:
+                if self.fault == 'persistent_unknown':
+                    return OperationResult(operation_id=command.operation_id, status='unknown', updated_at=now())
+                result = self._apply(db, command)
                 effect = Effect(key=command.idempotency_key, operation_id=str(command.operation_id),
-                    data={'resource_id': 'mock-rejection-' + str(command.operation_id), 'command': command.model_dump(mode='json')})
+                    data={'resource_id': result.resource_id, 'result': result.model_dump(mode='json'),
+                          'command': command.model_dump(mode='json')})
                 db.add(effect)
-            resource = effect.data['resource_id']
+            else:
+                result = self._saved_result(command, effect)
         if self.fault == 'lost_response':
             return OperationResult(operation_id=command.operation_id, status='unknown', updated_at=now())
-        return OperationResult(operation_id=command.operation_id, status='succeeded', resource_id=resource, updated_at=now())
+        return result
+
+    def _apply(self, db, command):
+        status = 'failed' if self.fault == 'write_failure' else 'succeeded'
+        prefix = {'reject_application': 'rejection', 'create_callback': 'callback',
+                  'create_followup': 'followup'}.get(command.kind)
+        if prefix is None:
+            raise DomainError('INVALID_ACTION', '通话记录须通过 writeback 写入')
+        if isinstance(command.payload, CallbackPayload):
+            row = db.get(Confirmation, str(command.payload.confirmation_id))
+            if row is None or row.session_id != str(command.session_id):
+                status = 'failed'
+            else:
+                confirmation = CallbackConfirmation.model_validate(row.data)
+                if (confirmation.application_id != command.application_id
+                        or confirmation.case_revision != command.case_revision
+                        or confirmation.revoked_at is not None
+                        or confirmation.expires_at <= now()
+                        or confirmation.window_start <= now()):
+                    status = 'failed'
+        resource = f'mock-{prefix}-{command.operation_id}' if status == 'succeeded' else None
+        return OperationResult(operation_id=command.operation_id, status=status,
+                               resource_id=resource, updated_at=now())
+
+    def _saved_result(self, command, effect):
+        if (effect.operation_id != str(command.operation_id)
+                or ActionCommand.model_validate(effect.data['command']) != command):
+            raise DomainError('OPERATION_CONFLICT', '操作与已登记命令不一致')
+        if 'result' in effect.data:
+            return OperationResult.model_validate(effect.data['result'])
+        return OperationResult(operation_id=command.operation_id, status='succeeded',
+                               resource_id=effect.data['resource_id'], updated_at=now())
 
     async def query_operation(self, command):
         with Session() as db:
             effect = db.get(Effect, command.idempotency_key)
-            return OperationResult(operation_id=command.operation_id,
-                status='succeeded' if effect else 'not_found_yet',
-                resource_id=effect.data['resource_id'] if effect else None, updated_at=now())
+            if effect is not None:
+                return self._saved_result(command, effect)
+        return OperationResult(operation_id=command.operation_id, status='not_found_yet', updated_at=now())
 
     async def writeback(self, record):
         if self.fault == 'writeback_failure':
