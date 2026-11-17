@@ -693,16 +693,20 @@ class Coordinator:
                     emit(db,row,SessionEnded(type='session.ended',reason='operation_unknown'))
                 return
             case=self.services.cases.get_case(row.owner,row.application_id)
-            record=self.make_record(row,case,[UUID(oid)])
+            if 'writeback_record' in op.data:
+                record=CallRecord.model_validate(op.data['writeback_record'])
+            else:
+                record=self.make_record(row,case,[UUID(oid)])
+                op.data={**op.data,'writeback_record':record.model_dump(mode='json')}
             transition(db,row,'WRITEBACK_PENDING')
             writeback_attempts=op.data.get('writeback_attempts',0)
         try:
-            await self.services.business.writeback(record)
-        except DomainError as exc:
+            await asyncio.wait_for(self.services.business.writeback(record),3)
+        except (TimeoutError,DomainError) as exc:
             # 回写失败是**独立**于业务效果的状态：业务效果已经发生，绝不能重发驳回，
             # 也不能把失败吞掉或谎报 CLOSED。有界重试后如实转人工。
             writeback_attempts+=1
-            _writeback_retry(oid,writeback_attempts,exc.code)
+            _writeback_retry(oid,writeback_attempts,getattr(exc,'code',type(exc).__name__))
             return
         except asyncio.CancelledError:
             raise

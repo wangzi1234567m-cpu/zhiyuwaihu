@@ -41,8 +41,7 @@ test-results/
 # ---- t6 index hygiene (architect, 2026-11-17) --------------------------------
 # Anything below is either regenerable, machine-specific, or carries host paths
 # / secrets. It must never be staged. `.gitignore` is the first gate; the second
-# gate is `scripts/t6_index_hygiene.mjs` (fails the build if a denied path is
-# already tracked).
+# gate is the coordinator's tracked-path check when packaging the release.
 *.log
 
 # Model / provider logs and prompt transcripts (may contain keys or raw text).
