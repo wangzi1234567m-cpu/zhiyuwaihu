@@ -534,7 +534,7 @@ class Coordinator:
         result=OperationResult(operation_id=command.operation_id,status='pending',updated_at=now())
         db.add(Operation(id=str(command.operation_id),session_id=row.id,key=key,status='pending',
             data={'command':command.model_dump(mode='json'),'result':result.model_dump(mode='json'),'attempts':0,'next_at':0,'writeback_done':False,
-                  'case_revision':fresh.case_revision,'business_key':key,'kind':kind}))
+                  'case_revision':fresh.case_revision,'case_snapshot':fresh.model_dump(mode='json'),'business_key':key,'kind':kind}))
         row.data={**row.data,'operation_ids':list(row.data.get('operation_ids') or [])+[str(command.operation_id)]}
         transition(db,row,'EXECUTING')
         emit(db,row,OperationUpdated(type='operation.updated',result=result),operation=command.operation_id)
@@ -662,7 +662,9 @@ class Coordinator:
 
     async def process_operation(self,oid):
         with self.repo.transaction() as db:
-            op=db.get(Operation,oid)
+            op=db.scalar(select(Operation).where(Operation.id==oid).with_for_update())
+            if op.data.get('manual') or op.data.get('writeback_done'):
+                return
             command=ActionCommand.model_validate(op.data['command'])
             prior=op.status
             # Persist dispatch intent BEFORE external I/O. A restart queries instead of resubmitting.
@@ -678,7 +680,9 @@ class Coordinator:
         else:
             with self.repo.read() as db: result=OperationResult.model_validate(db.get(Operation,oid).data['result'])
         with self.repo.transaction() as db:
-            op=db.get(Operation,oid)
+            op=db.scalar(select(Operation).where(Operation.id==oid).with_for_update())
+            if op.data.get('manual') or op.data.get('writeback_done'):
+                return
             row=db.scalar(select(Conversation).where(Conversation.id==op.session_id).with_for_update())
             attempts=op.data['attempts']+1
             op.status=result.status
@@ -692,10 +696,22 @@ class Coordinator:
                     transition(db,row,'MANUAL_REVIEW')
                     emit(db,row,SessionEnded(type='session.ended',reason='operation_unknown'))
                 return
-            case=self.services.cases.get_case(row.owner,row.application_id)
             if 'writeback_record' in op.data:
                 record=CallRecord.model_validate(op.data['writeback_record'])
+            elif 'case_snapshot' in op.data:
+                case=ReviewCase.model_validate(op.data['case_snapshot'])
+                record=self.make_record(row,case,[UUID(oid)])
+                op.data={**op.data,'writeback_record':record.model_dump(mode='json')}
             else:
+                case=self.services.cases.get_case(row.owner,row.application_id)
+                if (case.application_id!=getattr(command,'application_id',None) or
+                    case.case_revision!=getattr(command,'case_revision',None) or
+                    case.case_revision!=row.data.get('case_revision')):
+                    op.data={**op.data,'manual':True,'writeback_last_error':'STALE_REVISION'}
+                    row.data={**row.data,'ended':True}
+                    transition(db,row,'MANUAL_REVIEW')
+                    emit(db,row,SessionEnded(type='session.ended',reason='stale_revision'))
+                    return
                 record=self.make_record(row,case,[UUID(oid)])
                 op.data={**op.data,'writeback_record':record.model_dump(mode='json')}
             transition(db,row,'WRITEBACK_PENDING')
@@ -715,7 +731,9 @@ class Coordinator:
             _writeback_retry(oid,writeback_attempts,type(exc).__name__)
             return
         with self.repo.transaction() as db:
-            op=db.get(Operation,oid)
+            op=db.scalar(select(Operation).where(Operation.id==oid).with_for_update())
+            if op.data.get('manual') or op.data.get('writeback_done'):
+                return
             row=db.scalar(select(Conversation).where(Conversation.id==op.session_id).with_for_update())
             op.data={**op.data,'writeback_done':True,'writeback_attempts':writeback_attempts+1}
             transition(db,row,'CLOSED' if result.status=='succeeded' else 'MANUAL_REVIEW')
@@ -741,8 +759,10 @@ def _writeback_retry(oid, attempts, code):
     exhausted = attempts >= WRITEBACK_MAX_ATTEMPTS
     try:
         with Session.begin() as db:
-            op = db.get(Operation, oid)
+            op = db.scalar(select(Operation).where(Operation.id == oid).with_for_update())
             if op is None:
+                return
+            if op.data.get('writeback_done'):
                 return
             row = db.scalar(select(Conversation).where(Conversation.id == op.session_id).with_for_update())
             op.data = {**op.data, 'writeback_attempts': attempts,

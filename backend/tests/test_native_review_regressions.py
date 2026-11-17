@@ -1,5 +1,7 @@
 """原生审查独立边界：挂起回写、远端成功丢响应、最终派发时版本竞态。"""
 import asyncio
+import threading
+import time
 
 import httpx
 import pytest
@@ -9,6 +11,7 @@ from test_review_regressions import dedicated_db
 from test_integration import opened, say
 from app.adapters import DomainError, MockBusiness, Services
 from app.coordinator import Coordinator
+from app.contracts import ActionCommand
 from app.db import Application, Effect, Operation, Session
 from app.main import create_app
 from app.seed import fixture_id
@@ -113,3 +116,103 @@ async def test_final_enqueue_revision_race_rolls_back_completion_and_marks_faile
             assert value['messages'][-1]['status'] == 'failed'
             with Session() as db:
                 assert db.scalar(select(func.count()).select_from(Effect)) == 0
+
+
+class RevisionAfterExecute(MockBusiness):
+    async def execute(self, command):
+        result = await super().execute(command)
+        with Session.begin() as db:
+            application = db.get(Application, fixture_id(1))
+            application.data = {**application.data, 'case_revision':2,
+                'scenario_id':'demo.new_revision',
+                'slots':{**application.data['slots'], 'remedy':'仅属于版本二的整改要求'}}
+        return result
+
+
+@pytest.mark.asyncio
+async def test_writeback_uses_dispatch_case_snapshot_after_revision_changes(dedicated_db):
+    app = create_app(Services(business=RevisionAfterExecute()))
+    async with app.router.lifespan_context(app):
+        coordinator = app.state.coordinator
+        await stop_operation_worker(coordinator)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test', headers={'X-Requested-With':'zhiyu'}) as client:
+            sid, oid = await prepare_operation(client)
+            await coordinator.process_operation(oid)
+            value = (await client.get(f'/api/v1/sessions/{sid}')).json()
+            assert value['state'] == 'CLOSED'
+            assert value['record']['case_revision'] == 1
+            assert value['record']['reason_codes'] == ['demo.authorization_missing']
+            assert value['record']['rectification_items'] == ['请在模拟业务入口补充完整授权书。']
+
+
+@pytest.mark.asyncio
+async def test_legacy_operation_without_case_snapshot_rejects_mixed_revision_record(dedicated_db):
+    app = create_app(Services(business=RevisionAfterExecute()))
+    async with app.router.lifespan_context(app):
+        coordinator = app.state.coordinator
+        await stop_operation_worker(coordinator)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test', headers={'X-Requested-With':'zhiyu'}) as client:
+            sid, oid = await prepare_operation(client)
+            with Session.begin() as db:
+                op = db.get(Operation, oid)
+                op.data = {k:v for k,v in op.data.items() if k not in ('case_snapshot','writeback_record')}
+            await coordinator.process_operation(oid)
+            value = (await client.get(f'/api/v1/sessions/{sid}')).json()
+            assert value['state'] == 'MANUAL_REVIEW' and value['record'] is None
+            with Session() as db:
+                assert db.get(Operation, oid).status == 'succeeded'
+                assert db.get(Operation, oid).data.get('manual') is True
+                assert db.scalar(select(func.count()).select_from(Effect)) == 1
+
+
+@pytest.mark.asyncio
+async def test_concurrent_coordinators_share_one_persisted_writeback_identity(dedicated_db):
+    class ConcurrentRemote(MockBusiness):
+        def __init__(self):
+            super().__init__()
+            self.payloads = []
+            self.remote_records = {}
+            self.barrier = threading.Barrier(2)
+        async def writeback(self, record):
+            payload = record.model_dump(mode='json')
+            self.payloads.append(payload)
+            self.remote_records.setdefault(str(record.record_id), payload)
+            try:
+                await asyncio.to_thread(self.barrier.wait, 2)
+            except threading.BrokenBarrierError:
+                pass
+            await super().writeback(record)
+    business = ConcurrentRemote()
+    services = Services(business=business)
+    app = create_app(services)
+    async with app.router.lifespan_context(app):
+        coordinator = app.state.coordinator
+        await stop_operation_worker(coordinator)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url='http://test', headers={'X-Requested-With':'zhiyu'}) as client:
+            sid, oid = await prepare_operation(client)
+            with Session() as db:
+                command = ActionCommand.model_validate(db.get(Operation, oid).data['command'])
+            result = await business.execute(command)
+            with Session.begin() as db:
+                op = db.get(Operation, oid)
+                op.status = result.status
+                op.data = {k:v for k,v in op.data.items() if k != 'writeback_record'}
+                op.data = {**op.data, 'result':result.model_dump(mode='json')}
+            launch = threading.Barrier(2)
+            def process_in_thread():
+                concurrent = Coordinator(services)
+                original = concurrent.make_record
+                def slow_make_record(*args, **kwargs):
+                    time.sleep(.25)  # 模拟正常慢知识读取，暴露行锁前读取旧operation的竞态。
+                    return original(*args, **kwargs)
+                concurrent.make_record = slow_make_record
+                launch.wait(3)
+                asyncio.run(concurrent.process_operation(oid))
+            await asyncio.wait_for(asyncio.gather(asyncio.to_thread(process_in_thread), asyncio.to_thread(process_in_thread)), timeout=8)
+            assert business.payloads
+            assert all(p == business.payloads[0] for p in business.payloads)
+            assert len(business.remote_records) == 1
+            with Session() as db:
+                op = db.get(Operation, oid)
+                assert op.data.get('writeback_done') is True
+                assert db.scalar(select(func.count()).select_from(Effect)) == 1
