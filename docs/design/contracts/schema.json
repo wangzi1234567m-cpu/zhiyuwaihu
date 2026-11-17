@@ -215,6 +215,45 @@
           ],
           "default": null,
           "title": "Action Payload"
+        },
+        "understanding": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Understanding"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "contact_outcome": {
+          "anyOf": [
+            {
+              "enum": [
+                "verified",
+                "wrong_person",
+                "refused",
+                "no_answer",
+                "disconnected",
+                "not_required",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contact Outcome"
+        },
+        "required_slot_missing": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Slot Missing",
+          "type": "array"
         }
       },
       "required": [
@@ -330,7 +369,8 @@
             "refused",
             "no_answer",
             "disconnected",
-            "not_required"
+            "not_required",
+            "unknown"
           ],
           "title": "Contact Status",
           "type": "string"
@@ -1172,6 +1212,46 @@
       "title": "ModelRequest",
       "type": "object"
     },
+    "NotificationEvidence": {
+      "additionalProperties": false,
+      "description": "已发出的告知证据；由服务端在消息落库后写入，Agent 只读。",
+      "properties": {
+        "kind": {
+          "enum": [
+            "explanation",
+            "reason_notice",
+            "remedy_notice",
+            "callback_notice"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "knowledge_entry_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Knowledge Entry Ids",
+          "type": "array"
+        },
+        "completed": {
+          "default": false,
+          "title": "Completed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "message_id"
+      ],
+      "title": "NotificationEvidence",
+      "type": "object"
+    },
     "OperationResult": {
       "additionalProperties": false,
       "properties": {
@@ -1409,6 +1489,25 @@
           },
           "title": "Required Evidence",
           "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/RoutingEvidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "submission_attempt": {
+          "default": 1,
+          "minimum": 0,
+          "title": "Submission Attempt",
+          "type": "integer"
+        },
+        "call_attempt": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Call Attempt",
+          "type": "integer"
         }
       },
       "required": [
@@ -1423,8 +1522,66 @@
       "title": "RoutingDecision",
       "type": "object"
     },
+    "RoutingEvidence": {
+      "additionalProperties": false,
+      "description": "规则命中证据：为什么得到这个 route，可追溯、不含个人信息。",
+      "properties": {
+        "code": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "detail": {
+          "default": "",
+          "maxLength": 400,
+          "title": "Detail",
+          "type": "string"
+        },
+        "source": {
+          "default": "rule",
+          "enum": [
+            "case",
+            "rule",
+            "knowledge",
+            "contact_history",
+            "authorization",
+            "attempts"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "ref": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Ref"
+        },
+        "knowledge_entry_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Knowledge Entry Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "RoutingEvidence",
+      "type": "object"
+    },
     "SessionContext": {
       "additionalProperties": false,
+      "description": "服务端组装的可信只读上下文。Agent 只能读，不能写入或回填。",
       "properties": {
         "session_id": {
           "format": "uuid",
@@ -1476,6 +1633,89 @@
         "model_version": {
           "title": "Model Version",
           "type": "string"
+        },
+        "state": {
+          "default": "CASE_READY",
+          "enum": [
+            "CASE_READY",
+            "ROUTING",
+            "OPENING",
+            "VERIFYING",
+            "EXPLAINING",
+            "QA",
+            "CALLBACK_PENDING",
+            "CLOSING",
+            "ACTION_READY",
+            "EXECUTING",
+            "RECONCILING",
+            "WRITEBACK_PENDING",
+            "CLOSED",
+            "MANUAL_REVIEW"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "routing_decision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RoutingDecision"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "notifications": {
+          "items": {
+            "$ref": "#/$defs/NotificationEvidence"
+          },
+          "title": "Notifications",
+          "type": "array"
+        },
+        "contact_outcome": {
+          "default": "unknown",
+          "enum": [
+            "verified",
+            "wrong_person",
+            "refused",
+            "no_answer",
+            "disconnected",
+            "not_required",
+            "unknown"
+          ],
+          "title": "Contact Outcome",
+          "type": "string"
+        },
+        "contact_outcome_source": {
+          "default": "none",
+          "enum": [
+            "none",
+            "domain_event",
+            "demo_text_rule"
+          ],
+          "title": "Contact Outcome Source",
+          "type": "string"
+        },
+        "submission_attempt": {
+          "default": 1,
+          "minimum": 0,
+          "title": "Submission Attempt",
+          "type": "integer"
+        },
+        "call_attempt": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Call Attempt",
+          "type": "integer"
+        },
+        "operation_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Operation Ids",
+          "type": "array"
         }
       },
       "required": [
@@ -1902,6 +2142,112 @@
         "message_id"
       ],
       "title": "TurnStarted",
+      "type": "object"
+    },
+    "Understanding": {
+      "additionalProperties": false,
+      "description": "结构化理解结果（内部 DTO，服务器再校验）。模型不能写 verified/审核结论/成功。",
+      "properties": {
+        "intents": {
+          "items": {
+            "enum": [
+              "confirm_identity",
+              "deny_identity",
+              "ask_reason",
+              "ask_remedy",
+              "ask_guarantee",
+              "ask_source",
+              "ask_outcome",
+              "refuse_contact",
+              "request_callback",
+              "acknowledge",
+              "unclear",
+              "complaint_risk"
+            ],
+            "type": "string"
+          },
+          "title": "Intents",
+          "type": "array"
+        },
+        "slots": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Slots",
+          "type": "object"
+        },
+        "evidence_message_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Evidence Message Ids",
+          "type": "array"
+        },
+        "needs_clarification": {
+          "default": false,
+          "title": "Needs Clarification",
+          "type": "boolean"
+        },
+        "clarification_reason": {
+          "anyOf": [
+            {
+              "maxLength": 200,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clarification Reason"
+        },
+        "negated": {
+          "default": false,
+          "title": "Negated",
+          "type": "boolean"
+        },
+        "multi_intent": {
+          "default": false,
+          "title": "Multi Intent",
+          "type": "boolean"
+        },
+        "contact_outcome_hint": {
+          "anyOf": [
+            {
+              "enum": [
+                "verified",
+                "wrong_person",
+                "refused",
+                "no_answer",
+                "disconnected",
+                "not_required",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contact Outcome Hint"
+        },
+        "source": {
+          "default": "fake",
+          "enum": [
+            "fake",
+            "glm",
+            "rules"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "intents"
+      ],
+      "title": "Understanding",
       "type": "object"
     },
     "WritebackPayload": {

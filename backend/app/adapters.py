@@ -1,4 +1,5 @@
 import asyncio
+import os
 from sqlalchemy import select
 from .config import settings
 from .contracts import *
@@ -33,6 +34,11 @@ class FakeModel:
             yield text[i:i+4]
 
 class DemoAgent:
+    """历史演示夹具（关键字版）。**不是生产 Agent**，只用于保留原演示/回归夹具。
+
+    生产使用 `app.agent.SemanticAgent`（结构化理解驱动）。此处保留是为了让原始
+    演示行为与旧测试可重复，并且不把它当作"意图理解已完成"的证据。
+    """
     async def handle_turn(self, input, context, history, case, knowledge, verified, cancel):
         text = input.text
         state = 'VERIFYING'
@@ -123,14 +129,41 @@ class DisabledVoice:
         raise DomainError('VOICE_NOT_CONFIGURED', '语音未配置', 503)
 
 class Services:
-    def __init__(self, *, agent=None, model=None, cases=None, knowledge=None, business=None, policy=None, guard=None, voice=None, repository=None):
+    """依赖装配点：所有内部端口在此注入，模块之间不建 HTTP。
+
+    默认是**可重复的确定性实现**（FakeModel 流式 + 规则理解），真实 GLM 只在
+    `ZHIYU_MODEL_MODE=glm` 且宿主继承了 `GLM_API_KEY` 时启用；缺密钥明确报错，
+    绝不静默降级成假模型（假模型只留给可重复测试）。
+    """
+
+    def __init__(self, *, agent=None, model=None, cases=None, knowledge=None, business=None,
+                 policy=None, guard=None, voice=None, repository=None, understanding=None,
+                 model_mode=None):
         from .repository import Repository
+        from .guard import RoutingPolicy, ToolGuard as BusinessToolGuard
+        from .agent import SemanticAgent
+        from .semantic import build_understanding, RuleUnderstanding
         self.repository = repository or Repository()
-        self.agent = agent or DemoAgent()
+        self.model_mode = (model_mode or os.environ.get('ZHIYU_MODEL_MODE') or 'fake').strip().lower()
+        # 理解端口：glm 模式 → 真实模型（缺键即抛 MODEL_NOT_CONFIGURED）；否则规则替身。
+        self.understanding = understanding or (
+            build_understanding('glm') if self.model_mode == 'glm' else RuleUnderstanding())
+        self.agent = agent or SemanticAgent(self.understanding)
+        # FakeModel 仍负责"把已校验回复分片流出"；真实模型模式不改变流式通道。
         self.model = model or FakeModel()
         self.cases = cases or DatabaseCases()
         self.knowledge = knowledge or DatabaseKnowledge()
         self.business = business or MockBusiness()
-        self.policy = policy or Policy()
-        self.guard = guard or ToolGuard()
+        # 规则层：生产决策表与守卫（纯函数，无 I/O）。
+        self.policy = policy or RoutingPolicy()
+        self.guard = guard or BusinessToolGuard()
         self.voice = voice or DisabledVoice()
+
+    def model_info(self) -> dict:
+        """只公开 model/endpoint/key 是否存在，永不输出密钥。"""
+        from .guard import load_model_config
+        view = {'mode': self.model_mode, **load_model_config().public_view()}
+        port = getattr(self.understanding, 'public_view', None)
+        if callable(port):
+            view['understanding'] = port()
+        return view
