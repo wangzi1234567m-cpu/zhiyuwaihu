@@ -1,5 +1,6 @@
 """Run only against a dedicated PostgreSQL test DB. No SQLite substitutes."""
 import asyncio
+from datetime import timedelta
 import os
 from uuid import uuid4
 import pytest
@@ -7,7 +8,8 @@ import httpx
 from sqlalchemy import text,select,func
 from app.main import create_app
 from app.adapters import Services
-from app.db import Session,Effect,Operation,Conversation,Message,EventRow,engine
+from app.db import Session,Effect,Operation,Conversation,Confirmation,Message,EventRow,engine,now
+from app.contracts import ActionCommand, CallbackConfirmation
 from app.seed import seed,fixture_id
 
 pytestmark=[pytest.mark.integration,pytest.mark.skipif(os.getenv('RUN_DB_TESTS')!='1',reason='RUN_DB_TESTS=1 requires a dedicated migrated PostgreSQL test DB')]
@@ -205,3 +207,53 @@ async def test_messages_keep_order_when_timestamps_tie(setup):
     value=(await client.get(f'/api/v1/sessions/{sid}')).json()
     assert [m['role'] for m in value['messages']]==['assistant','user','assistant','user','assistant']
     assert '不能保证' in value['messages'][-1]['text']
+
+
+async def test_callback_and_followup_mock_ports(setup):
+    client, _, services = setup
+    sid = await opened(client)
+    verified = await say(client, sid, '我是演示商家1')
+    evidence_id = next(message['message_id'] for message in verified['messages'] if message['role'] == 'user')
+    confirmation_id = uuid4()
+    application_id = fixture_id(1)
+    timestamp = now()
+    confirmation = CallbackConfirmation(
+        confirmation_id=confirmation_id, application_id=application_id, case_revision=1,
+        evidence_message_id=evidence_id, window_start=timestamp + timedelta(hours=1),
+        window_end=timestamp + timedelta(hours=2), expires_at=timestamp + timedelta(minutes=10))
+    with Session.begin() as db:
+        db.add(Confirmation(id=str(confirmation_id), session_id=sid, data=confirmation.model_dump(mode='json')))
+
+    def register(kind, payload, confirmation_ref=None, evidence_refs=()):
+        operation_id = uuid4()
+        command = ActionCommand(session_id=sid, application_id=application_id, case_revision=1,
+            decision_id=uuid4(), operation_id=operation_id, kind=kind, idempotency_key=f'test:{operation_id}',
+            confirmation_ref=confirmation_ref, evidence_refs=list(evidence_refs), payload=payload)
+        with Session.begin() as db:
+            db.add(Operation(id=str(operation_id), session_id=sid, key=command.idempotency_key,
+                status='pending', data={'command': command.model_dump(mode='json'), 'manual': True}))
+        return command
+
+    payload = {'type': 'create_callback', 'confirmation_id': confirmation_id}
+    unconfirmed = register('create_callback', payload, confirmation_id)
+    failed = await services.business.execute(unconfirmed)
+    assert failed.status == 'failed'
+    assert failed.error.code == 'CALLBACK_CONFIRMATION_INVALID'
+    assert await services.business.query_operation(unconfirmed) == failed
+
+    callback = register('create_callback', payload, confirmation_id, [evidence_id])
+    services.business.fault = 'lost_response'
+    assert (await services.business.execute(callback)).status == 'unknown'
+    actual = await services.business.query_operation(callback)
+    assert actual.status == 'succeeded'
+    assert actual.resource_id == f'mock-callback-{callback.operation_id}'
+    services.business.fault = 'none'
+    assert await services.business.execute(callback) == actual
+    with Session() as db:
+        assert db.get(Effect, callback.idempotency_key).data['details']['timezone'] == 'Asia/Shanghai'
+
+    followup = register('create_followup', {'type': 'create_followup', 'reason_code': 'synthetic_followup',
+                                           'related_operation_id': callback.operation_id})
+    result = await services.business.execute(followup)
+    assert result.resource_id == f'mock-followup-{followup.operation_id}'
+    assert await services.business.query_operation(followup) == result

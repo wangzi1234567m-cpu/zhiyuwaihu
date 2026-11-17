@@ -2,7 +2,7 @@ import asyncio
 from sqlalchemy import select
 from .config import settings
 from .contracts import *
-from .db import Session, Application, Knowledge, Effect, Record, Operation, Confirmation, now
+from .db import Session, Application, Knowledge, Effect, Record, Operation, Confirmation, Conversation, Message, now, new_id
 
 class DomainError(Exception):
     def __init__(self, code: str, message: str, status: int = 409):
@@ -99,10 +99,10 @@ class MockBusiness:
             if effect is None:
                 if self.fault == 'persistent_unknown':
                     return OperationResult(operation_id=command.operation_id, status='unknown', updated_at=now())
-                result = self._apply(db, command)
+                result, details = self._apply(db, command)
                 effect = Effect(key=command.idempotency_key, operation_id=str(command.operation_id),
                     data={'resource_id': result.resource_id, 'result': result.model_dump(mode='json'),
-                          'command': command.model_dump(mode='json')})
+                          'command': command.model_dump(mode='json'), 'details': details})
                 db.add(effect)
             else:
                 result = self._saved_result(command, effect)
@@ -111,26 +111,61 @@ class MockBusiness:
         return result
 
     def _apply(self, db, command):
-        status = 'failed' if self.fault == 'write_failure' else 'succeeded'
         prefix = {'reject_application': 'rejection', 'create_callback': 'callback',
                   'create_followup': 'followup'}.get(command.kind)
         if prefix is None:
             raise DomainError('INVALID_ACTION', '通话记录须通过 writeback 写入')
-        if isinstance(command.payload, CallbackPayload):
-            row = db.get(Confirmation, str(command.payload.confirmation_id))
-            if row is None or row.session_id != str(command.session_id):
-                status = 'failed'
+
+        details = {}
+        error = None
+        session = db.get(Conversation, str(command.session_id))
+        if (session is None or session.application_id != str(command.application_id)
+                or session.data['case_revision'] != command.case_revision):
+            error = ('CASE_MISMATCH', '操作与会话的申请单或审核版本不一致')
+        elif self.fault == 'write_failure':
+            error = ('MOCK_WRITE_FAILED', '模拟业务写入失败')
+        elif isinstance(command.payload, CallbackPayload):
+            confirmation = self._callback_confirmation(db, session, command)
+            if confirmation is None:
+                error = ('CALLBACK_CONFIRMATION_INVALID', '缺少有效的预约确认记录')
             else:
-                confirmation = CallbackConfirmation.model_validate(row.data)
-                if (confirmation.application_id != command.application_id
-                        or confirmation.case_revision != command.case_revision
-                        or confirmation.revoked_at is not None
-                        or confirmation.expires_at <= now()
-                        or confirmation.window_start <= now()):
-                    status = 'failed'
-        resource = f'mock-{prefix}-{command.operation_id}' if status == 'succeeded' else None
-        return OperationResult(operation_id=command.operation_id, status=status,
-                               resource_id=resource, updated_at=now())
+                details = confirmation.model_dump(mode='json', include={'window_start', 'window_end', 'timezone'})
+        elif isinstance(command.payload, FollowupPayload) and command.payload.related_operation_id:
+            related = db.get(Operation, str(command.payload.related_operation_id))
+            related_command = ActionCommand.model_validate(related.data['command']) if related else None
+            if (related_command is None or related_command.application_id != command.application_id
+                    or related_command.case_revision != command.case_revision):
+                error = ('FOLLOWUP_REFERENCE_INVALID', '跟进引用与当前申请单或审核版本不一致')
+
+        if error:
+            code, message = error
+            return OperationResult(operation_id=command.operation_id, status='failed', updated_at=now(),
+                error=ApiError(code=code, message=message, retryable=False,
+                               request_id=new_id(), operation_id=command.operation_id)), details
+        return OperationResult(operation_id=command.operation_id, status='succeeded',
+                               resource_id=f'mock-{prefix}-{command.operation_id}', updated_at=now()), details
+
+    def _callback_confirmation(self, db, session, command):
+        row = db.scalar(select(Confirmation).where(
+            Confirmation.id == str(command.payload.confirmation_id)).with_for_update())
+        if row is None or row.session_id != session.id or not session.data.get('verified'):
+            return None
+        confirmation = CallbackConfirmation.model_validate(row.data)
+        current = now()
+        if (confirmation.application_id != command.application_id
+                or confirmation.case_revision != command.case_revision
+                or confirmation.revoked_at is not None
+                or confirmation.expires_at <= current
+                or confirmation.window_start <= current
+                or confirmation.evidence_message_id not in command.evidence_refs):
+            return None
+        evidence = db.get(Message, str(confirmation.evidence_message_id))
+        if evidence is None or evidence.session_id != session.id:
+            return None
+        message = evidence.data['view']
+        if message['role'] != 'user' or message['status'] != 'completed':
+            return None
+        return confirmation
 
     def _saved_result(self, command, effect):
         if (effect.operation_id != str(command.operation_id)

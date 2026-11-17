@@ -22,10 +22,17 @@ def sources(inputs, allowed):
         if path.suffix.lower() == '.zip':
             with ZipFile(path) as archive:
                 for member in archive.infolist():
-                    parts = member.filename.replace(chr(92), '/').split('/')
+                    name = member.filename
+                    if not member.flag_bits & 0x800:
+                        # Some ZIP writers omit the UTF-8 filename flag.
+                        try:
+                            name = name.encode('cp437').decode('utf-8')
+                        except UnicodeDecodeError:
+                            pass
+                    parts = name.replace(chr(92), '/').split('/')
                     if member.is_dir() or '__MACOSX' in parts:
                         continue
-                    if member.filename.startswith(('/', chr(92))) or '..' in parts or ':' in parts[0]:
+                    if name.startswith(('/', chr(92))) or '..' in parts or ':' in parts[0]:
                         raise ValueError('Unsafe archive path')
                     if parts[-1] in allowed:
                         if member.file_size > MAX_BYTES or parts[-1] in files:
