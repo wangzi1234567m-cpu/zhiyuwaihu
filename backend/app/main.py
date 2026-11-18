@@ -107,7 +107,7 @@ def create_app(services=None):
 
     @app.get('/api/v1/sessions/{sid}',response_model=SessionView)
     def get_session(sid: UUID,user=Depends(owner)):
-        with Session() as db: return snapshot(db,owned(db,str(sid),user))
+        with Session.begin() as db: return snapshot(db,owned(db,str(sid),user,True))
 
     @app.post('/api/v1/sessions/{sid}/start',response_model=AcceptedTurn,status_code=202)
     async def start(sid: UUID,body: StartSession,user=Depends(owner),idempotency_key: str | None=Header(default=None)):

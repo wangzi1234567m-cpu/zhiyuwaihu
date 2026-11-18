@@ -69,6 +69,7 @@ export default function Home() {
           cursor.current=event.seq;
           if(event.payload.type==='turn.started') {
             generation.current=event.generation_id ?? null; setLive('');
+            setView(previous=>previous ? {...previous,busy:true,generation_id:event.generation_id} : previous);
           } else if(event.payload.type==='text.delta') {
             const delta=event.payload.text;
             if(event.generation_id===generation.current) setLive(x=>x+delta);
@@ -108,7 +109,8 @@ export default function Home() {
     if(!input.trim())return;
     const turn=await api<Accepted>(`/sessions/${sid}/turns`,{text:input,client_event_id:crypto.randomUUID()});
     generation.current=turn.generation_id; setInput(''); setLive('');
-    const next=await api<View>(`/sessions/${sid}`); setView(next);
+    const next=await api<View>(`/sessions/${sid}`);
+    if(activeSid.current===sid && next.last_event_seq>=cursor.current) setView(next);
   }
   return <main>
     <header><div><p className="eyebrow">智语外呼 / 开发联调</p><h1>商户资质告知助手</h1><p>合成数据 · 文本模式 · 不执行真实外呼</p></div><span className="badge">语音未配置</span></header>
