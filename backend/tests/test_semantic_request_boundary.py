@@ -21,3 +21,13 @@ def test_new_request_after_negative_self_description_is_preserved(text):
 ))
 def test_closer_negative_request_is_not_erased(text):
     assert 'request_callback' not in detect_intents(text)
+
+
+@pytest.mark.parametrize('text,intent', (
+    ('我又不能投诉', 'complaint_risk'),
+    ('我又不能回电', 'request_callback'),
+    ('你不必回电', 'request_callback'),
+    ('你不必改期', 'request_callback'),
+))
+def test_explicit_single_negation_is_not_affirmative(text, intent):
+    assert intent not in detect_intents(text)
