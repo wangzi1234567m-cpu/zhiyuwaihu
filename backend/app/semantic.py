@@ -97,7 +97,7 @@ UNCLEAR_MARKERS = ('那个东西', '怎么说来着', '呃', '啊这个', '那�
                    '就是那个', '你懂的', '啥来着')
 
 NEGATION_MARKERS = ('不是', '不用', '不要', '不需要', '不必', '没有', '别', '无需', '不打算', '不能',
-                    '不会', '没')
+                    '不会', '没', '并非', '绝非')
 
 #: **否定作用域**（本轮 t1 最小改进）：下面这些意图是高代价动作（转人工/回电/口径承诺），
 #: 只要触发词在本句内被否定，就不能成立——否则"我没投诉你们，只是问原因"会被判成投诉风险，
@@ -254,6 +254,9 @@ def _drop_object_scoped_negations(prefix: str) -> str:
 
 def _span_negated(text: str, start: int) -> bool:
     """该触发点是否落在否定作用域内（只看同句读内前文，且先剥离正反问句）。"""
+    if re.search(r'(?:并非|绝非)(?:不|没|别|无)(?:是|用|要|需要|必|打算|能|会|想|愿意?|有|需)?(?:要|去|再)?$',
+                 _clause_prefix(text, start, NEGATION_WINDOW)):
+        return False
     if _directly_negated(text, start):
         return True
     prefix = _QUESTION_FORM.sub('', _clause_prefix(text, start, NEGATION_WINDOW))

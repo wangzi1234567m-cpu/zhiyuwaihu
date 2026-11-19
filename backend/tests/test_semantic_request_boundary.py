@@ -52,3 +52,24 @@ def test_modal_or_lack_of_time_negation_does_not_trigger_action(text, intent):
 ))
 def test_unrelated_predicate_and_double_modal_negation_remain_affirmative(text, intent):
     assert intent in detect_intents(text)
+
+
+@pytest.mark.parametrize('text,intent', (
+    ('我并非不投诉', 'complaint_risk'),
+    ('我并非不想投诉', 'complaint_risk'),
+    ('我并非不愿投诉', 'complaint_risk'),
+    ('我并非不愿意投诉', 'complaint_risk'),
+    ('我绝非不想投诉', 'complaint_risk'),
+    ('我并非不想回电', 'request_callback'),
+    ('我绝非不需要回电', 'request_callback'),
+))
+def test_contrary_prefix_negates_unwillingness_before_action_checks(text, intent):
+    assert intent in detect_intents(text)
+
+
+@pytest.mark.parametrize('text,intent', (
+    ('我并非要投诉，只想问原因', 'complaint_risk'),
+    ('我绝非想回电，直接告诉我原因', 'request_callback'),
+))
+def test_single_contrary_prefix_still_negates_action(text, intent):
+    assert intent not in detect_intents(text)
