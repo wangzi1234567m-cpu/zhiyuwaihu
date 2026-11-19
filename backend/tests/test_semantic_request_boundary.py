@@ -31,3 +31,24 @@ def test_closer_negative_request_is_not_erased(text):
 ))
 def test_explicit_single_negation_is_not_affirmative(text, intent):
     assert intent not in detect_intents(text)
+
+
+@pytest.mark.parametrize('text,intent', (
+    ('我不想投诉，只想问原因', 'complaint_risk'),
+    ('我不愿投诉，只想问原因', 'complaint_risk'),
+    ('我不愿意投诉', 'complaint_risk'),
+    ('我不想回电，直接告诉我原因', 'request_callback'),
+    ('我没空再回电', 'request_callback'),
+    ('我没时间再回电', 'request_callback'),
+))
+def test_modal_or_lack_of_time_negation_does_not_trigger_action(text, intent):
+    assert intent not in detect_intents(text)
+
+
+@pytest.mark.parametrize('text,intent', (
+    ('我不想再解释要举报你们', 'complaint_risk'),
+    ('我没空请回电', 'request_callback'),
+    ('我不是不想投诉', 'complaint_risk'),
+))
+def test_unrelated_predicate_and_double_modal_negation_remain_affirmative(text, intent):
+    assert intent in detect_intents(text)

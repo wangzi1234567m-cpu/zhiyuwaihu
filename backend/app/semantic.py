@@ -233,7 +233,7 @@ _OBJECT_NEGATION = re.compile(
 #: 下一个请求动作上，否定不再延伸到后文。收紧到"请求/谓述"字，**不含人称代词**：
 #: `我没空你不用回电` 的 `你` 之后是新的否定（真的不用回电），不能因为换主语就当成放开。
 #: 定语紧贴触发点（`没时间回电`）不留间隔，仍算同域否定。
-_DETACHING_CONNECTORS = frozenset('请帮给烦就再要也想说问直先快赶马上立了着的啊呀吧呢哦嘛')
+_DETACHING_CONNECTORS = frozenset('请帮给烦就要也想说问直先快赶马上立了着的啊呀吧呢哦嘛')
 
 
 def _drop_object_scoped_negations(prefix: str) -> str:
@@ -258,6 +258,8 @@ def _span_negated(text: str, start: int) -> bool:
         return True
     prefix = _QUESTION_FORM.sub('', _clause_prefix(text, start, NEGATION_WINDOW))
     prefix = _strip_double_negation(prefix)
+    if re.search(r'(?:不想|不愿意?|没想)(?:要|去|再)?$', prefix):
+        return True
     prefix = _apply_forced_cut(prefix)
     prefix = _drop_object_scoped_negations(prefix)
     return any(marker in prefix for marker in NEGATION_MARKERS)
