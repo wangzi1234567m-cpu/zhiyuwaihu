@@ -99,6 +99,17 @@ UNCLEAR_MARKERS = ('那个东西', '怎么说来着', '呃', '啊这个', '那�
 NEGATION_MARKERS = ('不是', '不用', '不要', '不需要', '没有', '别', '无需', '不打算', '不能',
                     '不会', '没')
 
+#: **否定作用域**（本轮 t1 最小改进）：下面这些意图是高代价动作（转人工/回电/口径承诺），
+#: 只要触发词在本句内被否定，就不能成立——否则"我没投诉你们，只是问原因"会被判成投诉风险，
+#: "不用回电，你就说补什么材料"会被判成要求回电，把一次正常追问强行升级成人工/预约。
+#: 只收窄这两个意图；`deny_identity`/`refuse_contact` 本身就是否定式语义，不在此列（它们由
+#: 各自的规则与作用域词表负责），审核结论/权限/知识/阈值一律不在此处改动。
+NEGATION_SCOPED_INTENTS: tuple[str, ...] = ('complaint_risk', 'request_callback')
+
+#: 否定词向前回溯的窗口（字符）与句读边界：跨句读即视为不在同一否定作用域。
+NEGATION_WINDOW = 6
+CLAUSE_BREAK = re.compile(r'[，。！？；、,.!?;:：\n]')
+
 #: 模型绝不能输出的越权键（审核结论/权限/知识/门槛/白名单/成功）。
 FORBIDDEN_UNDERSTANDING_KEYS = frozenset({
     'review_conclusion', 'conclusion', 'approved', 'approve', 'verified', 'verify',
@@ -137,6 +148,137 @@ def normalize(text: str) -> str:
     return re.sub(r'[，。！？、,.!?;:；：""\'\'（）()《》\-—…~～]', '', value)
 
 
+def _clause_prefix(text: str, start: int, window: int) -> str:
+    """取触发点前、**同一句读内**的至多 window 个字符（跨句读不算同域）。"""
+    begin = max(0, start - window)
+    prefix = text[begin:start]
+    cut = 0
+    for match in CLAUSE_BREAK.finditer(prefix):
+        cut = match.end()
+    return prefix[cut:]
+
+
+def _clause_tail(text: str, start: int, window: int) -> str:
+    """取触发点后、**同一句读内**的至多 window 个字符。"""
+    tail = text[start:start + window]
+    match = CLAUSE_BREAK.search(tail)
+    return tail[:match.start()] if match else tail
+
+
+#: 汉语**正反问句**（"能不能/可不可以/会不会/要不要"）里含否定字，但语义是询问不是否定。
+#: 不先剥离它，\"能不能回电跟我说一下\"会被当成"否定回电"，把正常预约请求误降级成 unclear。
+_QUESTION_FORM = re.compile(r'[能可会要](?:不|没)[能可会要]'
+                            r'|是(?:不|没)是|有(?:不|没)有|是否')
+
+#: **直接否定**：否定词紧贴在触发词前面（`不投诉` / `没投诉` / `别回电` / `无需回电`）。
+#: 这是最强的否定证据，不受 6 字窗口与连接词影响；距离稍远就必须靠上面的窗口与对象作用域。
+_DIRECT_NEGATION_PREFIXES = ('不', '没', '别', '无', '未')
+
+
+#: 双重否定 / 反诘：`不得不投诉` `不能不投诉` `没办法只能投诉` 表面两个否定字，语义是**肯定**。
+#: 不先认出来，紧邻否定规则会把真投诉当成"否认投诉"抹掉（比修复前更糟）。
+_DOUBLE_NEGATION_TAILS = ('不得不', '不能不', '不可能不', '不是不', '没有不', '不会不',
+                          '无不', '没办法不', '又不能')
+
+#: 触发点前的"只能/只好"类**被迫**标记：`没办法只能投诉` 是被迫投诉，不是否认投诉。
+#: 只用于**截断**：这些标记之前的内容不再参与否定作用域判定。
+_FORCED_MARKERS = ('只能', '只好', '只得', '必须')
+
+
+def _strip_double_negation(prefix: str) -> str:
+    """去掉双重否定结构（`不得不`/`不能不`/`不可能不`…），它们整体表肯定。"""
+    for tail in _DOUBLE_NEGATION_TAILS:
+        prefix = prefix.replace(tail, '')
+    return prefix
+
+
+def _apply_forced_cut(prefix: str) -> str:
+    """`只好/只能/必须` 之后是新谓述，之前的内容不再属于本触发点的否定作用域。"""
+    cut = -1
+    for marker in _FORCED_MARKERS:
+        found = prefix.rfind(marker)
+        if found >= 0:
+            cut = max(cut, found + len(marker))
+    return prefix[cut:] if cut >= 0 else prefix
+
+
+def _directly_negated(text: str, start: int) -> bool:
+    """触发词是否被**紧邻**其前的否定词直接否定（`不投诉`、`没回电`）。
+
+    双重否定与"只能/只好"被迫式不算否定：`不得不投诉` 是肯定投诉。
+    """
+    if start <= 0:
+        return False
+    head = text[:start]
+    if head.endswith(_DOUBLE_NEGATION_TAILS):
+        return False
+    if any(head.endswith(marker) for marker in _FORCED_MARKERS):
+        return False
+    if text[start - 1] in _DIRECT_NEGATION_PREFIXES:
+        return True
+    # `没有投诉`：否定词是两个字的"没有"。
+    return text[max(0, start - 2):start] == '没有'
+
+
+#: \"否定 + 自身对象/状态\"的**封闭短语**：被否定的是说话人自己的空闲、能力或便利，
+#: 不是后文那个动作。`我没空请回电` / `我不能等了要投诉` / `我不会操作，你们帮我投诉`
+#: 里的否定都只闭合在自己的对象上；旧实现只看"前 6 字里有没有否定词"，于是把后面的
+#: 真实回电请求、真实投诉一并抹掉，降级成 unclear。
+_OBJECT_NEGATION = re.compile(
+    r'(?:没有?|不)(?:空|时间|工夫|功夫)'
+    r'|不会(?:操作|用|弄|搞|填|传|上网|电脑|手机|打字)'
+    r'|不能(?:等|上网|过来|再等)')
+
+#: 出现在"对象否定短语"与触发点之间的**新谓述标记**：请/帮/就/了/要… 说明话已经翻到
+#: 下一个请求动作上，否定不再延伸到后文。收紧到"请求/谓述"字，**不含人称代词**：
+#: `我没空你不用回电` 的 `你` 之后是新的否定（真的不用回电），不能因为换主语就当成放开。
+#: 定语紧贴触发点（`没时间回电`）不留间隔，仍算同域否定。
+_DETACHING_CONNECTORS = frozenset('请帮给烦就再要也想说问直先快赶马上立了着的啊呀吧呢哦嘛')
+
+
+def _drop_object_scoped_negations(prefix: str) -> str:
+    """把已被后文新谓述隔开的"否定+自身对象"短语从作用域前文中去掉。"""
+    kept: list[str] = []
+    last = 0
+    for match in _OBJECT_NEGATION.finditer(prefix):
+        gap = prefix[match.end():]
+        if not gap:
+            continue
+        if gap[0] not in _DETACHING_CONNECTORS and not any(w in gap for w in ("请", "麻烦", "烦请")):
+            continue
+        kept.append(prefix[last:match.start()])
+        last = match.end()
+    kept.append(prefix[last:])
+    return ''.join(kept)
+
+
+def _span_negated(text: str, start: int) -> bool:
+    """该触发点是否落在否定作用域内（只看同句读内前文，且先剥离正反问句）。"""
+    if _directly_negated(text, start):
+        return True
+    prefix = _QUESTION_FORM.sub('', _clause_prefix(text, start, NEGATION_WINDOW))
+    prefix = _strip_double_negation(prefix)
+    prefix = _apply_forced_cut(prefix)
+    prefix = _drop_object_scoped_negations(prefix)
+    return any(marker in prefix for marker in NEGATION_MARKERS)
+
+
+#: 裸否定词（本身不是"拒绝联系"的强表述）后接这些**具体对象**时，否定作用在对象上，
+#: 而不是作用在"是否继续联系"上：\"我不需要改期\"是拒绝改期，不是拒绝接听。
+_BARE_REFUSAL_WORDS = ('不需要', '不用', '不必', '无需')
+_SCOPED_REFUSAL_OBJECTS = ('改期', '换时间', '回电', '回电话', '电话', '预约', '邮件')
+
+
+def _refusal_targets_object(text: str, start: int) -> bool:
+    """该 refusal 触发点是否只否定了一个具体对象（改期/回电…），而非拒绝继续联系。"""
+    for word in _BARE_REFUSAL_WORDS:
+        if not text.startswith(word, start):
+            continue
+        tail = _clause_tail(text, start + len(word), NEGATION_WINDOW)
+        return any(tail.startswith(obj) for obj in _SCOPED_REFUSAL_OBJECTS)
+    return False
+
+
 def detect_intents(text: str) -> list[str]:
     """确定性意图抽取（无网络、可重复）。聚合意图保留全部命中项。
 
@@ -144,14 +286,34 @@ def detect_intents(text: str) -> list[str]:
     模式只描述表达家族，不匹配任何评测句子全文，因此不会因为"某句话"才通过。
     """
     raw = text or ''
-    hits: list[str] = []
+    # 先按"触发位置"收集，而不是只问"出现了没"：否定作用域要按**每个**触发点判断，
+    # 只要有一个触发点没被否定，该意图仍然成立（聚合语义不变）。
+    spans: dict[str, list[int]] = {}
     for intent, words in INTENT_RULES:
-        if any(word in raw for word in words):
-            hits.append(intent)
+        for word in words:
+            idx = raw.find(word)
+            while idx != -1:
+                spans.setdefault(intent, []).append(idx)
+                idx = raw.find(word, idx + 1)
     for intent, patterns in _INTENT_PATTERNS:
-        if any(re.search(pattern, raw) for pattern in patterns):
-            if intent not in hits:
-                hits.append(intent)
+        for pattern in patterns:
+            for match in re.finditer(pattern, raw):
+                spans.setdefault(intent, []).append(match.start())
+    # 否定作用域：仅对高代价意图收窄（投诉/回电），全部触发点都被否定才摘除意图。
+    for intent in NEGATION_SCOPED_INTENTS:
+        if intent in spans and all(_span_negated(raw, start) for start in spans[intent]):
+            spans.pop(intent, None)
+    # 拒绝联系的对象作用域：\"我不需要改期\"只否定改期这一具体对象，不构成拒绝继续联系。
+    if 'refuse_contact' in spans and all(_refusal_targets_object(raw, start)
+                                         for start in spans['refuse_contact']):
+        spans.pop('refuse_contact', None)
+    hits: list[str] = []
+    for intent, _words in INTENT_RULES:
+        if intent in spans:
+            hits.append(intent)
+    for intent, _patterns in _INTENT_PATTERNS:
+        if intent in spans and intent not in hits:
+            hits.append(intent)
     # 输出顺序固定为 ALLOWED_INTENTS 顺序，保证可重复且与契约枚举一致。
     order = {name: index for index, name in enumerate(ALLOWED_INTENTS)}
     hits.sort(key=lambda name: order.get(name, len(order)))
