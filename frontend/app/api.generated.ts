@@ -72,6 +72,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dev/routing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Routing Catalog */
+        get: operations["routing_catalog_api_v1_dev_routing_get"];
+        put?: never;
+        /** Preview Routing */
+        post: operations["preview_routing_api_v1_dev_routing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications": {
         parameters: {
             query?: never;
@@ -329,7 +347,7 @@ export interface components {
              * Contact Status
              * @enum {string}
              */
-            contact_status: "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required";
+            contact_status: "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
             /**
              * Explanation Status
              * @enum {string}
@@ -365,15 +383,44 @@ export interface components {
             /**
              * Model
              * @default fake
-             * @constant
+             * @enum {string}
              */
-            model: "fake";
+            model: "fake" | "glm";
             /**
              * Schema Version
              * @default 0.3.0
              * @constant
              */
             schema_version: "0.3.0";
+        };
+        /** Catalog */
+        Catalog: {
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "workbook" | "synthetic";
+            /** Scenarios */
+            scenarios: components["schemas"]["Scenario"][];
+        };
+        /** Conditions */
+        Conditions: {
+            /** Row */
+            row: number;
+            /** Submission */
+            submission: number;
+            /** Missed */
+            missed: number;
+            /**
+             * Callback
+             * @default false
+             */
+            callback: boolean;
+            /**
+             * Risk
+             * @default false
+             */
+            risk: boolean;
         };
         /** CreateSession */
         CreateSession: {
@@ -473,6 +520,8 @@ export interface components {
         };
         /** OperationResult */
         OperationResult: {
+            /** Kind */
+            kind?: ("reject_application" | "create_callback" | "create_followup" | "writeback") | null;
             /**
              * Operation Id
              * Format: uuid
@@ -491,6 +540,33 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** Outcome */
+        Outcome: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "phone" | "jingmai" | "followup" | "manual";
+            /** Reason */
+            reason: string;
+        };
+        /** Scenario */
+        Scenario: {
+            /** Row */
+            row: number;
+            /** Label */
+            label: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "phone" | "jingmai";
+            /**
+             * Missing Template
+             * @default false
+             */
+            missing_template: boolean;
         };
         /** SessionView */
         SessionView: {
@@ -653,6 +729,15 @@ export interface components {
              * @default null
              */
             action_payload: (components["schemas"]["RejectPayload"] | components["schemas"]["CallbackPayload"] | components["schemas"]["FollowupPayload"] | components["schemas"]["WritebackPayload"]) | null;
+            /** @default null */
+            understanding: components["schemas"]["Understanding"] | null;
+            /**
+             * Contact Outcome
+             * @default null
+             */
+            contact_outcome: ("verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown") | null;
+            /** Required Slot Missing */
+            required_slot_missing?: string[];
         };
         /** CallbackConfirmation */
         CallbackConfirmation: {
@@ -903,6 +988,29 @@ export interface components {
             /** Fixture Response */
             fixture_response: string;
         };
+        /**
+         * NotificationEvidence
+         * @description 已发出的告知证据；由服务端在消息落库后写入，Agent 只读。
+         */
+        NotificationEvidence: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "explanation" | "reason_notice" | "remedy_notice" | "callback_notice";
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /** Knowledge Entry Ids */
+            knowledge_entry_ids?: string[];
+            /**
+             * Completed
+             * @default false
+             */
+            completed: boolean;
+        };
         /** OperationUpdated */
         OperationUpdated: {
             /**
@@ -991,8 +1099,49 @@ export interface components {
             rule_version: string;
             /** Required Evidence */
             required_evidence: string[];
+            /** Evidence */
+            evidence?: components["schemas"]["RoutingEvidence"][];
+            /**
+             * Submission Attempt
+             * @default 1
+             */
+            submission_attempt: number;
+            /**
+             * Call Attempt
+             * @default 0
+             */
+            call_attempt: number;
         };
-        /** SessionContext */
+        /**
+         * RoutingEvidence
+         * @description 规则命中证据：为什么得到这个 route，可追溯、不含个人信息。
+         */
+        RoutingEvidence: {
+            /** Code */
+            code: string;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /**
+             * Source
+             * @default rule
+             * @enum {string}
+             */
+            source: "case" | "rule" | "knowledge" | "contact_history" | "authorization" | "attempts";
+            /**
+             * Ref
+             * @default null
+             */
+            ref: string | null;
+            /** Knowledge Entry Ids */
+            knowledge_entry_ids?: string[];
+        };
+        /**
+         * SessionContext
+         * @description 服务端组装的可信只读上下文。Agent 只能读，不能写入或回填。
+         */
         SessionContext: {
             /**
              * Session Id
@@ -1028,6 +1177,40 @@ export interface components {
             knowledge_version: string;
             /** Model Version */
             model_version: string;
+            /**
+             * State
+             * @default CASE_READY
+             * @enum {string}
+             */
+            state: "CASE_READY" | "ROUTING" | "OPENING" | "VERIFYING" | "EXPLAINING" | "QA" | "CALLBACK_PENDING" | "CLOSING" | "ACTION_READY" | "EXECUTING" | "RECONCILING" | "WRITEBACK_PENDING" | "CLOSED" | "MANUAL_REVIEW";
+            /** @default null */
+            routing_decision: components["schemas"]["RoutingDecision"] | null;
+            /** Notifications */
+            notifications?: components["schemas"]["NotificationEvidence"][];
+            /**
+             * Contact Outcome
+             * @default unknown
+             * @enum {string}
+             */
+            contact_outcome: "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
+            /**
+             * Contact Outcome Source
+             * @default none
+             * @enum {string}
+             */
+            contact_outcome_source: "none" | "domain_event" | "demo_text_rule";
+            /**
+             * Submission Attempt
+             * @default 1
+             */
+            submission_attempt: number;
+            /**
+             * Call Attempt
+             * @default 0
+             */
+            call_attempt: number;
+            /** Operation Ids */
+            operation_ids?: string[];
         };
         /** SessionEnded */
         SessionEnded: {
@@ -1126,6 +1309,51 @@ export interface components {
              * Format: uuid
              */
             message_id: string;
+        };
+        /**
+         * Understanding
+         * @description 结构化理解结果（内部 DTO，服务器再校验）。模型不能写 verified/审核结论/成功。
+         */
+        Understanding: {
+            /** Intents */
+            intents: ("confirm_identity" | "deny_identity" | "ask_reason" | "ask_remedy" | "ask_guarantee" | "ask_source" | "ask_outcome" | "refuse_contact" | "request_callback" | "acknowledge" | "unclear" | "complaint_risk")[];
+            /** Slots */
+            slots?: {
+                [key: string]: string;
+            };
+            /** Evidence Message Ids */
+            evidence_message_ids?: string[];
+            /**
+             * Needs Clarification
+             * @default false
+             */
+            needs_clarification: boolean;
+            /**
+             * Clarification Reason
+             * @default null
+             */
+            clarification_reason: string | null;
+            /**
+             * Negated
+             * @default false
+             */
+            negated: boolean;
+            /**
+             * Multi Intent
+             * @default false
+             */
+            multi_intent: boolean;
+            /**
+             * Contact Outcome Hint
+             * @default null
+             */
+            contact_outcome_hint: ("verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown") | null;
+            /**
+             * Source
+             * @default fake
+             * @enum {string}
+             */
+            source: "fake" | "glm" | "rules";
         };
         /** WritebackPayload */
         WritebackPayload: {
@@ -1240,6 +1468,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Capabilities"];
+                };
+            };
+        };
+    };
+    routing_catalog_api_v1_dev_routing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Catalog"];
+                };
+            };
+        };
+    };
+    preview_routing_api_v1_dev_routing_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Conditions"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Outcome"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

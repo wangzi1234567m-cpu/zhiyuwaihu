@@ -68,10 +68,11 @@ def convert(inputs):
                 sheet = workbook[sheet_name]
                 is_main = sheet_name == MAIN
                 categories = {}
-                if is_main:
+                is_taxonomy = is_main or sheet_name in ('京麦驳回场景', '电话场景')
+                if is_taxonomy:
                     for region in sheet.merged_cells.ranges:
                         if region.min_col == region.max_col and region.max_col <= 3:
-                            for row in range(max(13, region.min_row), min(80, region.max_row) + 1):
+                            for row in range(max(13, region.min_row), region.max_row + 1):
                                 categories[row, region.min_col] = sheet.cell(region.min_row, region.min_col).value
                 rows = sheet.iter_rows(min_row=13, max_row=80) if is_main else sheet.iter_rows()
                 for cells in rows:
@@ -89,7 +90,7 @@ def convert(inputs):
                     issue_codes = ['formula_requires_review'] if formulas else []
                     entries.append({'source_ref': source_ref, 'raw_cells': raw,
                                     'classification': [categories.get((row, i), raw.get(col))
-                                                       for i, col in enumerate('ABC', 1)] if is_main else [],
+                                                       for i, col in enumerate('ABC', 1)] if is_taxonomy else [],
                                     'channel': {'电话': 'phone', '京麦驳回': 'jingmai'}.get(channel),
                                     'internal_comments': notes, 'status': 'draft',
                                     'issue_codes': issue_codes})
@@ -113,8 +114,9 @@ def main():
     parser.add_argument('--output', type=Path, required=True, help='Private path outside the repository')
     args = parser.parse_args()
     output = args.output.resolve()
-    if output.is_relative_to(Path(__file__).resolve().parents[1]):
-        parser.error('Output must be outside the checkout')
+    root = Path(__file__).resolve().parents[1]
+    if output.is_relative_to(root) and not output.is_relative_to(root / 'private-evidence'):
+        parser.error('Use private-evidence/ or a directory outside the checkout')
     package = convert(args.inputs)
     with output.open('x', encoding='utf-8') as handle:
         json.dump(package, handle, ensure_ascii=False, indent=2, default=str)

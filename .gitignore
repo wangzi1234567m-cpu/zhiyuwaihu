@@ -17,3 +17,100 @@ evaluation/holdout-private/
 *.tsbuildinfo
 playwright-report/
 test-results/
+
+.workbench/
+.project-brief/
+.runtime/
+.delivery-private/
+
+# ---- mission-local runtime data (architect/t1, 2026-11-17) -------------------
+# Never commit these: they are large, machine-specific, or contain credentials.
+# A portable PostgreSQL cluster + binaries and the local Python/uv toolchain live
+# inside this mission root so the mission never touches an existing cluster.
+.pgdata/
+.pglog/
+.pgserver/
+.pgserver-cache/
+.uv-cache/
+# Ad-hoc probe output that may echo absolute host paths (personal directory
+# listings, interpreter locations). Keep it on disk, out of the index.
+.qa/
+.qa-probe-env.json
+.qa-probe-tools*.json
+
+# ---- t6 index hygiene (architect, 2026-11-17) --------------------------------
+# Anything below is either regenerable, machine-specific, or carries host paths
+# / secrets. It must never be staged. `.gitignore` is the first gate; the second
+# gate is the coordinator's tracked-path check when packaging the release.
+*.log
+
+# Model / provider logs and prompt transcripts (may contain keys or raw text).
+.model-logs/
+model-logs/
+.model-runtime/
+
+# Secrets, credentials, private keys and local config overrides.
+secrets/
+secret/
+credentials/
+credentials.json
+*.pem
+*.key
+*.pfx
+*.p12
+.npmrc
+.pypirc
+
+# Local databases / dumps (never commit a real cluster or a data dump).
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+pgdata/
+pgdata-*/
+postgres-data/
+
+# Dependency trees and build caches (reproducible from lock files).
+deps/
+vendor/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.turbo/
+frontend/coverage/
+.coverage
+htmlcov/
+
+# Playwright / browser artefacts.
+ms-playwright/
+.playwright/
+browser-artifacts/
+*.webm
+*.har
+
+# Temporary probe scratch dirs created by verification scripts.
+scripts/.rsi_head_probe/
+scripts/.tmp/
+.tmp-probe/
+probe-out/
+
+# Delivery packaging output (git bundle + patch). These are *transport* artefacts
+# handed to the coordinator, not repository content: the bundle already contains
+# the full history and the patch duplicates the work tree, so committing them
+# would be circular and add ~45 MiB. The small text summaries under
+# docs/agent/evidence/t6-* stay tracked.
+docs/agent/delivery/
+
+# OS / editor noise.
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+
+# 私有保留评测与运行账本由协调者保管，不进入公开分支。
+backend/app/rsi/scenarios/holdout*.json
+backend/app/rsi/version_store.json
+evidence/

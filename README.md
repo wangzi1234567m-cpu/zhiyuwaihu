@@ -1,5 +1,7 @@
 # 智语外呼 · 文本联调骨架 0.3.0
 
+2026-11-17 Agent增量的当前能力、复验结果、启动方式和剩余联调事项见[Agent交付说明](docs/agent/DELIVERY.md)。下文保留原骨架的环境与使用说明。
+
 京东 POP 商户资质审核驳回告知与整改指导的**合成演示骨架**。Next.js＋TypeScript、FastAPI＋Pydantic、PostgreSQL、REST＋SSE。默认FakeModel，不需要云账号，不执行真实外呼。
 
 代码已搭建；本机WSL／Docker问题按团队决定稍后处理。已绕过Docker，用临时PostgreSQL完成30项测试及三轮浏览器业务验收，详见 [验证记录](docs/verification.md)。

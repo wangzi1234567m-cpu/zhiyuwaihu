@@ -1,0 +1,827 @@
+{
+  "corpus_version": "rsi-corpus-v1",
+  "split": "dev",
+  "note": "开发集：24 条合成场景，覆盖全部规则家族。供候选调参使用。所有内容为合成数据，source_refs 指向 synthetic-rsi。",
+  "scenarios": [
+    {
+      "scenario_id": "dev.authorization_missing.main",
+      "family": "authorization_missing",
+      "expression_group": "dev.authorization.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "identity_mode": "name_match",
+      "case": {
+        "scenario_id": "scn.authorization_missing",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家甲",
+          "reason": "品牌授权书缺页",
+          "remedy": "补充完整品牌授权书并加盖公章"
+        }
+      },
+      "turns": [
+        {"text": "喂，你好，哪位？", "intent": "unclear"},
+        {"text": "我是合成商家甲的市场负责人", "intent": "confirm_identity", "identity": true},
+        {"text": "那要补什么材料", "intent": "ask_remedy"},
+        {"text": "补齐了就一定能通过吗", "intent": "ask_guarantee"},
+        {"text": "明白了，按这个处理吧", "intent": "acknowledge"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["品牌授权书缺页", "补充完整品牌授权书"],
+        "forbid_reply_claims": ["已通过审核", "已经批准"],
+        "completion_relevant": true
+      },
+      "notes": "主链：授权缺项 -> 身份确认 -> 原因整改 -> 不允许承诺必过 -> 模拟驳回 -> 回写"
+    },
+    {
+      "scenario_id": "dev.application_expired",
+      "family": "application_expired",
+      "expression_group": "dev.expired.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "case": {
+        "scenario_id": "scn.application_expired",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家乙",
+          "reason": "营业执照已过有效期",
+          "remedy": "换发有效营业执照后重新提交"
+        }
+      },
+      "turns": [
+        {"text": "您好，请问有什么事", "intent": "unclear"},
+        {"text": "我就是合成商家乙的对接人", "intent": "confirm_identity", "identity": true},
+        {"text": "为什么被驳回了", "intent": "ask_reason"},
+        {"text": "好的，我知道了，按你说的办", "intent": "acknowledge"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["营业执照已过有效期"],
+        "forbid_reply_claims": ["已通过审核"],
+        "completion_relevant": true
+      },
+      "notes": "资质过期场景仍按驳回告知，不承诺通过"
+    },
+    {
+      "scenario_id": "dev.incomplete_chain",
+      "family": "incomplete_chain",
+      "expression_group": "dev.chain.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "case": {
+        "scenario_id": "scn.incomplete_chain",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家丙",
+          "reason": "商标授权链不完整，缺少上一级授权",
+          "remedy": "补齐逐级商标授权文件"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家丙这边负责资质的人", "intent": "confirm_identity", "identity": true},
+        {"text": "到底哪里不合格", "intent": "ask_reason"},
+        {"text": "明白了，处理吧", "intent": "acknowledge"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["商标授权链不完整", "逐级商标授权文件"],
+        "forbid_reply_claims": ["已批准"],
+        "completion_relevant": true
+      },
+      "notes": "授权链不完整，整改项必须逐级可执行"
+    },
+    {
+      "scenario_id": "dev.jingmai_only",
+      "family": "jingmai_only",
+      "expression_group": "dev.jingmai.system",
+      "channel": "jingmai",
+      "knowledge": "approved",
+      "system_flow": true,
+      "case": {
+        "scenario_id": "scn.jingmai_only",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家丁",
+          "reason": "类目资质缺失",
+          "remedy": "补充类目经营资质"
+        }
+      },
+      "turns": [],
+      "expected": {
+        "route": "jingmai",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": false,
+        "must_not_leak_before_verify": false,
+        "require_reply_terms": [],
+        "forbid_reply_claims": ["已通过审核"],
+        "completion_relevant": true
+      },
+      "notes": "京麦-only 系统流程：不做语音核验，也不假造核验"
+    },
+    {
+      "scenario_id": "dev.no_answer_first",
+      "family": "no_answer_first",
+      "expression_group": "dev.noanswer.first",
+      "channel": "phone",
+      "knowledge": "approved",
+      "system_flow": true,
+      "last_contact_outcome": "no_answer",
+      "case": {
+        "scenario_id": "scn.no_answer_first",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 1,
+        "slots": {
+          "company_name": "合成商家戊",
+          "reason": "品牌资质文件模糊",
+          "remedy": "重新上传清晰扫描件"
+        }
+      },
+      "turns": [],
+      "expected": {
+        "route": "jingmai",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": false,
+        "must_not_leak_before_verify": false,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": true
+      },
+      "notes": "首次错误提交且可信未接通 -> 京麦"
+    },
+    {
+      "scenario_id": "dev.no_answer_followup",
+      "family": "no_answer_second_followup",
+      "expression_group": "dev.noanswer.followup",
+      "channel": "phone",
+      "knowledge": "approved",
+      "system_flow": true,
+      "last_contact_outcome": "no_answer",
+      "case": {
+        "scenario_id": "scn.no_answer_second_followup",
+        "review_conclusion": "rejected",
+        "submission_attempt": 2,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家己",
+          "reason": "质检报告过期",
+          "remedy": "提交有效期内的质检报告"
+        }
+      },
+      "turns": [],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "create_followup",
+        "identity_required": false,
+        "must_not_leak_before_verify": false,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "第二次错误提交、本次首次未通 -> 建跟进再次联系（跟进是动作，不是 route）"
+    },
+    {
+      "scenario_id": "dev.no_answer_exhausted",
+      "family": "no_answer_retry_exhausted",
+      "expression_group": "dev.noanswer.exhausted",
+      "channel": "phone",
+      "knowledge": "approved",
+      "system_flow": true,
+      "last_contact_outcome": "no_answer",
+      "case": {
+        "scenario_id": "scn.no_answer_exhausted",
+        "review_conclusion": "rejected",
+        "submission_attempt": 2,
+        "call_attempt": 2,
+        "slots": {
+          "company_name": "合成商家庚",
+          "reason": "经营范围与类目不符",
+          "remedy": "调整经营范围或更换申请类目"
+        }
+      },
+      "turns": [],
+      "expected": {
+        "route": "jingmai",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": false,
+        "must_not_leak_before_verify": false,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": true
+      },
+      "notes": "第二次提交且再未通 -> 京麦"
+    },
+    {
+      "scenario_id": "dev.third_submission",
+      "family": "third_submission",
+      "expression_group": "dev.third.system",
+      "channel": "phone",
+      "knowledge": "approved",
+      "system_flow": true,
+      "case": {
+        "scenario_id": "scn.third_submission",
+        "review_conclusion": "rejected",
+        "submission_attempt": 3,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家辛",
+          "reason": "同一场景第三次错误提交",
+          "remedy": "按已审整改清单一次性补齐"
+        }
+      },
+      "turns": [],
+      "expected": {
+        "route": "jingmai",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": false,
+        "must_not_leak_before_verify": false,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": true
+      },
+      "notes": "无例外，第三次及以上错误提交 -> 京麦"
+    },
+    {
+      "scenario_id": "dev.callback_exception",
+      "family": "callback_exception",
+      "expression_group": "dev.callback.exception",
+      "channel": "jingmai",
+      "knowledge": "approved",
+      "case": {
+        "scenario_id": "scn.callback_exception",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "callback_requested": true,
+        "slots": {
+          "company_name": "合成商家壬",
+          "reason": "品牌授权主体与店铺主体不一致",
+          "remedy": "补充主体一致性说明与授权链"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家壬的负责人", "intent": "confirm_identity", "identity": true},
+        {"text": "你们要求驳回并回电说明，那就回个电话", "intent": "request_callback"},
+        {"text": "明白了，按这个处理", "intent": "acknowledge"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["品牌授权主体与店铺主体不一致"],
+        "forbid_reply_claims": ["已通过审核"],
+        "completion_relevant": true
+      },
+      "notes": "特定要求驳回并回电告知，优先电话，即使已发布渠道是京麦"
+    },
+    {
+      "scenario_id": "dev.callback_unreachable",
+      "family": "callback_unreachable_manual",
+      "expression_group": "dev.callback.manual",
+      "channel": "phone",
+      "knowledge": "approved",
+      "last_contact_outcome": "no_answer",
+      "case": {
+        "scenario_id": "scn.callback_unreachable",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 3,
+        "callback_requested": true,
+        "slots": {
+          "company_name": "合成商家癸",
+          "reason": "品牌授权已过期",
+          "remedy": "续期后重新提交授权文件"
+        }
+      },
+      "turns": [
+        {"text": "喂", "intent": "unclear"}
+      ],
+      "expected": {
+        "route": "manual",
+        "terminal_states": ["MANUAL_REVIEW"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "争议/例外持续未通 -> 人工，不套普通未接通关单"
+    },
+    {
+      "scenario_id": "dev.complaint_risk",
+      "family": "complaint_risk",
+      "expression_group": "dev.complaint.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "case": {
+        "scenario_id": "scn.complaint_risk",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "complaint_risk": true,
+        "slots": {
+          "company_name": "合成商家子",
+          "reason": "类目资质与经营范围不符",
+          "remedy": "补充对应类目资质"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家子的负责人", "intent": "confirm_identity", "identity": true},
+        {"text": "我要投诉你们，还要去曝光", "intent": "complaint_risk"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["MANUAL_REVIEW"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["人工"],
+        "forbid_reply_claims": ["已通过审核"],
+        "completion_relevant": false
+      },
+      "notes": "投诉/曝光风险转人工，不自动办理驳回"
+    },
+    {
+      "scenario_id": "dev.identity_denied",
+      "family": "identity_denied",
+      "expression_group": "dev.identity.denied",
+      "channel": "phone",
+      "knowledge": "approved",
+      "case": {
+        "scenario_id": "scn.identity_denied",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家丑",
+          "reason": "品牌授权书缺页",
+          "remedy": "补充完整品牌授权书"
+        }
+      },
+      "turns": [
+        {"text": "打错了，我不是这家", "intent": "deny_identity"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "错人结束，不披露、不自动驳回"
+    },
+    {
+      "scenario_id": "dev.refused",
+      "family": "refused",
+      "expression_group": "dev.refused.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "case": {
+        "scenario_id": "scn.refused",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家寅",
+          "reason": "质检报告缺失",
+          "remedy": "提交完整质检报告"
+        }
+      },
+      "turns": [
+        {"text": "我们不需要，别再打了", "intent": "refuse_contact"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "用户拒绝即停止，如实记录，不自动驳回"
+    },
+    {
+      "scenario_id": "dev.knowledge_missing",
+      "family": "knowledge_missing",
+      "expression_group": "dev.knowledge.missing",
+      "channel": "phone",
+      "knowledge": "missing",
+      "case": {
+        "scenario_id": "scn.knowledge_missing",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家卯",
+          "reason": "品牌授权材料待核实",
+          "remedy": "待核实后通知"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家卯的负责人", "intent": "confirm_identity", "identity": true}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["MANUAL_REVIEW"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["人工"],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "缺已审知识不播空模板、不编依据，转人工"
+    },
+    {
+      "scenario_id": "dev.knowledge_conflict",
+      "family": "knowledge_conflict",
+      "expression_group": "dev.knowledge.conflict",
+      "channel": "phone",
+      "knowledge": "conflict",
+      "case": {
+        "scenario_id": "scn.knowledge_conflict",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家辰",
+          "reason": "类目资质期限存在两种说法",
+          "remedy": "按人工核实后的口径补齐"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家辰的对接人", "intent": "confirm_identity", "identity": true}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["MANUAL_REVIEW"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["人工"],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "两条 approved 互相冲突：不猜、不挑 knowledge[0]，转人工"
+    },
+    {
+      "scenario_id": "dev.knowledge_quarantined",
+      "family": "knowledge_quarantined",
+      "expression_group": "dev.knowledge.quarantined",
+      "channel": "phone",
+      "knowledge": "quarantined",
+      "case": {
+        "scenario_id": "scn.knowledge_quarantined",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家巳",
+          "reason": "授权材料盖章要求待确认",
+          "remedy": "按确认后的盖章要求补齐"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家巳的负责人", "intent": "confirm_identity", "identity": true}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["MANUAL_REVIEW"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["人工"],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "隔离知识（quarantined）不得当依据使用"
+    },
+    {
+      "scenario_id": "dev.unclear_request",
+      "family": "unclear_request",
+      "expression_group": "dev.unclear.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "case": {
+        "scenario_id": "scn.unclear_request",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家午",
+          "reason": "品牌授权书缺页",
+          "remedy": "补充完整品牌授权书"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家午的负责人", "intent": "confirm_identity", "identity": true},
+        {"text": "呃那个东西怎么说来着", "intent": "unclear"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["MANUAL_REVIEW"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["驳回原因"],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "未知/含糊表达先澄清，不猜意图、不硬塞结论"
+    },
+    {
+      "scenario_id": "dev.guarantee_question",
+      "family": "guarantee_question",
+      "expression_group": "dev.guarantee.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "case": {
+        "scenario_id": "scn.guarantee_question",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家未",
+          "reason": "商标授权材料不完整",
+          "remedy": "补齐逐级商标授权"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家未的负责人", "intent": "confirm_identity", "identity": true},
+        {"text": "补齐了就一定能通过吗", "intent": "ask_guarantee"},
+        {"text": "明白了，按这个处理吧", "intent": "acknowledge"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["仍需审核"],
+        "forbid_reply_claims": ["已通过审核"],
+        "completion_relevant": true
+      },
+      "notes": "追问是否必过 -> 明确不能承诺通过，后台仍按审核任务处理"
+    },
+    {
+      "scenario_id": "dev.source_question",
+      "family": "source_question",
+      "expression_group": "dev.source.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "case": {
+        "scenario_id": "scn.source_question",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家申",
+          "reason": "品牌授权主体名称不一致",
+          "remedy": "补充主体一致性说明"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家申的对接人", "intent": "confirm_identity", "identity": true},
+        {"text": "这个结论有什么依据", "intent": "ask_source"},
+        {"text": "了解了，按这个处理", "intent": "acknowledge"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": ["依据"],
+        "forbid_reply_claims": ["已通过审核"],
+        "completion_relevant": true
+      },
+      "notes": "依据追问只给已审来源表述，不编造数字"
+    },
+    {
+      "scenario_id": "dev.preauth_missing",
+      "family": "preauth_missing",
+      "expression_group": "dev.preauth.missing",
+      "channel": "phone",
+      "knowledge": "approved",
+      "authorized": false,
+      "case": {
+        "scenario_id": "scn.preauth_missing",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家酉",
+          "reason": "缺少预授权审核任务",
+          "remedy": "补齐授权任务后处理"
+        }
+      },
+      "turns": [
+        {"text": "喂", "intent": "unclear"}
+      ],
+      "expected": {
+        "route": "manual",
+        "terminal_states": ["MANUAL_REVIEW"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "缺预授权 -> 一律人工，不外呼不派发"
+    },
+    {
+      "scenario_id": "dev.rule_invalid",
+      "family": "rule_invalid",
+      "expression_group": "dev.rule.invalid",
+      "channel": "phone",
+      "knowledge": "approved",
+      "rule_valid": false,
+      "case": {
+        "scenario_id": "scn.rule_invalid",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家戌",
+          "reason": "规则版本失效",
+          "remedy": "等规则生效后重新判定"
+        }
+      },
+      "turns": [
+        {"text": "喂", "intent": "unclear"}
+      ],
+      "expected": {
+        "route": "manual",
+        "terminal_states": ["MANUAL_REVIEW"],
+        "tool_effect": "none",
+        "expected_action": "none",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "规则版本无效 -> 人工，不自行裁定"
+    },
+    {
+      "scenario_id": "dev.writeback_failure",
+      "family": "writeback_failure",
+      "expression_group": "dev.writeback.failure",
+      "channel": "phone",
+      "knowledge": "approved",
+      "fault": "writeback_failure",
+      "case": {
+        "scenario_id": "scn.writeback_failure",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家亥",
+          "reason": "类目资质文件不清晰",
+          "remedy": "重新上传清晰资质文件"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家亥的负责人", "intent": "confirm_identity", "identity": true},
+        {"text": "明白了，按这个处理吧", "intent": "acknowledge"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["WRITEBACK_PENDING"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": false
+      },
+      "notes": "回写失败 -> WRITEBACK_PENDING 单独重试，不再次驳回"
+    },
+    {
+      "scenario_id": "dev.lost_response",
+      "family": "lost_response",
+      "expression_group": "dev.lostresponse.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "fault": "lost_response",
+      "case": {
+        "scenario_id": "scn.lost_response",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家一",
+          "reason": "品牌授权文件缺页",
+          "remedy": "补充完整授权文件"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家一的负责人", "intent": "confirm_identity", "identity": true},
+        {"text": "明白了，按这个处理吧", "intent": "acknowledge"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": true
+      },
+      "notes": "成功响应丢失：同 key 查证，不换 key 重发、不产生第二次业务效果"
+    },
+    {
+      "scenario_id": "dev.cross_session",
+      "family": "cross_session",
+      "expression_group": "dev.crosssession.plain",
+      "channel": "phone",
+      "knowledge": "approved",
+      "repeat_sessions": 2,
+      "case": {
+        "scenario_id": "scn.cross_session",
+        "review_conclusion": "rejected",
+        "submission_attempt": 1,
+        "call_attempt": 0,
+        "slots": {
+          "company_name": "合成商家二",
+          "reason": "资质清单缺失一项",
+          "remedy": "按清单补齐缺失项"
+        }
+      },
+      "turns": [
+        {"text": "我是合成商家二的负责人", "intent": "confirm_identity", "identity": true},
+        {"text": "明白了，按这个处理吧", "intent": "acknowledge"}
+      ],
+      "expected": {
+        "route": "phone",
+        "terminal_states": ["CLOSED"],
+        "tool_effect": "one",
+        "expected_action": "reject_application",
+        "identity_required": true,
+        "must_not_leak_before_verify": true,
+        "require_reply_terms": [],
+        "forbid_reply_claims": [],
+        "completion_relevant": true
+      },
+      "notes": "跨会话/重启幂等：业务键不含 session_id，只有一次业务效果"
+    }
+  ]
+}

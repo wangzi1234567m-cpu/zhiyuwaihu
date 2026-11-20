@@ -39,7 +39,7 @@ test('renders a synthetic session, unresolved operation and measured latency', a
   }));
   await page.goto('/');
   await expect(page.getByText('关单渠道：人工处理')).toBeVisible();
-  await expect(page.getByTestId('operation-status')).toHaveText('结果待确认');
+  await expect(page.getByTestId('operation-status')).toHaveText('结果待确认 · 阶段 审查/回写');
   await expect(page.getByText('PRIVATE_REASON')).toHaveCount(0);
   await expect(page.getByText('PRIVATE_REMEDY')).toHaveCount(0);
   await expect(page.getByRole('region', {name: '本次会话指标'}).getByText('125 ms')).toBeVisible();
@@ -80,7 +80,7 @@ const routingFixtures = [
     ended: false,
     status: 'unknown',
     channel: '电话说明',
-    stateLabel: '等待预约处理',
+    stateLabel: '等待二次联系',
     operationLabel: '结果待确认',
   },
   {
@@ -131,7 +131,7 @@ for (const fixture of routingFixtures) {
     await page.goto('/');
     await expect(page.getByText(`关单渠道：${fixture.channel}`)).toBeVisible();
     await expect(page.getByText(`状态：${fixture.stateLabel}`, {exact: true})).toBeVisible();
-    await expect(page.getByTestId('operation-status')).toHaveText(fixture.operationLabel);
+    await expect(page.getByTestId('operation-status')).toContainText(fixture.operationLabel);
     await expect(page.getByRole('button', {name: '开始', exact: true})).toBeDisabled();
     await expect(page.getByText('身份：尚未核对')).toBeVisible();
     if (fixture.contactLabel) {

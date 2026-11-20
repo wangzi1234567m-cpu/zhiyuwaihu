@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 from sqlalchemy import select, text
 from .config import settings
+from . import mock_routing
 from .contracts import *
 from .db import Session, Application, Operation, EventRow, now
 from .adapters import DomainError, Services
@@ -93,7 +94,23 @@ def create_app(services=None):
         return response
 
     @app.get('/api/v1/capabilities',response_model=Capabilities)
-    def capabilities(user=Depends(owner)): return Capabilities()
+    def capabilities(user=Depends(owner)): return Capabilities(model=services.model_mode)
+
+    def demo_catalog(user=Depends(owner)):
+        if settings.environment not in ('development', 'test'):
+            raise DomainError('MOCK_DISABLED', '仅演示环境可用', 404)
+        return mock_routing.catalog()
+
+    @app.get('/api/v1/dev/routing', response_model=mock_routing.Catalog)
+    def routing_catalog(data=Depends(demo_catalog)):
+        return data
+
+    @app.post('/api/v1/dev/routing', response_model=mock_routing.Outcome)
+    def preview_routing(body: mock_routing.Conditions, data=Depends(demo_catalog)):
+        scenario = next((s for s in data.scenarios if s.row == body.row), None)
+        if scenario is None:
+            raise DomainError('UNKNOWN_SCENARIO', '场景不存在', 422)
+        return mock_routing.evaluate(scenario.channel, body.submission, body.missed, body.callback, body.risk)
 
     @app.get('/api/v1/applications',response_model=list[ApplicationView])
     def applications(user=Depends(owner)):
