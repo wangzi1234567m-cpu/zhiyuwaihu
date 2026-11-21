@@ -1,4 +1,5 @@
 import asyncio
+import os
 from sqlalchemy import select
 from .config import settings
 from .contracts import *
@@ -33,6 +34,11 @@ class FakeModel:
             yield text[i:i+4]
 
 class DemoAgent:
+    """历史演示夹具（关键字版）。**不是生产 Agent**，只用于保留原演示/回归夹具。
+
+    生产使用 `app.agent.SemanticAgent`（结构化理解驱动）。此处保留是为了让原始
+    演示行为与旧测试可重复，并且不把它当作"意图理解已完成"的证据。
+    """
     async def handle_turn(self, input, context, history, case, knowledge, verified, cancel):
         text = input.text
         state = 'VERIFYING'
@@ -127,22 +133,53 @@ class DisabledVoice:
         raise DomainError('VOICE_NOT_CONFIGURED', '语音未配置', 503)
 
 class Services:
-    def __init__(self, *, agent=None, model=None, cases=None, knowledge=None, business=None, policy=None, guard=None, voice=None, repository=None):
+    '''依赖装配点：所有内部端口在此注入，模块之间不建 HTTP。
+
+    默认是**可重复的确定性实现**（FakeModel 流式 + 规则理解）；真实模型只由
+    MODEL_PROVIDER 决定，不读取旧 ZHIYU_MODEL_MODE 自动启用 GLM，也不把团队 model
+    替换为工作台网关。understanding 可显式注入以便 MockTransport 测试；生产结构化
+    模型端口留待架构协商，不新增公共 ModelPort。
+    '''
+
+    def __init__(self, *, agent=None, model=None, cases=None, knowledge=None, business=None,
+                 policy=None, guard=None, voice=None, repository=None, understanding=None,
+                 model_mode=None):
         from .repository import Repository
+        from .guard import RoutingPolicy, ToolGuard as BusinessToolGuard
+        from .agent import SemanticAgent
+        from .semantic import RuleUnderstanding
         self.repository = repository or Repository()
-        self.agent = agent or DemoAgent()
-        if model is not None: self.model=model
-        elif settings.model_provider=='deepseek':
+        if model_mode not in (None, 'fake'):
+            raise DomainError('MODEL_MODE_UNSUPPORTED',
+                              'model_mode 仅兼容 fake/None；生产模型请使用 MODEL_PROVIDER，测试 understanding 请显式注入', 503)
+        self.understanding = understanding or RuleUnderstanding()
+        self.agent = agent or SemanticAgent(self.understanding)
+        if model is not None:
+            self.model = model
+        elif settings.model_provider == 'deepseek':
             from .deepseek import DeepSeekModel
-            from .cloud_budget import reserve_call,observe_model_first_content
-            self.model=DeepSeekModel(reserve=reserve_call,observe=observe_model_first_content)
-        else: self.model=FakeModel()
+            from .cloud_budget import reserve_call, observe_model_first_content
+            self.model = DeepSeekModel(reserve=reserve_call, observe=observe_model_first_content)
+        else:
+            self.model = FakeModel()
         self.cases = cases or DatabaseCases()
         self.knowledge = knowledge or DatabaseKnowledge()
         self.business = business or MockBusiness()
-        self.policy = policy or Policy()
-        self.guard = guard or ToolGuard()
-        if voice is not None:self.voice=voice
+        self.policy = policy or RoutingPolicy()
+        self.guard = guard or BusinessToolGuard()
+        if voice is not None:
+            self.voice = voice
         else:
             from .voice import AgoraVoiceGateway
-            self.voice=AgoraVoiceGateway()
+            self.voice = AgoraVoiceGateway()
+
+    def model_info(self) -> dict:
+        '''只报告 MODEL_PROVIDER 与配置版本，不读取或输出工作台 GLM key。'''
+        provider = (getattr(settings, 'model_provider', 'fake') or 'fake').strip().lower()
+        model_id = getattr(settings, 'deepseek_model', 'fake-v1') if provider == 'deepseek' else 'fake-v1'
+        view = {'mode': provider, 'provider': provider, 'model_id': model_id,
+                'config_version': getattr(settings, 'config_version', 'env')}
+        port = getattr(self.understanding, 'public_view', None)
+        if callable(port):
+            view['understanding'] = port()
+        return view

@@ -40,6 +40,14 @@ class ReviewCase(DTO):
     complaint_risk: bool
     synthetic: Literal[True] = True
 
+class RoutingEvidence(DTO):
+    """规则命中证据：为什么得到这个 route，可追溯、不含个人信息。"""
+    code: str = Field(min_length=1, max_length=80)
+    detail: str = Field(default="", max_length=400)
+    source: Literal["case", "rule", "knowledge", "contact_history", "authorization", "attempts"] = "rule"
+    ref: str | None = Field(default=None, max_length=200)
+    knowledge_entry_ids: list[UUID] = Field(default_factory=list)
+
 class RoutingDecision(DTO):
     decision_id: UUID
     application_id: UUID
@@ -48,8 +56,22 @@ class RoutingDecision(DTO):
     reason_codes: list[str]
     rule_version: str
     required_evidence: list[str]
+    # 兼容增量：旧样例/调用方不传也能反序列化。followup 是动作不是 route。
+    evidence: list[RoutingEvidence] = Field(default_factory=list)
+    submission_attempt: int = Field(default=1, ge=0)
+    call_attempt: int = Field(default=0, ge=0)
 
 State = Literal["CASE_READY", "ROUTING", "OPENING", "VERIFYING", "EXPLAINING", "QA", "CALLBACK_PENDING", "CLOSING", "ACTION_READY", "EXECUTING", "RECONCILING", "WRITEBACK_PENDING", "CLOSED", "MANUAL_REVIEW"]
+
+#: 真实联系结果。unknown 表示没有可信联系事件，不能当成未接通或已核验。
+ContactOutcome = Literal["verified", "wrong_person", "refused", "no_answer", "disconnected", "not_required", "unknown"]
+
+class NotificationEvidence(DTO):
+    """已发出的告知证据；由服务端在消息落库后写入，Agent 只读。"""
+    kind: Literal["explanation", "reason_notice", "remedy_notice", "callback_notice"]
+    message_id: UUID
+    knowledge_entry_ids: list[UUID] = Field(default_factory=list)
+    completed: bool = False
 
 class CreateSession(DTO):
     application_id: UUID
@@ -67,6 +89,7 @@ class InterruptRequest(DTO):
     client_event_id: UUID
 
 class SessionContext(DTO):
+    """服务端组装的可信只读上下文。Agent 只能读，不能写入或回填。"""
     session_id: UUID
     turn_id: UUID
     generation_id: UUID
@@ -78,6 +101,15 @@ class SessionContext(DTO):
     rule_version: str
     knowledge_version: str
     model_version: str
+    # 兼容增量：全部有默认值，旧调用方不传也能构造。状态只来自数据库，不从话术推断。
+    state: State = "CASE_READY"
+    routing_decision: RoutingDecision | None = None
+    notifications: list[NotificationEvidence] = Field(default_factory=list)
+    contact_outcome: ContactOutcome = "unknown"
+    contact_outcome_source: Literal["none", "domain_event", "demo_text_rule"] = "none"
+    submission_attempt: int = Field(default=1, ge=0)
+    call_attempt: int = Field(default=0, ge=0)
+    operation_ids: list[UUID] = Field(default_factory=list)
 
 class TurnInput(DTO):
     message_id: UUID
@@ -171,7 +203,10 @@ class CallRecord(DTO):
     session_id: UUID
     application_id: UUID
     case_revision: int = Field(ge=1)
-    contact_status: Literal["verified", "wrong_person", "refused", "no_answer", "disconnected", "not_required"]
+    # 兼容增量：新增 "unknown"。没有可信联系事件时必须如实记录 unknown，
+    # 不能用 not_required（代表无需核验）或 disconnected（代表断线）冒充。
+    # 既有取值与消费者语义不变。
+    contact_status: Literal["verified", "wrong_person", "refused", "no_answer", "disconnected", "not_required", "unknown"]
     explanation_status: Literal["not_started", "partial", "completed", "unknown", "not_required"]
     reason_codes: list[str]
     rectification_items: list[str]
@@ -181,6 +216,20 @@ class CallRecord(DTO):
     rule_version: str
     knowledge_version: str
 
+class Understanding(DTO):
+    """结构化理解结果（内部 DTO，服务器再校验）。模型不能写 verified/审核结论/成功。"""
+    intents: list[Literal["confirm_identity", "deny_identity", "ask_reason", "ask_remedy",
+                          "ask_guarantee", "ask_source", "ask_outcome", "refuse_contact",
+                          "request_callback", "acknowledge", "unclear", "complaint_risk"]]
+    slots: dict[str, str] = Field(default_factory=dict)
+    evidence_message_ids: list[UUID] = Field(default_factory=list)
+    needs_clarification: bool = False
+    clarification_reason: str | None = Field(default=None, max_length=200)
+    negated: bool = False
+    multi_intent: bool = False
+    contact_outcome_hint: ContactOutcome | None = None
+    source: Literal["fake", "glm", "rules"] = "fake"
+
 class AgentDecision(DTO):
     reply_text: str
     proposed_action: Literal["none", "reject_application", "create_callback", "create_followup", "writeback"]
@@ -188,6 +237,10 @@ class AgentDecision(DTO):
     knowledge_entry_ids: list[UUID]
     next_state: State
     action_payload: ActionPayload | None = None
+    # 兼容增量：默认值保证旧实现/旧样例仍合法。
+    understanding: Understanding | None = None
+    contact_outcome: ContactOutcome | None = None
+    required_slot_missing: list[str] = Field(default_factory=list)
 
 class StateChanged(DTO):
     type: Literal["state.changed"]
@@ -322,7 +375,7 @@ class ModelRequest(DTO):
 
 SessionView.model_rebuild()
 
-PUBLIC_MODELS = [SourceRef, KnowledgeEntry, ReviewCase, RoutingDecision, CreateSession, TextTurn, StartSession, InterruptRequest, SessionContext, TurnInput, CallbackConfirmation, ActionCommand, ApiError, OperationResult, CallRecord, AgentDecision, Event, SessionView]
+PUBLIC_MODELS = [SourceRef, KnowledgeEntry, ReviewCase, RoutingDecision, RoutingEvidence, NotificationEvidence, CreateSession, TextTurn, StartSession, InterruptRequest, SessionContext, TurnInput, CallbackConfirmation, ActionCommand, ApiError, OperationResult, CallRecord, AgentDecision, Understanding, Event, SessionView]
 PUBLIC_MODELS += [MessageView, AcceptedTurn, Interrupted, EndRequest, LoginRequest, LoginResult, ApplicationView, Capabilities]
 PUBLIC_MODELS += [ModelRequest, ModelMessage]
 
