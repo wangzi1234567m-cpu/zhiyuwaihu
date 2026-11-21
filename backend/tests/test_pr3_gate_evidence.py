@@ -92,6 +92,17 @@ def test_duplicate_call_identifiers_refuse_even_when_count_claims_ten():
     assert gate(voice,cost).decision=='refuse_auto_adopt'
 
 
+@pytest.mark.parametrize('reuse',('all','one'))
+def test_sample_identifiers_cannot_be_reused_across_baseline_and_candidate(reuse):
+    voice,cost=evidence()
+    if reuse=='all':voice['candidate']['sample_ids']=list(voice['baseline']['sample_ids'])
+    else:voice['candidate']['sample_ids'][0]=voice['baseline']['sample_ids'][0]
+    # 两组内部仍各有10个唯一ID，交叉复用不得冒充独立两组证据。
+    assert len(set(voice['candidate']['sample_ids']))==10
+    result=gate(voice,cost)
+    assert result.decision=='refuse_auto_adopt' and not result.evidence_sufficient
+
+
 @pytest.mark.parametrize('field',('model_ttft_p50_ms','total_cost'))
 @pytest.mark.parametrize('value',(0,-1,float('nan'),float('inf')))
 def test_invalid_baseline_never_skips_cost_or_ttft_comparison(field,value):

@@ -32,7 +32,9 @@
 | “不用回电，直接说原因”“我不想回电”“我不愿意回电” / request_callback+ask_reason | CALLBACK_PENDING | QA，无回电、无业务效果 |
 | 一通一轮、P50=9000ms、失败率=1 的旧式报告 | adopt | refuse_auto_adopt，证据不充分 |
 
-修前新增回归 **14 failed / 59 passed**；其中包括新证据格式正向控制，不能将 14 直接称为 14 个独立产品缺陷。修后完整后端 **375 passed、0 failed、0 skipped**，在新建、迁移至 head 的 `_test` PostgreSQL 库执行。原有测试保留；解析回电用例补真实原文支持，语音旧中断用例用 Event 保持生成中，避免短回复完成造成时序误报，断言未放宽。
+修前新增回归 **14 failed / 59 passed**；其中包括新证据格式正向控制，不能将 14 直接称为 14 个独立产品缺陷。修后完整后端 **377 passed、0 failed、0 skipped**，在新建、迁移至 head 的 `_test` PostgreSQL 库执行。原有测试保留；解析回电用例补真实原文支持，语音旧中断用例用 Event 保持生成中，避免短回复完成造成时序误报，断言未放宽。
+
+独立复审曾对首轮 4fdd1fe 提出一项高优先级问题：两臂内部唯一，但语音 sample_ids 可跨 baseline/candidate 复用。补充“全部复用”和“部分复用”两个反例在首轮代码上均失败；GLM 补丁新增跨臂集合交集拒绝，证据不独立时 refuse_auto_adopt。来源引用仍可指向包含两组测量的同一份报告，不据此要求重复采集文件。全量在此补丁后重新运行；首次复审的 CHANGES_REQUESTED 保留，不冒称初次通过。
 
 新回归在 `backend/tests/test_pr3_model_safety.py`、`test_pr3_gate_evidence.py`、`test_pr3_shared_contract.py`。语音、DeepSeek、TTS、持久额度的 main 测试一并运行。Schema、OpenAPI、TypeScript 重新生成；类型检查、生产构建通过。浏览器结果及源码哈希见交付证据。
 

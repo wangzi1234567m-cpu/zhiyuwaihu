@@ -1,0 +1,20 @@
+FF                                                                       [100%]
+================================== FAILURES ===================================
+_ test_sample_identifiers_cannot_be_reused_across_baseline_and_candidate[all] _
+backend\tests\test_pr3_gate_evidence.py:103: in test_sample_identifiers_cannot_be_reused_across_baseline_and_candidate
+    assert result.decision=='refuse_auto_adopt' and not result.evidence_sufficient
+E   AssertionError: assert ('adopt' == 'refuse_auto_adopt'
+E
+E     - refuse_auto_adopt
+E     + adopt)
+_ test_sample_identifiers_cannot_be_reused_across_baseline_and_candidate[one] _
+backend\tests\test_pr3_gate_evidence.py:103: in test_sample_identifiers_cannot_be_reused_across_baseline_and_candidate
+    assert result.decision=='refuse_auto_adopt' and not result.evidence_sufficient
+E   AssertionError: assert ('adopt' == 'refuse_auto_adopt'
+E
+E     - refuse_auto_adopt
+E     + adopt)
+=========================== short test summary info ===========================
+FAILED backend\tests\test_pr3_gate_evidence.py::test_sample_identifiers_cannot_be_reused_across_baseline_and_candidate[all]
+FAILED backend\tests\test_pr3_gate_evidence.py::test_sample_identifiers_cannot_be_reused_across_baseline_and_candidate[one]
+2 failed in 0.77s

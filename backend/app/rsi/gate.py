@@ -244,6 +244,9 @@ def _validate_runtime_evidence(voice, cost):
         missing.append('真实语音报告缺失或非法：需要版本、来源引用和完整 baseline/candidate 逐通标识及统计')
     else:
         b, c = voice['baseline'], voice['candidate']
+        shared_samples = set(b['sample_ids']) & set(c['sample_ids'])
+        if shared_samples:
+            missing.append('真实语音 baseline/candidate 样本标识不独立：两组复用了同一批 call sample_ids，不能作为独立证据')
         b_rate, c_rate = b['failed_calls'] / b['calls'], c['failed_calls'] / c['calls']
         metrics['voice'] = {'source_refs': voice['source_refs'], 'baseline': b, 'candidate': c,
                             'baseline_failure_rate': b_rate, 'candidate_failure_rate': c_rate}
