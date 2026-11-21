@@ -1,3 +1,6 @@
+from datetime import timedelta
+from app.db import Confirmation, now
+from app.contracts import ActionCommand, CallbackConfirmation
 """Run only against a dedicated PostgreSQL test DB. No SQLite substitutes."""
 import asyncio
 import os
@@ -205,3 +208,75 @@ async def test_messages_keep_order_when_timestamps_tie(setup):
     value=(await client.get(f'/api/v1/sessions/{sid}')).json()
     assert [m['role'] for m in value['messages']]==['assistant','user','assistant','user','assistant']
     assert '不能保证' in value['messages'][-1]['text']
+
+
+async def test_callback_and_followup_mock_ports(setup):
+    client, _, services = setup
+    sid = await opened(client)
+    verified = await say(client, sid, '我是演示商家1')
+    evidence_id = next(message['message_id'] for message in verified['messages'] if message['role'] == 'user')
+    confirmation_id = uuid4()
+    application_id = fixture_id(1)
+    timestamp = now()
+    confirmation = CallbackConfirmation(
+        confirmation_id=confirmation_id, application_id=application_id, case_revision=1,
+        evidence_message_id=evidence_id, window_start=timestamp + timedelta(hours=1),
+        window_end=timestamp + timedelta(hours=2), expires_at=timestamp + timedelta(minutes=10))
+    with Session.begin() as db:
+        db.add(Confirmation(id=str(confirmation_id), session_id=sid, data=confirmation.model_dump(mode='json')))
+
+    def register(kind, payload, confirmation_ref=None, evidence_refs=()):
+        operation_id = uuid4()
+        command = ActionCommand(session_id=sid, application_id=application_id, case_revision=1,
+            decision_id=uuid4(), operation_id=operation_id, kind=kind, idempotency_key=f'test:{operation_id}',
+            confirmation_ref=confirmation_ref, evidence_refs=list(evidence_refs), payload=payload)
+        with Session.begin() as db:
+            db.add(Operation(id=str(operation_id), session_id=sid, key=command.idempotency_key,
+                status='pending', data={'command': command.model_dump(mode='json'), 'manual': True}))
+        return command
+
+    payload = {'type': 'create_callback', 'confirmation_id': confirmation_id}
+    unconfirmed = register('create_callback', payload, confirmation_id)
+    failed = await services.business.execute(unconfirmed)
+    assert failed.status == 'failed'
+    assert failed.error.code == 'CALLBACK_CONFIRMATION_INVALID'
+    assert await services.business.query_operation(unconfirmed) == failed
+
+    callback = register('create_callback', payload, confirmation_id, [evidence_id])
+    services.business.fault = 'lost_response'
+    assert (await services.business.execute(callback)).status == 'unknown'
+    actual = await services.business.query_operation(callback)
+    assert actual.status == 'succeeded'
+    assert actual.resource_id == f'mock-callback-{callback.operation_id}'
+    services.business.fault = 'none'
+    assert await services.business.execute(callback) == actual
+    with Session() as db:
+        assert db.get(Effect, callback.idempotency_key).data['details']['timezone'] == 'Asia/Shanghai'
+
+    followup = register('create_followup', {'type': 'create_followup', 'reason_code': 'synthetic_followup',
+                                           'related_operation_id': callback.operation_id})
+    result = await services.business.execute(followup)
+    assert result.resource_id == f'mock-followup-{followup.operation_id}'
+    assert await services.business.query_operation(followup) == result
+
+async def test_release_publish_and_session_version_binding(setup,monkeypatch):
+    from pathlib import Path
+    import importlib.util
+    script = Path(__file__).resolve().parents[2] / 'scripts/publish_reviewed_knowledge.py'
+    spec = importlib.util.spec_from_file_location('reviewed_knowledge', script)
+    publisher = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(publisher)
+    client, _, services = setup
+    old_sid = await create(client)
+    entry = services.knowledge.lookup('demo.authorization_missing','',['synthetic'],'demo-k1')[0]
+    release = 'integration-synthetic-v1'
+    entry = entry.model_copy(update={'entry_id':uuid4(),'knowledge_version':release})
+    publisher.publish(release,[entry])
+    publisher.publish(release,[entry])
+    with pytest.raises(ValueError,match='immutable'):
+        publisher.publish(release,[entry.model_copy(update={'approved_text':'different text'})])
+    monkeypatch.setenv('ZHIYU_KNOWLEDGE_VERSION',release)
+    sid = await create(client)
+    with Session() as db:
+        assert db.get(Conversation,old_sid).data['knowledge_version']=='demo-k1'
+        assert db.get(Conversation,sid).data['knowledge_version']==release

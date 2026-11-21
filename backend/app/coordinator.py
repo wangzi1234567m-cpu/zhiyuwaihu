@@ -2,7 +2,10 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
+from .knowledge_templates import available_entries
 from uuid import UUID
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy import select
 from .contracts import *
 from .db import Session, Conversation, Message, EventRow, Operation, Record, RequestReceipt, now, new_id
@@ -41,16 +44,33 @@ def messages(db, sid):
     return [MessageView(message_id=m.id, **m.data['view']) for m in db.scalars(
         select(Message).where(Message.session_id == sid).order_by(Message.position))]
 
+def operation_view(operation):
+    return OperationResult.model_validate({
+        **operation.data['result'], 'kind': operation.data['command']['kind']
+    })
+
+
 def snapshot(db, row):
-    ops = [OperationResult.model_validate(o.data['result']) for o in db.scalars(select(Operation).where(Operation.session_id == row.id))]
+    ops = [operation_view(o) for o in db.scalars(select(Operation).where(Operation.session_id == row.id))]
     linked = db.get(Operation,row.data['linked_operation_id']) if row.data.get('linked_operation_id') else None
     if linked and all(str(o.operation_id)!=linked.id for o in ops):
-        ops.append(OperationResult.model_validate(linked.data['result']))
+        ops.append(operation_view(linked))
     record = db.scalar(select(Record).where(Record.session_id == row.id))
     verified = row.data.get('verified', False)
+    payload = EventRow.data['payload']
+    facts = select(payload).where(EventRow.session_id == row.id)
+    refs = []
+    if verified:
+        knowledge = db.scalar(facts.where(payload['type'].as_string() == 'knowledge.used')
+                              .order_by(EventRow.seq.desc()).limit(1))
+        if knowledge:
+            refs = knowledge['source_refs']
+    metric_name = payload['name'].as_string()
+    metrics = db.scalars(facts.where(payload['type'].as_string() == 'metric.recorded')
+                         .ext(distinct_on(metric_name)).order_by(metric_name, EventRow.seq.desc())).all()
     return SessionView(session_id=row.id, application_id=row.application_id, case_revision=row.data['case_revision'],
         state=row.state, state_revision=row.revision, route=row.data['route'], last_event_seq=row.seq,
-        operations=ops, verified=verified, busy=row.data.get('busy',False), ended=row.data.get('ended',False),
+        source_refs=refs, metrics=metrics, operations=ops, verified=verified, busy=row.data.get('busy',False), ended=row.data.get('ended',False),
         generation_id=row.data.get('generation_id'), reason=row.data.get('reason') if verified else None,
         remedy=row.data.get('remedy') if verified else None, messages=messages(db,row.id), record=record.data if record else None, mode=row.data.get('mode','text'))
 
@@ -89,7 +109,7 @@ class Coordinator:
             digest, previous = receipt(db,rkey,request.model_dump(mode='json'))
             if previous: return snapshot(db,owned(db,previous['session_id'],owner))
             row = Conversation(id=new_id(),owner=owner,application_id=str(case.application_id), state='CASE_READY',revision=0,seq=0,
-                data={'case_revision':case.case_revision,'strategy_version':'demo-p1','knowledge_version':'demo-k1','rule_version':'demo-r1',
+                data={'case_revision':case.case_revision,'strategy_version':'demo-p1','knowledge_version':os.getenv('ZHIYU_KNOWLEDGE_VERSION', 'demo-k1'),'rule_version':'demo-r1',
                       'route':self.services.policy.decide_route(case),'verified':False,'explained':False,'ended':False,'busy':False,'epoch':0,'message_count':0,'mode':request.mode})
             db.add(row)
             db.flush()
@@ -168,12 +188,12 @@ class Coordinator:
                 # Demo identity evidence is validated by code against the assigned synthetic entity.
                 import re
                 normalized=re.sub(r'[\s，。！？,.!?、]','',text)
-                company=case.slots['company_name']
+                company=case.slots.get('company_name', '').strip()
                 aliases={company}
                 if source=='asr':
                     for digit,han in [('1','一'),('2','二'),('3','三')]:aliases.add(company.replace(digit,han))
                 identities={phrase for alias in aliases for phrase in [f'我是{alias}',f'我是{alias}的联系人',f'对我是{alias}的联系人']}
-                if not opening and normalized in identities:
+                if company and not opening and normalized in identities:
                     row.data={**row.data,'verified':True,'identity_evidence':mid}
                 verified=row.data.get('verified',False)
                 context=SessionContext(session_id=sid,turn_id=turn,generation_id=generation,generation_epoch=row.data['epoch'],
@@ -181,12 +201,15 @@ class Coordinator:
                     strategy_version=row.data['strategy_version'],rule_version=row.data['rule_version'],knowledge_version=row.data['knowledge_version'],model_version=settings.deepseek_model if settings.model_provider=='deepseek' else 'fake-v1')
                 history=tuple(messages(db,sid))
             entries=self.services.knowledge.lookup(case.scenario_id,text,['synthetic'],context.knowledge_version)
-            if opening:
+            entries=available_entries([e for e in entries if e.channel == row.data['route']], case)
+            if not company:
+                decision=AgentDecision(reply_text='审核任务缺少核验主体，已转人工。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
+            elif opening:
                 decision=AgentDecision(reply_text=f'您好，这里是模拟商户服务AI演示。请确认您是否是{case.slots["company_name"]}的联系人。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
             else:
                 decision=await asyncio.wait_for(self.services.agent.handle_turn(TurnInput(message_id=mid,text=text,source=source),context,history,case,tuple(entries),verified,cancel),8)
             # Pre-identity and missing-source output cannot bypass the coordinator via a replacement Agent.
-            if not verified and decision.next_state != 'CLOSING':
+            if company and not verified and decision.next_state != 'CLOSING':
                 decision=AgentDecision(reply_text=f'这里是模拟商户服务AI。请确认身份：输入“我是{case.slots["company_name"]}”。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
             if verified and not entries:
                 decision=AgentDecision(reply_text='缺少已审核依据，已转人工核实。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
@@ -289,7 +312,7 @@ class Coordinator:
             return
         result=OperationResult(operation_id=command.operation_id,status='pending',updated_at=now())
         db.add(Operation(id=str(command.operation_id),session_id=row.id,key=key,status='pending',
-            data={'command':command.model_dump(mode='json'),'result':result.model_dump(mode='json'),'attempts':0,'next_at':0,'writeback_done':False}))
+            data={'command':command.model_dump(mode='json'),'case_snapshot':case.model_dump(mode='json'),'result':result.model_dump(mode='json'),'attempts':0,'next_at':0,'writeback_done':False}))
         transition(db,row,'EXECUTING')
         emit(db,row,OperationUpdated(type='operation.updated',result=result),operation=command.operation_id)
 
@@ -374,7 +397,8 @@ class Coordinator:
                     transition(db,row,'MANUAL_REVIEW')
                     emit(db,row,SessionEnded(type='session.ended',reason='operation_unknown'))
                 return
-            case=self.services.cases.get_case(row.owner,row.application_id)
+            case = (ReviewCase.model_validate(op.data['case_snapshot']) if 'case_snapshot' in op.data
+                    else self.services.cases.get_case(row.owner, row.application_id))
             record=self.make_record(row,case,[oid])
             transition(db,row,'WRITEBACK_PENDING')
         try: await self.services.business.writeback(record)

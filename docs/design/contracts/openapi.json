@@ -131,6 +131,60 @@
         }
       }
     },
+    "/api/v1/dev/routing": {
+      "get": {
+        "summary": "Routing Catalog",
+        "operationId": "routing_catalog_api_v1_dev_routing_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Catalog"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Preview Routing",
+        "operationId": "preview_routing_api_v1_dev_routing_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Conditions"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Outcome"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/applications": {
       "get": {
         "summary": "Applications",
@@ -1225,6 +1279,11 @@
       },
       "Capabilities": {
         "properties": {
+          "routing_preview": {
+            "type": "boolean",
+            "title": "Routing Preview",
+            "default": false
+          },
           "text": {
             "type": "boolean",
             "title": "Text",
@@ -1265,6 +1324,67 @@
         "additionalProperties": false,
         "type": "object",
         "title": "Capabilities"
+      },
+      "Catalog": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "workbook",
+              "synthetic"
+            ],
+            "title": "Source"
+          },
+          "scenarios": {
+            "items": {
+              "$ref": "#/components/schemas/Scenario"
+            },
+            "type": "array",
+            "title": "Scenarios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "scenarios"
+        ],
+        "title": "Catalog"
+      },
+      "Conditions": {
+        "properties": {
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "submission": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Submission"
+          },
+          "missed": {
+            "type": "integer",
+            "maximum": 2.0,
+            "minimum": 0.0,
+            "title": "Missed"
+          },
+          "callback": {
+            "type": "boolean",
+            "title": "Callback",
+            "default": false
+          },
+          "risk": {
+            "type": "boolean",
+            "title": "Risk",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "submission",
+          "missed"
+        ],
+        "title": "Conditions"
       },
       "CreateSession": {
         "properties": {
@@ -1494,8 +1614,83 @@
         ],
         "title": "MessageView"
       },
+      "MetricRecorded": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "metric.recorded",
+            "title": "Type"
+          },
+          "name": {
+            "type": "string",
+            "enum": [
+              "model_ttft",
+              "speech_end_to_text",
+              "speech_end_to_playback"
+            ],
+            "title": "Name"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "success",
+              "timeout",
+              "cancelled",
+              "missing"
+            ],
+            "title": "Outcome"
+          },
+          "clock_domain": {
+            "type": "string",
+            "title": "Clock Domain"
+          },
+          "measurement_method": {
+            "type": "string",
+            "title": "Measurement Method"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "name",
+          "outcome",
+          "clock_domain",
+          "measurement_method"
+        ],
+        "title": "MetricRecorded"
+      },
       "OperationResult": {
         "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "reject_application",
+                  "create_callback",
+                  "create_followup",
+                  "writeback"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
           "operation_id": {
             "type": "string",
             "format": "uuid",
@@ -1547,6 +1742,69 @@
           "updated_at"
         ],
         "title": "OperationResult"
+      },
+      "Outcome": {
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "phone",
+                  "jingmai",
+                  "followup",
+                  "manual"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action",
+          "reason"
+        ],
+        "title": "Outcome"
+      },
+      "Scenario": {
+        "properties": {
+          "row": {
+            "type": "integer",
+            "title": "Row"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "phone",
+              "jingmai"
+            ],
+            "title": "Channel"
+          },
+          "missing_template": {
+            "type": "boolean",
+            "title": "Missing Template",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "row",
+          "label",
+          "channel"
+        ],
+        "title": "Scenario"
       },
       "SessionView": {
         "properties": {
@@ -1659,6 +1917,20 @@
               }
             ],
             "title": "Remedy"
+          },
+          "source_refs": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "type": "array",
+            "title": "Source Refs"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricRecorded"
+            },
+            "type": "array",
+            "title": "Metrics"
           },
           "messages": {
             "items": {
@@ -2641,65 +2913,6 @@
           "source_refs"
         ],
         "title": "KnowledgeUsed",
-        "type": "object"
-      },
-      "MetricRecorded": {
-        "additionalProperties": false,
-        "properties": {
-          "type": {
-            "const": "metric.recorded",
-            "title": "Type",
-            "type": "string"
-          },
-          "name": {
-            "enum": [
-              "model_ttft",
-              "speech_end_to_text",
-              "speech_end_to_playback"
-            ],
-            "title": "Name",
-            "type": "string"
-          },
-          "duration_ms": {
-            "anyOf": [
-              {
-                "minimum": 0,
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Duration Ms"
-          },
-          "outcome": {
-            "enum": [
-              "success",
-              "timeout",
-              "cancelled",
-              "missing"
-            ],
-            "title": "Outcome",
-            "type": "string"
-          },
-          "clock_domain": {
-            "title": "Clock Domain",
-            "type": "string"
-          },
-          "measurement_method": {
-            "title": "Measurement Method",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "name",
-          "outcome",
-          "clock_domain",
-          "measurement_method"
-        ],
-        "title": "MetricRecorded",
         "type": "object"
       },
       "ModelMessage": {
