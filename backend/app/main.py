@@ -11,6 +11,7 @@ from sqlalchemy import select, text
 from .config import settings
 from .contracts import *
 from .db import Session, Application, Operation, EventRow, now
+from . import mock_routing
 from .adapters import DomainError, Services
 from .coordinator import Coordinator, owned, snapshot
 
@@ -114,13 +115,29 @@ def create_app(services=None, *, tts=None):
 
     @app.get('/api/v1/capabilities',response_model=Capabilities)
     def capabilities(user=Depends(owner)):
-        return Capabilities(voice=services.voice.available(),model=settings.model_provider,
+        return Capabilities(routing_preview=settings.environment in ('development', 'test'), voice=services.voice.available(),model=settings.model_provider,
             voice_unavailable_reason=services.voice.unavailable_reason())
+
+    def demo_catalog(user=Depends(owner)):
+        if settings.environment not in ('development', 'test'):
+            raise DomainError('MOCK_DISABLED', '仅演示环境可用', 404)
+        return mock_routing.catalog()
+
+    @app.get('/api/v1/dev/routing', response_model=mock_routing.Catalog)
+    def routing_catalog(data=Depends(demo_catalog)):
+        return data
+
+    @app.post('/api/v1/dev/routing', response_model=mock_routing.Outcome)
+    def preview_routing(body: mock_routing.Conditions, data=Depends(demo_catalog)):
+        scenario = next((s for s in data.scenarios if s.row == body.row), None)
+        if scenario is None:
+            raise DomainError('UNKNOWN_SCENARIO', '场景不存在', 422)
+        return mock_routing.evaluate(services.policy, scenario, body)
 
     @app.get('/api/v1/applications',response_model=list[ApplicationView])
     def applications(user=Depends(owner)):
         with Session() as db:
-            return [ApplicationView(application_id=a.id,label=f'合成申请单 {i+1}',company_hint=a.data['slots']['company_name'])
+            return [ApplicationView(application_id=a.id,label=f'合成申请单 {i+1}',company_hint=a.data['slots'].get('company_name') or '待核实主体')
                 for i,a in enumerate(db.scalars(select(Application).where(Application.owner==user).order_by(Application.id)))]
 
     @app.post('/api/v1/sessions',response_model=SessionView,status_code=201)
@@ -282,7 +299,7 @@ def create_app(services=None, *, tts=None):
 
     if settings.faults_enabled and settings.environment in ['development','test']:
         class FaultRequest(DTO):
-            fault: Literal['none','write_failure','lost_response','persistent_unknown','writeback_failure']
+            fault: Literal['none','write_failure','lost_response','persistent_unknown','writeback_failure','query_timeout','query_failure']
         @app.post('/api/v1/dev/faults')
         def set_fault(body: FaultRequest,user=Depends(owner)):
             if user!='demo': raise DomainError('FORBIDDEN','禁止故障注入',403)

@@ -83,6 +83,8 @@ docker compose up --build -d
 
 ## 类型与测试
 
+翟雯分支的原件转换、三项授权场景、Mock 故障复现和架构接入补丁见[数据、Mock 与前端交付说明](docs/zhai-rework.md)。
+
 ```powershell
 ./scripts/dev.ps1 Types
 ./scripts/dev.ps1 Check
