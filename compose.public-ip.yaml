@@ -1,11 +1,20 @@
 # Alternative to compose.public.yaml. Requires a trusted IP certificate first.
 services:
+  db:
+    ports: !reset []
+    restart: unless-stopped
   backend:
+    ports: !reset []
+    restart: unless-stopped
     environment:
       APP_ENV: staging
       ENABLE_FAULTS: 'false'
+  frontend:
+    ports: !reset []
+    restart: unless-stopped
   gateway:
     image: caddy:2
+    restart: unless-stopped
     environment:
       PUBLIC_IP: ${PUBLIC_IP:?Set PUBLIC_IP to the server public IPv4}
     ports: ['80:80', '443:443']

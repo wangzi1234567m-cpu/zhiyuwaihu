@@ -1,4 +1,8 @@
 # The certificate must be issued for PUBLIC_IP by a public CA. No local/self-signed fallback.
+{
+    default_sni {$PUBLIC_IP}
+}
+
 http://{$PUBLIC_IP} {
     handle /.well-known/acme-challenge/* {
         root * /srv/acme

@@ -1,0 +1,4 @@
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Install as /etc/cron.d/zhiyu-ip-cert (root:root, mode 0644).
+17 */12 * * * root /bin/sh /opt/zhiyu/infra/renew-ip-cert.sh >> /var/log/zhiyu-ip-cert-renew.log 2>&1

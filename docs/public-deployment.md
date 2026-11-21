@@ -1,12 +1,77 @@
 # 固定公网HTTPS与腾讯云部署准备
 
+## 11月21日当前上传包与操作
+
+**最终实测状态（本轮服务器部署验收完成）：** 用户授权项目专用公钥后，助手已直接SSH登录ubuntu并验证sudo权限。四个容器正常运行，db/backend健康，全部配置unless-stopped，Docker开机启动已启用。公网可信TLS检查未跳过证书验证，健康接口200、页面200、未登录申请单接口401；模型仍为fake，云调用／语音／语音写操作／故障注入均关闭。此验收仅覆盖部署基础设施，正式队友模块与语音未验收。
+
+Certbot webroot续期dry-run已返回all simulated renewals succeeded；初次演练的316秒随机等待已取消，实际演练使用--no-random-sleep-on-renew。续期脚本新增flock避免任务重叠，服务器上root拥有、权限750；已安装/etc/cron.d/zhiyu-ip-cert（root:root、644），每天服务器时间00:17与12:17检查，日志/var/log/zhiyu-ip-cert-renew.log。cron已启用且active；实际运行脚本及Caddy强制reload通过，重载后公网检查仍通过。演练不替换正式证书；未来定时触发与正式续期结果仍需查日志。私有.env及server.env已设600。
+
+可机读证据见public-deployment-evidence.json。以下较早排查记录中的“待验证”以本段最终状态为准。保留项目专用私钥在本机忽略目录，不进入仓库；当前可供SSH执行账号读取的专用副本为.cache/public-deploy/ssh/id_ed25519-runner，已限制为该账号可读。无需继续让用户手动执行例行检查。
+
+最新外部验证：助手从用户本机直接请求https://192.144.214.34/health/ready，未跳过TLS验证，返回{"status":"ready"}。公网可信HTTPS及后端就绪检查通过。用户粘贴日志显示Caddy重启后立即curl的一次连接失败，后续日志已正常监听443；不据此重复修证书。SSH BatchMode登录ubuntu被拒绝(publickey,password)，尚不能代替用户执行服务器命令；项目专用SSH密钥仅在.cache/public-deploy/ssh生成，私钥不上传Git或聊天，需用户在服务器授权公钥后才能远程操作。证书续期尚待配置验证，正式业务及语音未验收。
+
+端口补丁后用户截图确认四个容器均启动，db/backend健康，仅gateway发布80/443；curl报TLS alert internal error。IP直连客户端通常不发送SNI，原Caddyfile遗漏无SNI时的证书名称，已在全局块补default_sni {$PUBLIC_IP}。本地Caddy适配通过并检查生成TLS策略包含192.144.214.34；尚未用服务器正式证书完成握手。上传最新infra/Caddyfile.ip后，在服务器exec gateway caddy validate --config /etc/caddy/Caddyfile，验证通过再restart gateway及curl健康检查。若仍失败，读取gateway最近日志定位，不关闭TLS校验或重新申请证书。后续上传包须同时刷新此Caddyfile。
+
+后续服务器截图：镜像已导入，db与backend健康；frontend因宿主机127.0.0.1:3000占用而启动失败，gateway因此未启动，HTTPS尚不可达。本轮仅验收部署基础设施，正式前端与业务Agent等待队友交付。已修正compose.public-ip.yaml：db/backend/frontend使用ports: !reset []，只发布gateway的80/443；四个服务增加unless-stopped重启策略。本地合并结果已检查。无需重新打包应用镜像；将工作区最新compose.public-ip.yaml通过SCP覆盖服务器同名文件后，原三文件up命令会重建必要容器并保留数据卷。此前上传包仍含旧版Compose，不能覆盖此补丁；后续重做上传包时需刷新配置与manifest。
+
+```powershell
+scp "E:\桌面文件\开发\人工智能＋\compose.public-ip.yaml" ubuntu@192.144.214.34:/opt/zhiyu/compose.public-ip.yaml
+```
+
+服务器执行原三文件config --quiet、up -d --no-build、ps与HTTPS健康检查。不使用down -v或重装Docker。修正实际启动与证书自动续期仍待服务器验证。
+
+用户截图确认zhiyu-ip正式证书已签发，标识192.144.214.34，到期2026-11-27 17:10 UTC。本机Docker Engine 29.9.3恢复连接，重新构建前后端镜像成功，Next.js生产构建及TypeScript检查通过，镜像均为linux/amd64。服务器配置Compose解析、后端镜像应用导入通过；Caddyfile转换通过，但尚未加载服务器真实证书运行。
+
+当前工作区上传包位于.cache/public-deploy/zhiyu-public-deploy.tar.gz（约170 MiB），含镜像tar、三份Compose、IP版Caddyfile、续期脚本及配置摘要manifest.json；压缩包不含.env或私钥。单独的.cache/public-deploy/server.env复制本地供应商配置，使用服务器独立随机数据库密码、Cookie密钥、入口密钥和登录密码，固定公网IP与HTTPS地址，先保持Fake模型、云调用关闭、语音关闭、故障注入关闭。该私有文件不得提交Git或发聊天。准备文件不代表服务器已部署。
+
+通过安全文件管理上传两个文件到/opt/zhiyu，然后在服务器执行：
+
+```sh
+cd /opt/zhiyu
+sudo tar -xzf zhiyu-public-deploy.tar.gz
+sudo install -m 600 server.env .env
+sudo docker load -i zhiyu-images.tar
+sudo docker compose -f compose.yaml -f compose.cloud.yaml -f compose.public-ip.yaml config --quiet
+sudo docker compose -f compose.yaml -f compose.cloud.yaml -f compose.public-ip.yaml up -d --no-build
+sudo docker compose -f compose.yaml -f compose.cloud.yaml -f compose.public-ip.yaml ps
+curl --fail --show-error https://192.144.214.34/health/ready
+```
+
+仅首次部署安装server.env，不要在后续更新中覆盖已修改的服务器.env。原证书目录保留不动。数据库及Caddy基础镜像仍由服务器拉取。网页联调登录密码为私有server.env中的STAGING_PASSWORD，不使用本地默认密码。HTTPS检查通过后再做webroot续期dry-run、配置每12小时任务并从服务器外部验证HTTPS与SSE；这些尚未验收。
+
 目标更新：2026-11-25前完成公网接入与声网／DeepSeek／Qwen TTS语音联调，不再以11月22日校赛安排作为验收期限。本文的域名或IP方案均须实际云端验证；新域名备案不能保证在该日期前完成。
 
 11月21日配置准备记录：新增IP版Compose、Caddyfile和续期脚本，证书私有目录已排除Git与Docker构建上下文；Compose结构与配置解析通过。本机Docker引擎当前不可连接，Caddy容器语法／运行验证未完成。未在腾讯云执行安装、证书签发或部署，不将本地文件准备记为公网验收通过。
 
 **最新授权与方案：以本项目为主，停止旧Nginx和3000端口Node服务，使用独立Caddy。** 用户已明确允许停止这两个旧服务，不再要求保留它们的可用性。停止后先核实80／443／3000空闲，再执行本文后部“无域名：固定公网IP证书操作步骤”，使用compose.public-ip.yaml。下方Nginx复用步骤保留作历史备选，本轮不执行，不使用compose.nginx.yaml。停止服务不等于删除程序或旧项目文件。
 
-## 本轮首先执行：释放旧服务端口
+**最新实测进度：Docker安装、旧端口释放和最小镜像运行已完成，跳过重复操作。** 用户截图确认服务器Docker Engine 29.10.0、Compose 5.8.0正常响应；释放脚本回报80／443／3000均为空，nginx自启已禁用。后续按腾讯云官方内网源配置后，用户终端输出hello-world镜像拉取成功及Hello from Docker，Docker Hub直连超时的问题已通过镜像加速解决。下一步是Certbot版本检查和IP证书签发，不再重装或重复配置镜像源。
+
+## 已完成：腾讯云官方内网镜像加速（排查记录）
+
+腾讯云轻量官方文档提供https://mirror.ccs.tencentyun.com，仅支持腾讯云内网访问。使用scripts/configure-tencent-docker-mirror.py，不使用来历不明的公共镜像站，不关闭TLS验证、不写死Docker Hub的解析IP。
+
+将脚本上传服务器/tmp后执行：
+
+```sh
+sudo python3 /tmp/configure-tencent-docker-mirror.py
+```
+
+脚本先GET官方镜像的/v2/检查可信TLS与网络，接受200／401作为可达证据；这不等于镜像已拉取成功。检查失败不写配置。成功时保留/etc/docker/daemon.json的其他字段、去重并优先加入腾讯云源，使用dockerd --validate检查候选配置，然后备份旧文件并原子替换；脚本不重启Docker、不拉取镜像、不打印其他配置值。
+
+脚本成功后再执行：
+
+```sh
+sudo systemctl restart docker
+sudo docker info --format '{{json .RegistryConfig.Mirrors}}'
+sudo docker run --rm hello-world
+```
+
+用户已返回Hello from Docker，镜像下载及最小容器运行通过。脚本另已通过离线合并检查（保留字段、去重、拒绝非法结构）。这只证明该镜像拉取成功，其他项目基础镜像仍需分别拉取验证。
+
+官方依据：[轻量应用服务器镜像加速](https://cloud.tencent.com/document/product/1207/45596)、[Docker配置验证](https://docs.docker.com/reference/cli/dockerd/)。
+
+## 已完成：释放旧服务端口与Docker安装（不要重复执行）
 
 将scripts/release-server-ports.py及scripts/install-docker-ubuntu24.sh上传到服务器，例如/tmp下。在服务器终端依次运行：
 
@@ -20,7 +85,7 @@ sudo docker compose version
 
 第一个命令只检查，第二个命令执行已授权停止：禁用并停止nginx.service；只向当前监听TCP 3000的Node进程发SIGTERM，不按旧PID执行，不结束所有Node进程，不触碰SSH。若3000已换成其他程序，脚本停止而不做变更；若Node由PM2／systemd等自动拉起，脚本输出管理器unit及仍占用的端口，不循环强杀。根据实际管理器再停止对应旧应用的自动启动；不能为了停一个应用而直接停掉SSH或整个多应用管理器。
 
-两个脚本完成后，把结果发来，确认端口空闲与Docker可用，再上传项目镜像／配置并申请IP证书。脚本当前仅做了本地Python语法及帮助入口检查，没有在用户服务器执行停止或安装。
+用户已在服务器执行并返回结果：旧端口释放、Docker安装与hello-world运行通过。下面继续申请IP证书、上传项目镜像与配置，不重复执行安装或停止脚本。
 
 ## 已确认服务器信息与先前Nginx保留方案（本轮不执行）
 

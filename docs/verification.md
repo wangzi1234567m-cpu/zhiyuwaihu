@@ -76,6 +76,8 @@
 
 ## 填写凭证后的真实探针
 
+11月21日服务器后续实测（用户终端输出）：Docker Engine 29.10.0／Compose 5.8.0已安装，80／443／3000端口已释放且nginx开机启动关闭。Docker Hub直连出现TCP 443超时，配置腾讯云官方内网镜像源后，hello-world:latest拉取和运行通过，摘要sha256:1e4c05b897a751332ce85c7e9449da2d93514ea2dea6dbb0e2753c9e949b2bfa。此证据只证明服务器镜像下载和最小容器运行，尚不代表项目容器、公网HTTPS或声网接入通过。
+
 后续部署授权变更：用户明确同意停止旧Nginx和3000端口Node服务，以本项目为主。当前主方案重新采用独立Caddy／compose.public-ip.yaml，Nginx复用配置仅保留作备选。新增scripts/release-server-ports.py，默认只检查，--stop仅停止nginx.service和经可执行文件、进程启动时间核实的3000端口Node进程；对进程自动重启只报告，不强杀整个管理器。Python语法及帮助入口已检查，尚未在服务器执行停止。
 
 11月21日服务器盘点补充：用户提供Ubuntu 24.04.4 amd64、可用内存约1487MiB、磁盘余量约24GB、Nginx监听80且已有Node监听3000、Docker未安装；腾讯云防火墙截图确认80／443已放行。因此新增宿主Nginx方案compose.nginx.yaml，Compose解析确认前端只绑定127.0.0.1:13000、不保留3000映射、不启动gateway。新增Ubuntu官方仓库安装脚本、ACME片段、HTTPS站点模板及Nginx续期脚本，两个sh脚本Bash语法检查通过。未登录／修改服务器，Nginx模板仍需结合实际nginx -T审查并在服务器nginx -t通过后启用；不得将这些静态检查表述为公网证书或部署通过。
