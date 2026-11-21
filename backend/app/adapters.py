@@ -64,6 +64,8 @@ class Policy:
 
 class ToolGuard:
     def authorize(self, case, session_data, command, entries):
+        if session_data.get('mode')=='voice' and not session_data.get('voice_explanation_verified'):
+            raise DomainError('VOICE_EXPLANATION_UNVERIFIED','尚无可信语音告知完成证据',403)
         if (command.kind != 'reject_application' or case.review_conclusion != 'rejected'
             or command.case_revision != case.case_revision
             or str(command.application_id) != str(case.application_id)
@@ -119,6 +121,8 @@ class MockBusiness:
                 db.add(Record(id=str(record.record_id), session_id=str(record.session_id), data=record.model_dump(mode='json')))
 
 class DisabledVoice:
+    def available(self): return False
+
     async def credentials(self, session_id):
         raise DomainError('VOICE_NOT_CONFIGURED', '语音未配置', 503)
 
@@ -127,10 +131,18 @@ class Services:
         from .repository import Repository
         self.repository = repository or Repository()
         self.agent = agent or DemoAgent()
-        self.model = model or FakeModel()
+        if model is not None: self.model=model
+        elif settings.model_provider=='deepseek':
+            from .deepseek import DeepSeekModel
+            from .cloud_budget import reserve_call,observe_model_first_content
+            self.model=DeepSeekModel(reserve=reserve_call,observe=observe_model_first_content)
+        else: self.model=FakeModel()
         self.cases = cases or DatabaseCases()
         self.knowledge = knowledge or DatabaseKnowledge()
         self.business = business or MockBusiness()
         self.policy = policy or Policy()
         self.guard = guard or ToolGuard()
-        self.voice = voice or DisabledVoice()
+        if voice is not None:self.voice=voice
+        else:
+            from .voice import AgoraVoiceGateway
+            self.voice=AgoraVoiceGateway()

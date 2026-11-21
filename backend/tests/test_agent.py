@@ -22,7 +22,7 @@ async def test_missing_knowledge_never_invents_answer():
     result=await DemoAgent().handle_turn(TurnInput(message_id=uuid4(),text='怎么处理',source='text'),context,(),case,(),True,asyncio.Event())
     assert result.next_state=='MANUAL_REVIEW' and result.proposed_action=='none'
 
-@pytest.mark.parametrize('changes',[{'verified':False},{'explained':False},{'ended':True},{'route':'manual'}])
+@pytest.mark.parametrize('changes',[{'verified':False},{'explained':False},{'ended':True},{'route':'manual'},{'mode':'voice'}])
 def test_guard_requires_server_evidence(changes):
     case,entry,context=fixtures()
     command=ActionCommand(session_id=context.session_id,application_id=case.application_id,case_revision=1,decision_id=uuid4(),operation_id=uuid4(),kind='reject_application',idempotency_key='x',evidence_refs=[],payload=RejectPayload(type='reject_application',reason_codes=[case.scenario_id],written_text=entry.approved_text,knowledge_entry_ids=[entry.entry_id]))

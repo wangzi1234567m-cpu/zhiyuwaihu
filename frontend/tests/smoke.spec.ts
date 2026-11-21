@@ -36,6 +36,6 @@ test('three text rounds, writeback and reload',async({page})=>{
   await expect(page.getByTestId('operation-status')).toContainText('模拟处理成功');
   await page.reload();
   await expect(page.getByTestId('writeback')).toBeVisible();
-  await expect(page.getByText('语音未配置')).toBeVisible();
+  await expect(page.locator('header').getByText('语音未配置')).toBeVisible();
   await page.screenshot({path:test.info().outputPath('completed-flow.png'),fullPage:true});
 });

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from .contracts import *
 from .db import Session, Conversation, Message, EventRow, Operation, Record, RequestReceipt, now, new_id
 from .adapters import DomainError, Services
+from .config import settings
 
 log = logging.getLogger('zhiyu')
 
@@ -51,7 +52,7 @@ def snapshot(db, row):
         state=row.state, state_revision=row.revision, route=row.data['route'], last_event_seq=row.seq,
         operations=ops, verified=verified, busy=row.data.get('busy',False), ended=row.data.get('ended',False),
         generation_id=row.data.get('generation_id'), reason=row.data.get('reason') if verified else None,
-        remedy=row.data.get('remedy') if verified else None, messages=messages(db,row.id), record=record.data if record else None)
+        remedy=row.data.get('remedy') if verified else None, messages=messages(db,row.id), record=record.data if record else None, mode=row.data.get('mode','text'))
 
 class Coordinator:
     def __init__(self, services: Services):
@@ -77,8 +78,8 @@ class Coordinator:
         await asyncio.gather(*pending, *([self.operation_worker] if self.operation_worker else []), return_exceptions=True)
 
     def create(self, owner, request, key):
-        if request.mode != 'text':
-            raise DomainError('VOICE_NOT_CONFIGURED', '语音未配置', 503)
+        if request.mode=='voice' and not self.services.voice.available():
+            raise DomainError('VOICE_NOT_CONFIGURED', '语音配置尚未完成', 503)
         case = self.services.cases.get_case(owner, str(request.application_id))
         with self.repo.transaction() as db:
             # Serialize creation receipts across requests/process restarts.
@@ -89,7 +90,7 @@ class Coordinator:
             if previous: return snapshot(db,owned(db,previous['session_id'],owner))
             row = Conversation(id=new_id(),owner=owner,application_id=str(case.application_id), state='CASE_READY',revision=0,seq=0,
                 data={'case_revision':case.case_revision,'strategy_version':'demo-p1','knowledge_version':'demo-k1','rule_version':'demo-r1',
-                      'route':self.services.policy.decide_route(case),'verified':False,'explained':False,'ended':False,'busy':False,'epoch':0,'message_count':0})
+                      'route':self.services.policy.decide_route(case),'verified':False,'explained':False,'ended':False,'busy':False,'epoch':0,'message_count':0,'mode':request.mode})
             db.add(row)
             db.flush()
             emit(db,row,StateChanged(type='state.changed',state='CASE_READY'))
@@ -109,13 +110,17 @@ class Coordinator:
         if row.id in self.cancels: self.cancels[row.id].set()
         return True
 
-    async def accept(self,owner,sid,text,key,*,start_revision=None):
+    async def accept(self,owner,sid,text,key,*,start_revision=None,source='text',provider_turn=None):
         with self.repo.transaction() as db:
             row=owned(db,sid,owner,True)
             kind='start' if start_revision is not None else 'turn'
             rkey=f'{sid}:{kind}:{key}'
             digest,old=receipt(db,rkey,{'text':text,'revision':start_revision})
             if old: return AcceptedTurn(**old)
+            if row.data.get('mode','text')=='voice' and source!='asr':
+                raise DomainError('WRONG_INPUT_MODE','语音会话只能接收绑定的声网输入',409)
+            if provider_turn is not None and provider_turn<=row.data.get('last_provider_turn',-1):
+                raise DomainError('STALE_PROVIDER_TURN','收到过期语音轮次',409)
             if row.data.get('ended') or row.state in ['CLOSED','MANUAL_REVIEW']:
                 raise DomainError('SESSION_ENDED','会话已结束或转人工')
             if start_revision is not None:
@@ -126,6 +131,7 @@ class Coordinator:
             elif row.state not in ['OPENING','VERIFYING','EXPLAINING','QA','CALLBACK_PENDING']:
                 raise DomainError('ACTION_IN_PROGRESS','业务处理中，请等待查证或结束会话')
             self._invalidate(db,row)
+            if provider_turn is not None: row.data={**row.data,'last_provider_turn':provider_turn}
             turn,generation,mid,assistant_id=new_id(),new_id(),new_id(),new_id()
             row.data={**row.data,'generation_id':generation,'turn_id':turn,'busy':True}
             row.revision+=1
@@ -134,14 +140,14 @@ class Coordinator:
                 row.data={**row.data,'message_count':row.data['message_count']+1}
                 db.add(Message(id=mid,session_id=sid,position=row.data['message_count'],data={'view':{'turn_id':turn,'generation_id':generation,'role':'user','text':text,'status':'completed'}}))
             row.data={**row.data,'message_count':row.data['message_count']+1}
-            db.add(Message(id=assistant_id,session_id=sid,position=row.data['message_count'],data={'view':{'turn_id':turn,'generation_id':generation,'role':'assistant','text':'','status':'generating'}}))
+            db.add(Message(id=assistant_id,session_id=sid,position=row.data['message_count'],data={'view':{'turn_id':turn,'generation_id':generation,'role':'assistant','text':'','status':'generating','playback_status':'unknown' if source=='asr' else 'not_applicable'}}))
             emit(db,row,TurnStarted(type='turn.started',message_id=mid),turn=turn,generation=generation)
             result=AcceptedTurn(turn_id=turn,generation_id=generation)
             db.add(RequestReceipt(key=rkey,payload_hash=digest,data=result.model_dump(mode='json')))
         cancel=asyncio.Event()
         self.cancels[sid]=cancel
         # Existing work receives cancel; its finally blocks may finish without blocking this request.
-        task=asyncio.create_task(self.generate(owner,sid,text,mid,assistant_id,turn,generation,cancel,start_revision is not None))
+        task=asyncio.create_task(self.generate(owner,sid,text,mid,assistant_id,turn,generation,cancel,start_revision is not None,source))
         self.tasks[sid]=task
         self.all_tasks.add(task)
         def done(t):
@@ -153,44 +159,79 @@ class Coordinator:
         task.add_done_callback(done)
         return result
 
-    async def generate(self,owner,sid,text,mid,assistant_id,turn,generation,cancel,opening):
+    async def generate(self,owner,sid,text,mid,assistant_id,turn,generation,cancel,opening,source='text'):
         try:
             case=self.services.cases.get_case(owner,self.application_id(owner,sid))
             with self.repo.transaction() as db:
                 row=owned(db,sid,owner,True)
                 if not self.current(row,generation): return
                 # Demo identity evidence is validated by code against the assigned synthetic entity.
-                if not opening and text.strip() == f'我是{case.slots["company_name"]}':
+                import re
+                normalized=re.sub(r'[\s，。！？,.!?、]','',text)
+                company=case.slots['company_name']
+                aliases={company}
+                if source=='asr':
+                    for digit,han in [('1','一'),('2','二'),('3','三')]:aliases.add(company.replace(digit,han))
+                identities={phrase for alias in aliases for phrase in [f'我是{alias}',f'我是{alias}的联系人',f'对我是{alias}的联系人']}
+                if not opening and normalized in identities:
                     row.data={**row.data,'verified':True,'identity_evidence':mid}
                 verified=row.data.get('verified',False)
                 context=SessionContext(session_id=sid,turn_id=turn,generation_id=generation,generation_epoch=row.data['epoch'],
                     application_id=row.application_id,case_revision=row.data['case_revision'],state_revision=row.revision,
-                    strategy_version=row.data['strategy_version'],rule_version=row.data['rule_version'],knowledge_version=row.data['knowledge_version'],model_version='fake-v1')
+                    strategy_version=row.data['strategy_version'],rule_version=row.data['rule_version'],knowledge_version=row.data['knowledge_version'],model_version=settings.deepseek_model if settings.model_provider=='deepseek' else 'fake-v1')
                 history=tuple(messages(db,sid))
             entries=self.services.knowledge.lookup(case.scenario_id,text,['synthetic'],context.knowledge_version)
             if opening:
                 decision=AgentDecision(reply_text=f'您好，这里是模拟商户服务AI演示。请确认您是否是{case.slots["company_name"]}的联系人。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
             else:
-                decision=await asyncio.wait_for(self.services.agent.handle_turn(TurnInput(message_id=mid,text=text,source='text'),context,history,case,tuple(entries),verified,cancel),8)
+                decision=await asyncio.wait_for(self.services.agent.handle_turn(TurnInput(message_id=mid,text=text,source=source),context,history,case,tuple(entries),verified,cancel),8)
             # Pre-identity and missing-source output cannot bypass the coordinator via a replacement Agent.
             if not verified and decision.next_state != 'CLOSING':
                 decision=AgentDecision(reply_text=f'这里是模拟商户服务AI。请确认身份：输入“我是{case.slots["company_name"]}”。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
             if verified and not entries:
                 decision=AgentDecision(reply_text='缺少已审核依据，已转人工核实。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
+            if source=='asr' and decision.proposed_action!='none' and (not settings.voice_writes_enabled or not row.data.get('voice_explanation_verified')):
+                decision=AgentDecision(reply_text='本次语音链路演示已完成，业务写入尚未通过语音告知验收。后续由人工核实处理。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
             if decision.next_state not in ['VERIFYING','QA','CLOSING','MANUAL_REVIEW','ACTION_READY']:
                 raise DomainError('INVALID_TRANSITION','Agent提议了不允许的状态')
             if decision.next_state == 'ACTION_READY' and decision.proposed_action == 'none':
                 raise DomainError('INVALID_TRANSITION','业务准备状态必须有操作提议')
-            model_request=ModelRequest(messages=[ModelMessage(role='system',content='模拟商户服务。只表述已经校验的回复，不增加业务事实：'+decision.reply_text),
-                ModelMessage(role='user',content=text)],fixture_response=decision.reply_text)
+            # Fixed identity, rectification and action messages must retain exact reviewed wording.
+            rephrase=(verified and decision.next_state=='QA' and decision.proposed_action=='none'
+                and entries and entries[0].approved_text not in decision.reply_text)
+            prior=[ModelMessage(role=m.role,content=m.text) for m in history if m.status=='completed' and m.text and m.generation_id!=UUID(generation)]
+            model_request=ModelRequest(messages=[ModelMessage(role='system',content='模拟商户服务。只改写以下已校验答复，不增加任何业务事实、价格、期限或通过承诺：'+decision.reply_text),
+                *prior[-12:],ModelMessage(role='user',content=text)],fixture_response=decision.reply_text,allow_rephrase=bool(rephrase),session_id=sid,turn_id=turn,generation_id=generation)
+            from .adapters import FakeModel
+            output_model=FakeModel() if getattr(self.services.model,'name','fake')=='deepseek' and not model_request.allow_rephrase else self.services.model
+            import time
+            model_started=time.monotonic()
+            first_content=True
+            async def output_stream():
+                if getattr(output_model,'name','fake')!='deepseek':
+                    async for piece in output_model.stream(model_request,cancel):yield piece
+                    return
+                # Temporary DemoAgent has only this non-authoritative QA. Do not let an
+                # unconstrained paraphrase invent commitments while the real Agent is unfinished.
+                parts=[]
+                async for piece in output_model.stream(model_request,cancel):parts.append(piece)
+                if cancel.is_set():return
+                content=''.join(parts).strip()
+                approved={decision.reply_text,'补齐材料后仍需审核，无法保证通过。','材料补齐后还需要审核，不能保证一定通过。'}
+                yield content if content in approved else decision.reply_text
             async with asyncio.timeout(8):
-                async for chunk in self.services.model.stream(model_request,cancel):
+                async for chunk in output_stream():
                     with self.repo.transaction() as db:
                         row=owned(db,sid,owner,True)
                         if not self.current(row,generation) or cancel.is_set(): return
                         msg=db.get(Message,assistant_id)
+                        if first_content and getattr(output_model,'name','fake')!='deepseek':
+                            emit(db,row,MetricRecorded(type='metric.recorded',name='model_ttft',duration_ms=(time.monotonic()-model_started)*1000,
+                                outcome='success',clock_domain='server.monotonic',measurement_method='first_content:fake'),
+                                turn=turn,generation=generation)
+                            first_content=False
                         msg.data={**msg.data,'view':{**msg.data['view'],'text':msg.data['view']['text']+chunk}}
-                        emit(db,row,TextDelta(type='text.delta',text=chunk),turn=turn,generation=generation)
+                        emit(db,row,TextDelta(type='text.delta',text=chunk,channel='voice_transport' if source=='asr' else 'text_mode'),turn=turn,generation=generation)
             with self.repo.transaction() as db:
                 row=owned(db,sid,owner,True)
                 if not self.current(row,generation) or cancel.is_set(): return
@@ -218,7 +259,10 @@ class Coordinator:
             log.warning('generation_failed kind=%s session=%s',type(exc).__name__,sid)
             with self.repo.transaction() as db:
                 row=owned(db,sid,owner,True)
-                if self.current(row,generation): self._invalidate(db,row,'failed')
+                if self.current(row,generation):
+                    emit(db,row,MetricRecorded(type='metric.recorded',name='model_ttft',outcome='timeout' if getattr(exc,'code','')=='MODEL_TIMEOUT' or isinstance(exc,TimeoutError) else 'missing',
+                        clock_domain='server.monotonic',measurement_method='failed_generation_no_latency_claim'),turn=turn,generation=generation)
+                    self._invalidate(db,row,'failed')
 
     def application_id(self,owner,sid):
         with self.repo.read() as db: return owned(db,sid,owner).application_id

@@ -512,8 +512,11 @@
           "type": "boolean"
         },
         "model": {
-          "const": "fake",
           "default": "fake",
+          "enum": [
+            "fake",
+            "deepseek"
+          ],
           "title": "Model",
           "type": "string"
         },
@@ -522,6 +525,18 @@
           "default": "0.3.0",
           "title": "Schema Version",
           "type": "string"
+        },
+        "voice_unavailable_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Voice Unavailable Reason"
         }
       },
       "title": "Capabilities",
@@ -1006,6 +1021,51 @@
       "title": "LoginResult",
       "type": "object"
     },
+    "MediaCredentials": {
+      "additionalProperties": false,
+      "properties": {
+        "app_id": {
+          "title": "App Id",
+          "type": "string"
+        },
+        "channel": {
+          "title": "Channel",
+          "type": "string"
+        },
+        "rtc_uid": {
+          "title": "Rtc Uid",
+          "type": "integer"
+        },
+        "agent_uid": {
+          "title": "Agent Uid",
+          "type": "integer"
+        },
+        "rtc_token": {
+          "title": "Rtc Token",
+          "type": "string"
+        },
+        "rtm_token": {
+          "title": "Rtm Token",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "app_id",
+        "channel",
+        "rtc_uid",
+        "agent_uid",
+        "rtc_token",
+        "rtm_token",
+        "expires_at"
+      ],
+      "title": "MediaCredentials",
+      "type": "object"
+    },
     "MessageView": {
       "additionalProperties": false,
       "properties": {
@@ -1163,6 +1223,50 @@
         "fixture_response": {
           "title": "Fixture Response",
           "type": "string"
+        },
+        "allow_rephrase": {
+          "default": false,
+          "title": "Allow Rephrase",
+          "type": "boolean"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "turn_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Turn Id"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
         }
       },
       "required": [
@@ -1647,6 +1751,15 @@
             }
           ],
           "default": null
+        },
+        "mode": {
+          "default": "text",
+          "enum": [
+            "text",
+            "voice"
+          ],
+          "title": "Mode",
+          "type": "string"
         }
       },
       "required": [
@@ -1760,8 +1873,11 @@
           "type": "string"
         },
         "channel": {
-          "const": "text_mode",
           "default": "text_mode",
+          "enum": [
+            "text_mode",
+            "voice_transport"
+          ],
           "title": "Channel",
           "type": "string"
         }
@@ -1902,6 +2018,176 @@
         "message_id"
       ],
       "title": "TurnStarted",
+      "type": "object"
+    },
+    "VoiceHeartbeat": {
+      "additionalProperties": false,
+      "properties": {
+        "client_event_id": {
+          "format": "uuid",
+          "title": "Client Event Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "client_event_id"
+      ],
+      "title": "VoiceHeartbeat",
+      "type": "object"
+    },
+    "VoiceInterruptRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "client_event_id": {
+          "format": "uuid",
+          "title": "Client Event Id",
+          "type": "string"
+        },
+        "provider_turn_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Turn Id"
+        }
+      },
+      "required": [
+        "client_event_id"
+      ],
+      "title": "VoiceInterruptRequest",
+      "type": "object"
+    },
+    "VoiceStartResult": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "starting",
+            "running",
+            "stopped",
+            "cleanup_pending"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "agent_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Agent Id"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "VoiceStartResult",
+      "type": "object"
+    },
+    "VoiceTelemetry": {
+      "additionalProperties": false,
+      "properties": {
+        "client_event_id": {
+          "format": "uuid",
+          "title": "Client Event Id",
+          "type": "string"
+        },
+        "provider_turn_id": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Turn Id"
+        },
+        "kind": {
+          "enum": [
+            "interrupted",
+            "playback_observed",
+            "speech_end_observed",
+            "sdk_metric"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "clock_domain": {
+          "maxLength": 80,
+          "title": "Clock Domain",
+          "type": "string"
+        },
+        "monotonic_ms": {
+          "minimum": 0,
+          "title": "Monotonic Ms",
+          "type": "number"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "measurement_method": {
+          "maxLength": 150,
+          "title": "Measurement Method",
+          "type": "string"
+        },
+        "provider_metric_name": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Metric Name"
+        },
+        "provider_metric_value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Metric Value"
+        }
+      },
+      "required": [
+        "client_event_id",
+        "kind",
+        "clock_domain",
+        "monotonic_ms",
+        "measurement_method"
+      ],
+      "title": "VoiceTelemetry",
       "type": "object"
     },
     "WritebackPayload": {

@@ -2,7 +2,7 @@
 
 京东 POP 商户资质审核驳回告知与整改指导的**合成演示骨架**。Next.js＋TypeScript、FastAPI＋Pydantic、PostgreSQL、REST＋SSE。默认FakeModel，不需要云账号，不执行真实外呼。
 
-代码已搭建；本机WSL／Docker问题按团队决定稍后处理。已绕过Docker，用临时PostgreSQL完成30项测试及三轮浏览器业务验收，详见 [验证记录](docs/verification.md)。
+代码已搭建。本机Windows虚拟化组件已修复，重装Docker Desktop 4.99.0后容器部署通过：PostgreSQL、后端和前端均已启动，三轮浏览器业务流程、回写、刷新恢复及容器重启持久化验证通过。此前58项后端测试的记录及本次容器验收详见 [验证记录](docs/verification.md)。
 
 ## 先看哪里
 
@@ -52,7 +52,7 @@ $env:PUBLIC_ORIGIN='http://localhost:3000'
 
 应看到模拟处理结果及“通话记录已回写”，刷新后恢复。身份核对前不展示具体驳回原因。默认密码和演示登录仅供localhost，不用于公网部署。
 
-## Docker恢复后统一启动
+## Docker统一启动
 
 ```powershell
 Copy-Item .env.example .env
@@ -64,7 +64,7 @@ docker compose up --build -d
 
 热更新：`docker compose -f compose.yaml -f compose.dev.yaml up --build`。开发前端使用独立node_modules卷，依赖变化后在容器内执行npm ci。
 
-`.env`由Compose自动读取；本机启动脚本使用终端环境变量，不自动加载.env。
+`.env`由Compose读取；本机后端也会加载根目录.env，终端环境变量优先。修改.env后重启后端。
 
 ## 类型与测试
 
@@ -103,3 +103,11 @@ CI提供相同的PostgreSQL测试和浏览器验收。工作流已编写，尚�
 不提交.env、真实赛题数据、未脱敏日志、录音和保留评测集。旧套餐方案保留在docs/archive，仅作历史资料。
 
 复验完整数据流：准备专用`_test`数据库、完成迁移和前端构建，并安装Playwright Chromium后，运行 `.venv/Scripts/python.exe scripts/verify_browser_flow.py`。脚本会清空该测试库，自动启动／停止前后端并生成 [数据库事实证据](docs/flow-evidence.json)。
+
+## 语音／真实模型增量（2026-11-18）
+
+声网RTC／RTM语音组件、DeepSeek适配和自定义模型入口已经加入。配置与真实验收状态见 [接入说明](docs/voice-integration.md)。根目录`.env`已在本机生成，账号字段由本人填写；仓库仅提交`.env.example`。检查配置运行 `python scripts/cloud_doctor.py`，不会显示密钥或调用云服务。
+
+公网与声网操作顺序见 [腾讯云部署说明](docs/public-deployment.md)。目标为11月25日前联调。用户已授权停止旧Nginx和3000端口Node服务，以本项目为主；释放80／443／3000后使用独立Caddy与compose.public-ip.yaml。compose.nginx.yaml保留为需要保留旧Nginx时的备选，本轮不混用。所有公网路径都需要实际服务器和声网云端验收。
+
+本机Docker容器验收已通过，证据见 [Docker验收记录](docs/docker-evidence.json)。此前针对旧socket登记的开机改名任务已取消；正常启动无需运行故障修复脚本。固定公网三轮语音、真实模型及TTS接入仍待配置和实测。

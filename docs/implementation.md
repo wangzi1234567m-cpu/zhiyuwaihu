@@ -42,4 +42,8 @@ Repository提供事务边界，协调器使用read/transaction。协调器目前
 
 集成测试仅用真实PostgreSQL，默认显式跳过。只有RUN_DB_TESTS=1且数据库名以_test结尾才允许清空测试表。CI运行迁移、数据库测试、类型生成差异、前端构建和浏览器三轮流程。
 
-本机WSL/Docker仍留待后续处理，现已通过独立临时PostgreSQL验证数据库和浏览器全链路。消息采用持久化position排序，SSE代理关闭压缩以确保实时推送。具体通过项与待验证项见 [验证记录](verification.md)。
+本机Windows虚拟化组件已修复，Docker Desktop重装至4.99.0后Compose部署通过；数据库和浏览器文本全链路、容器重启后的持久化均已验证。消息采用持久化position排序，SSE代理关闭压缩以确保实时推送。具体通过项与待验证项见 [验证记录](verification.md)。
+
+## 2026-11-18语音／模型增量
+
+原“尚未实现”列表记录0.3.0初始状态。现已加入可配置DeepSeekModel、AgoraVoiceGateway及VoicePanel；增量接口、已实现与待实测范围统一见 [语音接入说明](voice-integration.md)。业务Agent／Case／Knowledge／Business端口签名保留，VoiceGateway增加生命周期方法，ModelRequest仅增加可选字段。旧文本流程继续作为回归门槛，语音业务写入默认禁用。

@@ -1,6 +1,7 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
 import type {components} from './api.generated';
+import VoicePanel from './VoicePanel';
 
 type View = components['schemas']['SessionView'];
 type Application = components['schemas']['ApplicationView'];
@@ -20,6 +21,8 @@ async function api<T>(path: string, body?: unknown, key?: string): Promise<T> {
 
 export default function Home() {
   const [logged,setLogged] = useState(false);
+  const [capabilities,setCapabilities]=useState<components['schemas']['Capabilities']|null>(null);
+  const [mode,setMode]=useState<'text'|'voice'>('text');
   const [password,setPassword] = useState('');
   const [applications,setApplications] = useState<Application[]>([]);
   const [selected,setSelected] = useState('');
@@ -36,6 +39,7 @@ export default function Home() {
 
   async function initialize() {
     const items = await api<Application[]>('/applications');
+    setCapabilities(await api<components['schemas']['Capabilities']>('/capabilities'));
     setApplications(items); setSelected(items[0]?.application_id ?? ''); setLogged(true);
     const saved = localStorage.getItem('zhiyu.session');
     if(saved) setSid(saved);
@@ -96,7 +100,7 @@ export default function Home() {
     try {await fn();} catch(e) {setError(e instanceof Error?e.message:String(e));} finally {setSubmitting(false);}
   }
   async function create() {
-    const next=await api<View>('/sessions',{application_id:selected,mode:'text'},crypto.randomUUID());
+    const next=await api<View>('/sessions',{application_id:selected,mode},crypto.randomUUID());
     localStorage.setItem('zhiyu.session',next.session_id); setSid(next.session_id);
   }
   async function start() {
@@ -110,16 +114,20 @@ export default function Home() {
     const turn=await api<Accepted>(`/sessions/${sid}/turns`,{text:input,client_event_id:crypto.randomUUID()});
     generation.current=turn.generation_id; setInput(''); setLive('');
     const next=await api<View>(`/sessions/${sid}`);
-    if(activeSid.current===sid && next.last_event_seq>=cursor.current) setView(next);
+    if(activeSid.current===sid && next.last_event_seq>=cursor.current) {
+      cursor.current=next.last_event_seq;
+      setView(next);
+      setLive('');
+    }
   }
   return <main>
-    <header><div><p className="eyebrow">智语外呼 / 开发联调</p><h1>商户资质告知助手</h1><p>合成数据 · 文本模式 · 不执行真实外呼</p></div><span className="badge">语音未配置</span></header>
+    <header><div><p className="eyebrow">智语外呼 / 开发联调</p><h1>商户资质告知助手</h1><p>合成数据 · 文本模式 · 不执行真实外呼</p></div><span className="badge">{capabilities?.voice?'语音可联调':'语音未配置'}</span></header>
     {error && <div role="alert" className="error">{error}</div>}
-    {!logged ? <section className="login"><h2>进入演示环境</h2><p>使用本地配置的演示密码。默认值见启动说明。</p><form onSubmit={e=>{e.preventDefault();run(async()=>{await api('/dev/login',{username:'demo',password});await initialize();});}}><label>演示密码<input aria-label="演示密码" type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={submitting}>登录</button></form></section> : <div className="grid">
-      <aside><h2>合成任务</h2><label>选择申请单<select value={selected} onChange={e=>setSelected(e.target.value)}>{applications.map(a=><option key={a.application_id} value={a.application_id}>{a.label} · {a.company_hint}</option>)}</select></label><button disabled={submitting||!selected||!!view?.busy} onClick={()=>run(create)}>创建会话</button><p className="hint">身份输入：我是演示商家1（按所选商家编号调整）</p><p className="hint">之后可问“补齐材料一定必过吗”，再说“明白了”。</p><hr/><h2>业务事实</h2><p>状态：{view ? stateLabels[view.state] ?? view.state : '尚未创建'}</p><p>身份：{view?.verified?'已核对':'尚未核对'}</p>{view?.reason && <p>原因：{view.reason}</p>}{view?.remedy && <p>整改：{view.remedy}</p>}{view?.operations.map(o=><p key={o.operation_id} data-testid="operation-status">{operationLabels[o.status]}{o.resource_id && <small>{o.resource_id}</small>}</p>)}{view?.record && <p data-testid="writeback">通话记录已回写</p>}</aside>
-      <section className="conversation"><div className="toolbar"><h2>文本会话</h2><span>{sid?(connecting?'事件连接中':'已连接'):'待连接'}</span></div><div className="actions"><button disabled={!view||view.state!=='CASE_READY'||submitting} onClick={()=>run(start)}>开始</button><button disabled={!view?.busy||!view.generation_id||submitting} onClick={()=>run(async()=>{await api(`/sessions/${sid}/interruptions`,{generation_id:view!.generation_id,client_event_id:crypto.randomUUID()});setView(await api<View>(`/sessions/${sid}`));setLive('');})}>打断</button><button disabled={!view||view.ended||submitting} onClick={()=>run(async()=>{setView(await api<View>(`/sessions/${sid}/end`,{reason:'user_ended'}));setLive('');})}>结束</button></div>
-      <div className="messages" aria-live="polite">{!view?.messages?.length && <p className="empty">创建会话后点击开始，AI 会主动开场。</p>}{view?.messages?.map(m=><article key={m.message_id} className={m.role}><strong>{m.role==='user'?'商户':'AI'}</strong><p>{m.text || '…'}</p>{m.status==='interrupted'&&<small>已打断</small>}{m.status==='failed'&&<small>生成失败，可重试</small>}</article>)}{live && <article className="assistant"><strong>AI · 正在回复</strong><p>{live}</p></article>}</div>
-      <form className="composer" onSubmit={e=>{e.preventDefault();run(send);}}><input aria-label="商户回复" placeholder="输入商户回复；新输入会打断旧生成" value={input} onChange={e=>setInput(e.target.value)} disabled={!view||view.ended||view.state==='CASE_READY'}/><button disabled={!view||view.ended||view.state==='CASE_READY'||submitting||!input.trim()}>发送</button></form></section>
+    {!logged ? <section className="login"><h2>进入演示环境</h2><p>使用本地配置的演示密码。默认值见启动说明。</p><form onSubmit={e=>{e.preventDefault();run(async()=>{await api('/auth/login',{username:'demo',password});await initialize();});}}><label>演示密码<input aria-label="演示密码" type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={submitting}>登录</button></form></section> : <div className="grid">
+      <aside><h2>合成任务</h2><label>交互模式<select value={mode} onChange={e=>setMode(e.target.value as 'text'|'voice')}><option value="text">文本联调</option><option value="voice" disabled={!capabilities?.voice}>实时语音</option></select></label>{capabilities?.voice_unavailable_reason&&<p className="hint">{capabilities.voice_unavailable_reason}</p>}<label>选择申请单<select value={selected} onChange={e=>setSelected(e.target.value)}>{applications.map(a=><option key={a.application_id} value={a.application_id}>{a.label} · {a.company_hint}</option>)}</select></label><button disabled={submitting||!selected||!!view?.busy} onClick={()=>run(create)}>创建会话</button><p className="hint">身份输入：我是演示商家1（按所选商家编号调整）</p><p className="hint">之后可问“补齐材料一定必过吗”，再说“明白了”。</p><hr/><h2>业务事实</h2><p>状态：{view ? stateLabels[view.state] ?? view.state : '尚未创建'}</p><p>身份：{view?.verified?'已核对':'尚未核对'}</p>{view?.reason && <p>原因：{view.reason}</p>}{view?.remedy && <p>整改：{view.remedy}</p>}{view?.operations.map(o=><p key={o.operation_id} data-testid="operation-status">{operationLabels[o.status]}{o.resource_id && <small>{o.resource_id}</small>}</p>)}{view?.record && <p data-testid="writeback">通话记录已回写</p>}</aside>
+      <section className="conversation">{view?.mode==='voice'?<VoicePanel key={view.session_id} view={view} onError={setError}/>:<><div className="toolbar"><h2>文本会话</h2><span>{sid?(connecting?'事件连接中':'已连接'):'待连接'}</span></div><div className="actions"><button disabled={!view||view.state!=='CASE_READY'||submitting} onClick={()=>run(start)}>开始</button><button disabled={!view?.busy||!view.generation_id||submitting} onClick={()=>run(async()=>{await api(`/sessions/${sid}/interruptions`,{generation_id:view!.generation_id,client_event_id:crypto.randomUUID()});setView(await api<View>(`/sessions/${sid}`));setLive('');})}>打断</button><button disabled={!view||view.ended||submitting} onClick={()=>run(async()=>{setView(await api<View>(`/sessions/${sid}/end`,{reason:'user_ended'}));setLive('');})}>结束</button></div>
+      <div className="messages" aria-live="polite">{!view?.messages?.length && <p className="empty">创建会话后点击开始，AI 会主动开场。</p>}{view?.messages?.filter(m=>!(live && m.status==='generating' && m.generation_id===generation.current)).map(m=><article key={m.message_id} className={m.role}><strong>{m.role==='user'?'商户':'AI'}</strong><p>{m.text || '…'}</p>{m.status==='interrupted'&&<small>已打断</small>}{m.status==='failed'&&<small>生成失败，可重试</small>}</article>)}{live && <article className="assistant"><strong>AI · 正在回复</strong><p>{live}</p></article>}</div>
+      <form className="composer" onSubmit={e=>{e.preventDefault();run(send);}}><input aria-label="商户回复" placeholder="输入商户回复；新输入会打断旧生成" value={input} onChange={e=>setInput(e.target.value)} disabled={!view||view.ended||view.state==='CASE_READY'}/><button disabled={!view||view.ended||view.state==='CASE_READY'||submitting||!input.trim()}>发送</button></form></>}</section>
     </div>}
     <footer>当前为确定性 DemoAgent 和模拟业务。文字响应不代表语音性能。</footer>
   </main>;

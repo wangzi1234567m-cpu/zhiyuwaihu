@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/AgoraIO/Tools",
+  "commit": "d9b93a53e4e2c6b4d035e3bb824b6ce8f0e052e0",
+  "files": {
+    "AccessToken2.py": "40264977bec1fcddb7764816226c0d47137de932390064b3500f8181c254f01d",
+    "RtcTokenBuilder2.py": "dfe71cb0ab92a3a4c6689c360648b25fb12dc4e36363d9a5ce5cb2d4816cdbf4",
+    "RtmTokenBuilder2.py": "b5e3e354ad4b30d598be2b4a4756f7d81af67274700e09cbf5181c847bea613e",
+    "Packer.py": "b7caab1a63a0ca5237adbd28bd5f73ab5cb47317808d2806466717a55cceda3f"
+  }
+}

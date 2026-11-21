@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from contextlib import suppress
 from uuid import UUID, uuid4
 from fastapi import FastAPI, Request, Depends, Header
 from fastapi.exceptions import RequestValidationError
@@ -15,16 +16,23 @@ from .coordinator import Coordinator, owned, snapshot
 
 log=logging.getLogger('zhiyu')
 
-def create_app(services=None):
+def create_app(services=None, *, tts=None):
     services=services or Services()
+    from .tts import QwenTTS, SpeechRequest
+    from .cloud_budget import reserve_call
+    tts=tts or QwenTTS(reserve=reserve_call)
+    services.voice.cancel_tts=tts.cancel_session
     coordinator=Coordinator(services)
     signer=URLSafeTimedSerializer(settings.cookie_secret)
 
     @asynccontextmanager
     async def lifespan(app):
         await coordinator.startup()
-        yield
-        await coordinator.shutdown()
+        await services.voice.startup(coordinator)
+        try:yield
+        finally:
+            await services.voice.shutdown()
+            await coordinator.shutdown()
 
     app=FastAPI(title='智语外呼文本联调骨架',version='0.3.0',lifespan=lifespan)
     app.state.services,app.state.coordinator=services,coordinator
@@ -92,8 +100,22 @@ def create_app(services=None):
             secure=settings.public_origin.startswith('https://'),max_age=8*3600)
         return response
 
+    @app.post('/api/v1/auth/login',response_model=LoginResult)
+    def staging_login(body: LoginRequest):
+        import secrets
+        if settings.environment in ['development','test']:return login(body)
+        if settings.environment!='staging' or not settings.public_origin.startswith('https://') or len(settings.staging_password)<16 or len(settings.cookie_secret)<32 or settings.cookie_secret.startswith('local-'):
+            raise DomainError('STAGING_LOGIN_DISABLED','公网联调登录尚未安全配置',503)
+        if body.username!='demo' or not secrets.compare_digest(body.password,settings.staging_password):
+            raise DomainError('BAD_CREDENTIALS','登录失败',401)
+        response=JSONResponse({'owner':'demo'})
+        response.set_cookie('zhiyu_session',signer.dumps({'owner':'demo'}),httponly=True,samesite='strict',secure=True,max_age=3600)
+        return response
+
     @app.get('/api/v1/capabilities',response_model=Capabilities)
-    def capabilities(user=Depends(owner)): return Capabilities()
+    def capabilities(user=Depends(owner)):
+        return Capabilities(voice=services.voice.available(),model=settings.model_provider,
+            voice_unavailable_reason=services.voice.unavailable_reason())
 
     @app.get('/api/v1/applications',response_model=list[ApplicationView])
     def applications(user=Depends(owner)):
@@ -126,7 +148,9 @@ def create_app(services=None):
 
     @app.post('/api/v1/sessions/{sid}/end',response_model=SessionView)
     async def end(sid: UUID,body: EndRequest,user=Depends(owner)):
-        return coordinator.end(user,str(sid))
+        result=coordinator.end(user,str(sid))
+        if result.mode=='voice':await services.voice.stop(user,str(sid))
+        return result
 
     @app.get('/api/v1/operations/{oid}',response_model=OperationResult)
     def operation(oid: UUID,user=Depends(owner)):
@@ -159,14 +183,102 @@ def create_app(services=None):
                 await asyncio.sleep(.2)
         return StreamingResponse(stream(),media_type='text/event-stream',headers={'X-Accel-Buffering':'no'})
 
-    @app.post('/api/v1/sessions/{sid}/credentials')
+    @app.post('/api/v1/sessions/{sid}/credentials',response_model=MediaCredentials)
     async def credentials(sid: UUID,user=Depends(owner)):
         with Session() as db: owned(db,str(sid),user)
         return await services.voice.credentials(str(sid))
 
+    @app.post('/api/v1/sessions/{sid}/voice/start',response_model=VoiceStartResult)
+    async def voice_start(sid: UUID,body: StartSession,user=Depends(owner)):
+        return await services.voice.start(user,str(sid),body.expected_revision)
+
+    @app.post('/api/v1/sessions/{sid}/voice/interrupt',response_model=Interrupted)
+    async def voice_interrupt(sid: UUID,body: VoiceInterruptRequest,user=Depends(owner)):
+        return await services.voice.interrupt(user,str(sid),body)
+
+    @app.post('/api/v1/sessions/{sid}/voice/heartbeat')
+    def voice_heartbeat(sid: UUID,body: VoiceHeartbeat,user=Depends(owner)):
+        services.voice.heartbeat(user,str(sid))
+        return {'accepted':True}
+
+    @app.get('/api/v1/sessions/{sid}/voice/status',response_model=VoiceStartResult)
+    async def voice_status(sid: UUID,user=Depends(owner)):
+        return await services.voice.status(user,str(sid))
+
+    @app.post('/api/v1/sessions/{sid}/voice/telemetry',status_code=202)
+    def voice_telemetry(sid: UUID,body: VoiceTelemetry,user=Depends(owner)):
+        from .coordinator import receipt
+        from .db import RequestReceipt
+        with Session.begin() as db:
+            row=owned(db,str(sid),user,True)
+            if row.data.get('mode')!='voice':raise DomainError('WRONG_INPUT_MODE','不是语音会话')
+            key=f'{sid}:telemetry:{body.client_event_id}'
+            digest,old=receipt(db,key,body.model_dump(mode='json'))
+            if old is None:
+                db.add(RequestReceipt(key=key,payload_hash=digest,data={'accepted':True,'observation':body.model_dump(mode='json'),'received_at':now().isoformat()}))
+                # Raw client observations never change identity, confirmation, playback facts or safety guards.
+                row.data={**row.data,'last_client_observation':body.model_dump(mode='json')}
+                if body.kind=='interrupted' and body.provider_turn_id is not None and body.provider_turn_id==row.data.get('last_provider_turn') and row.data.get('busy'):
+                    coordinator._invalidate(db,row)
+        return {'accepted':True}
+
     @app.post('/integrations/agora/sessions/{sid}/v1/chat/completions')
-    async def disabled_agora(sid: UUID):
-        raise DomainError('VOICE_NOT_CONFIGURED','声网适配尚未配置',503)
+    async def agora_completions(sid: UUID,request: Request,authorization: str | None=Header(default=None)):
+        from .voice import ProviderRequest
+        if not services.voice.available():raise DomainError('VOICE_NOT_CONFIGURED',services.voice.unavailable_reason(),503)
+        # Bound body size before parsing untrusted cloud requests.
+        services.voice.authorize_provider(str(sid),authorization)
+        data=bytearray()
+        async for chunk in request.stream():
+            data.extend(chunk)
+            if len(data)>128*1024:raise DomainError('BODY_TOO_LARGE','语音请求过大',413)
+        from pydantic import ValidationError
+        try:body=ProviderRequest.model_validate_json(data)
+        except ValidationError:raise DomainError('BAD_PROVIDER_REQUEST','声网请求格式不正确',422)
+        stream=await services.voice.completion(str(sid),body,authorization)
+        return StreamingResponse(stream,media_type='text/event-stream',headers={'X-Accel-Buffering':'no'})
+
+    @app.post('/integrations/agora/sessions/{sid}/v1/audio/speech',response_class=StreamingResponse,
+        openapi_extra={'requestBody':{'required':True,'content':{'application/json':{'schema':SpeechRequest.model_json_schema()}}},
+            'responses':{'200':{'description':'24kHz mono PCM16 audio stream','content':{'audio/pcm':{'schema':{'type':'string','format':'binary'}}}}}})
+    async def agora_speech(sid: UUID,request: Request,authorization: str | None=Header(default=None)):
+        from .tts import SpeechRequest
+        from pydantic import ValidationError
+        services.voice.authorize_tts(str(sid),authorization)
+        data=bytearray()
+        async for chunk in request.stream():
+            data.extend(chunk)
+            if len(data)>16*1024:raise DomainError('BODY_TOO_LARGE','语音合成请求过大',413)
+        try:body=SpeechRequest.model_validate_json(data)
+        except ValidationError:raise DomainError('BAD_TTS_REQUEST','语音合成参数不正确',422)
+        cancel=asyncio.Event()
+        tts.register(str(sid),cancel)
+        async def watch_disconnect():
+            while not await request.is_disconnected():await asyncio.sleep(.05)
+            cancel.set()
+        watcher=asyncio.create_task(watch_disconnect())
+        stream=tts.stream(body,cancel)
+        # Fetch first audio before sending 200 so upstream auth/quota errors stay JSON errors.
+        try:
+            try:first=await anext(stream)
+            except StopAsyncIteration:raise DomainError('TTS_EMPTY','音频生成取消或无输出',503)
+        except BaseException:
+            await stream.aclose()
+            tts.unregister(str(sid),cancel)
+            raise
+        finally:
+            watcher.cancel()
+            with suppress(asyncio.CancelledError):await watcher
+        async def content():
+            try:
+                yield first
+                async for chunk in stream:yield chunk
+            finally:
+                cancel.set()
+                await stream.aclose()
+                tts.unregister(str(sid),cancel)
+        return StreamingResponse(content(),media_type='audio/pcm',headers={
+            'X-Accel-Buffering':'no','X-Audio-Sample-Rate':'24000','X-Audio-Channels':'1'})
 
     if settings.faults_enabled and settings.environment in ['development','test']:
         class FaultRequest(DTO):

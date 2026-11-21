@@ -1,0 +1,23 @@
+# Alternative to compose.public.yaml. Requires a trusted IP certificate first.
+services:
+  backend:
+    environment:
+      APP_ENV: staging
+      ENABLE_FAULTS: 'false'
+  gateway:
+    image: caddy:2
+    environment:
+      PUBLIC_IP: ${PUBLIC_IP:?Set PUBLIC_IP to the server public IPv4}
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./infra/Caddyfile.ip:/etc/caddy/Caddyfile:ro
+      - ./infra/private/letsencrypt:/etc/letsencrypt:ro
+      - ./infra/private/acme-webroot:/srv/acme:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend: {condition: service_healthy}
+      frontend: {condition: service_started}
+volumes:
+  caddy_data:
+  caddy_config:

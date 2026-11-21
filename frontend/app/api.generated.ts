@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staging Login */
+        post: operations["staging_login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/capabilities": {
         parameters: {
             query?: never;
@@ -242,6 +259,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{sid}/voice/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Voice Start */
+        post: operations["voice_start_api_v1_sessions__sid__voice_start_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{sid}/voice/interrupt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Voice Interrupt */
+        post: operations["voice_interrupt_api_v1_sessions__sid__voice_interrupt_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{sid}/voice/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Voice Heartbeat */
+        post: operations["voice_heartbeat_api_v1_sessions__sid__voice_heartbeat_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{sid}/voice/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Voice Status */
+        get: operations["voice_status_api_v1_sessions__sid__voice_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{sid}/voice/telemetry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Voice Telemetry */
+        post: operations["voice_telemetry_api_v1_sessions__sid__voice_telemetry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/integrations/agora/sessions/{sid}/v1/chat/completions": {
         parameters: {
             query?: never;
@@ -251,8 +353,25 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Disabled Agora */
-        post: operations["disabled_agora_integrations_agora_sessions__sid__v1_chat_completions_post"];
+        /** Agora Completions */
+        post: operations["agora_completions_integrations_agora_sessions__sid__v1_chat_completions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/agora/sessions/{sid}/v1/audio/speech": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Agora Speech */
+        post: operations["agora_speech_integrations_agora_sessions__sid__v1_audio_speech_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -365,15 +484,17 @@ export interface components {
             /**
              * Model
              * @default fake
-             * @constant
+             * @enum {string}
              */
-            model: "fake";
+            model: "fake" | "deepseek";
             /**
              * Schema Version
              * @default 0.3.0
              * @constant
              */
             schema_version: "0.3.0";
+            /** Voice Unavailable Reason */
+            voice_unavailable_reason?: string | null;
         };
         /** CreateSession */
         CreateSession: {
@@ -434,6 +555,26 @@ export interface components {
         LoginResult: {
             /** Owner */
             owner: string;
+        };
+        /** MediaCredentials */
+        MediaCredentials: {
+            /** App Id */
+            app_id: string;
+            /** Channel */
+            channel: string;
+            /** Rtc Uid */
+            rtc_uid: number;
+            /** Agent Uid */
+            agent_uid: number;
+            /** Rtc Token */
+            rtc_token: string;
+            /** Rtm Token */
+            rtm_token: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
         };
         /** MessageView */
         MessageView: {
@@ -546,6 +687,12 @@ export interface components {
             /** Messages */
             messages?: components["schemas"]["MessageView"][];
             record?: components["schemas"]["CallRecord"] | null;
+            /**
+             * Mode
+             * @default text
+             * @enum {string}
+             */
+            mode: "text" | "voice";
         };
         /** SourceRef */
         SourceRef: {
@@ -585,6 +732,61 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /** VoiceHeartbeat */
+        VoiceHeartbeat: {
+            /**
+             * Client Event Id
+             * Format: uuid
+             */
+            client_event_id: string;
+        };
+        /** VoiceInterruptRequest */
+        VoiceInterruptRequest: {
+            /**
+             * Client Event Id
+             * Format: uuid
+             */
+            client_event_id: string;
+            /** Provider Turn Id */
+            provider_turn_id?: number | null;
+        };
+        /** VoiceStartResult */
+        VoiceStartResult: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "starting" | "running" | "stopped" | "cleanup_pending";
+            /** Agent Id */
+            agent_id?: string | null;
+        };
+        /** VoiceTelemetry */
+        VoiceTelemetry: {
+            /**
+             * Client Event Id
+             * Format: uuid
+             */
+            client_event_id: string;
+            /** Provider Turn Id */
+            provider_turn_id?: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "interrupted" | "playback_observed" | "speech_end_observed" | "sdk_metric";
+            /** Clock Domain */
+            clock_domain: string;
+            /** Monotonic Ms */
+            monotonic_ms: number;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /** Measurement Method */
+            measurement_method: string;
+            /** Provider Metric Name */
+            provider_metric_name?: string | null;
+            /** Provider Metric Value */
+            provider_metric_value?: number | null;
         };
         /**
          * ActionCommand
@@ -902,6 +1104,26 @@ export interface components {
             messages: components["schemas"]["ModelMessage"][];
             /** Fixture Response */
             fixture_response: string;
+            /**
+             * Allow Rephrase
+             * @default false
+             */
+            allow_rephrase: boolean;
+            /**
+             * Session Id
+             * @default null
+             */
+            session_id: string | null;
+            /**
+             * Turn Id
+             * @default null
+             */
+            turn_id: string | null;
+            /**
+             * Generation Id
+             * @default null
+             */
+            generation_id: string | null;
         };
         /** OperationUpdated */
         OperationUpdated: {
@@ -1064,9 +1286,9 @@ export interface components {
             /**
              * Channel
              * @default text_mode
-             * @constant
+             * @enum {string}
              */
-            channel: "text_mode";
+            channel: "text_mode" | "voice_transport";
         };
         /** TurnInput */
         TurnInput: {
@@ -1192,6 +1414,39 @@ export interface operations {
         };
     };
     login_api_v1_dev_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    staging_login_api_v1_auth_login_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1556,6 +1811,111 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["MediaCredentials"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voice_start_api_v1_sessions__sid__voice_start_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartSession"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceStartResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voice_interrupt_api_v1_sessions__sid__voice_interrupt_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceInterruptRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Interrupted"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voice_heartbeat_api_v1_sessions__sid__voice_heartbeat_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceHeartbeat"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": unknown;
                 };
             };
@@ -1570,7 +1930,7 @@ export interface operations {
             };
         };
     };
-    disabled_agora_integrations_agora_sessions__sid__v1_chat_completions_post: {
+    voice_status_api_v1_sessions__sid__voice_status_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -1587,7 +1947,134 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["VoiceStartResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    voice_telemetry_api_v1_sessions__sid__voice_telemetry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceTelemetry"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agora_completions_integrations_agora_sessions__sid__v1_chat_completions_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    agora_speech_integrations_agora_sessions__sid__v1_audio_speech_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Input */
+                    input: string;
+                    /** Model */
+                    model?: string | null;
+                    /** Voice */
+                    voice?: string | null;
+                    /**
+                     * Response Format
+                     * @default pcm
+                     */
+                    response_format?: string;
+                    /**
+                     * Sample Rate
+                     * @default 24000
+                     */
+                    sample_rate?: number;
+                    /**
+                     * Speed
+                     * @default 1
+                     */
+                    speed?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 24kHz mono PCM16 audio stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "audio/pcm": string;
                 };
             };
             /** @description Validation Error */
