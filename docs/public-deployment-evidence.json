@@ -1,0 +1,27 @@
+{
+  "date": "2026-11-21",
+  "host": "192.144.214.34",
+  "tls_verification": true,
+  "checks": [
+    {
+      "path": "/health/ready",
+      "status": 200,
+      "body": "{\"status\":\"ready\"}"
+    },
+    {
+      "path": "/",
+      "status": 200,
+      "body": null
+    },
+    {
+      "path": "/api/v1/applications",
+      "status": 401
+    }
+  ],
+  "renewal_dry_run": "all simulated renewals succeeded",
+  "renewal_schedule": "17 */12 * * *",
+  "cron_service": "active",
+  "container_restart_policy": "unless-stopped for all four services",
+  "voice_acceptance": "not performed",
+  "formal_teammate_modules": "pending"
+}

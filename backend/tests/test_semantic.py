@@ -554,14 +554,14 @@ def _understand(port, text='明白了'):
                                        context=make_context(case), knowledge=()))
 
 
-@pytest.mark.parametrize('content,expected_intents', [
-    ('{"intents":["acknowledge"]}', ['acknowledge']),
-    ('```json\n{"intents":["ask_reason","ask_remedy"]}\n```', ['ask_reason', 'ask_remedy']),
-    ('好的，结果如下：{"intents":["request_callback"]}', ['request_callback']),
+@pytest.mark.parametrize('content,expected_intents,user_text', [
+    ('{"intents":["acknowledge"]}', ['acknowledge'], '明白了'),
+    ('```json\n{"intents":["ask_reason","ask_remedy"]}\n```', ['ask_reason', 'ask_remedy'], '为什么驳回，要补什么材料'),
+    ('好的，结果如下：{"intents":["request_callback"]}', ['request_callback'], '请回电'),
 ])
-def test_glm_adapter_parses_and_server_validates_real_shapes(content, expected_intents):
+def test_glm_adapter_parses_and_server_validates_real_shapes(content, expected_intents, user_text):
     """真实模型输出形状（纯 JSON / 围栏 JSON / 带前后缀）都要能被解析并通过校验。"""
-    result = _understand(_glm_port(content), text='为什么驳回，要补什么材料')
+    result = _understand(_glm_port(content), text=user_text)
     assert result.intents == expected_intents
     assert result.source == 'glm'
 

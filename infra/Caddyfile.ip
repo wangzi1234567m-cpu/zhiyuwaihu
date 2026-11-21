@@ -1,0 +1,34 @@
+# The certificate must be issued for PUBLIC_IP by a public CA. No local/self-signed fallback.
+{
+    default_sni {$PUBLIC_IP}
+}
+
+http://{$PUBLIC_IP} {
+    handle /.well-known/acme-challenge/* {
+        root * /srv/acme
+        file_server
+    }
+    handle {
+        redir https://{$PUBLIC_IP}{uri} 308
+    }
+}
+
+https://{$PUBLIC_IP} {
+    tls /etc/letsencrypt/live/zhiyu-ip/fullchain.pem /etc/letsencrypt/live/zhiyu-ip/privkey.pem
+    handle /integrations/* {
+        reverse_proxy backend:8000 {
+            flush_interval -1
+        }
+    }
+    handle /api/* {
+        reverse_proxy backend:8000 {
+            flush_interval -1
+        }
+    }
+    handle /health/* {
+        reverse_proxy backend:8000
+    }
+    handle {
+        reverse_proxy frontend:3000
+    }
+}

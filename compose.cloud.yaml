@@ -1,0 +1,11 @@
+# Optional cloud integrations; existing compose.yaml remains offline by default.
+services:
+  backend:
+    env_file: .env
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      MODEL_PROVIDER: ${MODEL_PROVIDER:-fake}
+      VOICE_ENABLED: ${VOICE_ENABLED:-false}
+      CLOUD_CALLS_ENABLED: ${CLOUD_CALLS_ENABLED:-false}
+      FREE_QUOTA_CONFIRMED: ${FREE_QUOTA_CONFIRMED:-false}
+      VOICE_WRITES_ENABLED: ${VOICE_WRITES_ENABLED:-false}

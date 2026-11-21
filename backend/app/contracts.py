@@ -262,7 +262,7 @@ class KnowledgeUsed(DTO):
 class TextDelta(DTO):
     type: Literal["text.delta"]
     text: str
-    channel: Literal["text_mode"] = "text_mode"
+    channel: Literal["text_mode", "voice_transport"] = "text_mode"
 
 class TurnInterrupted(DTO):
     type: Literal["turn.interrupted"]
@@ -319,6 +319,7 @@ class SessionView(DTO):
     remedy: str | None = None
     messages: list['MessageView'] = Field(default_factory=list)
     record: CallRecord | None = None
+    mode: Literal['text','voice'] = 'text'
 
 class MessageView(DTO):
     message_id: UUID
@@ -354,8 +355,9 @@ class ApplicationView(DTO):
 class Capabilities(DTO):
     text: bool = True
     voice: bool = False
-    model: Literal['fake'] = 'fake'
+    model: Literal['fake','deepseek'] = 'fake'
     schema_version: Literal['0.3.0'] = '0.3.0'
+    voice_unavailable_reason: str | None = None
 
 class ModelMessage(DTO):
     role: Literal['system','user','assistant']
@@ -364,6 +366,10 @@ class ModelMessage(DTO):
 class ModelRequest(DTO):
     messages: list[ModelMessage]
     fixture_response: str
+    allow_rephrase: bool = False
+    session_id: UUID | None = None
+    turn_id: UUID | None = None
+    generation_id: UUID | None = None
     # Fake adapter uses fixture_response; a future LLM adapter uses messages.
     # Tool suggestions are handled by AgentPort, not by this speech-text stream.
 
@@ -372,3 +378,36 @@ SessionView.model_rebuild()
 PUBLIC_MODELS = [SourceRef, KnowledgeEntry, ReviewCase, RoutingDecision, RoutingEvidence, NotificationEvidence, CreateSession, TextTurn, StartSession, InterruptRequest, SessionContext, TurnInput, CallbackConfirmation, ActionCommand, ApiError, OperationResult, CallRecord, AgentDecision, Understanding, Event, SessionView]
 PUBLIC_MODELS += [MessageView, AcceptedTurn, Interrupted, EndRequest, LoginRequest, LoginResult, ApplicationView, Capabilities]
 PUBLIC_MODELS += [ModelRequest, ModelMessage]
+
+class MediaCredentials(DTO):
+    app_id: str
+    channel: str
+    rtc_uid: int
+    agent_uid: int
+    rtc_token: str
+    rtm_token: str
+    expires_at: AwareDatetime
+
+class VoiceStartResult(DTO):
+    status: Literal['starting','running','stopped','cleanup_pending']
+    agent_id: str | None = None
+
+class VoiceInterruptRequest(DTO):
+    client_event_id: UUID
+    provider_turn_id: int | None = Field(default=None,ge=0)
+
+class VoiceHeartbeat(DTO):
+    client_event_id: UUID
+
+class VoiceTelemetry(DTO):
+    client_event_id: UUID
+    provider_turn_id: int | None = Field(default=None,ge=0)
+    kind: Literal['interrupted','playback_observed','speech_end_observed','sdk_metric']
+    clock_domain: str = Field(max_length=80)
+    monotonic_ms: float = Field(ge=0)
+    duration_ms: float | None = Field(default=None,ge=0)
+    measurement_method: str = Field(max_length=150)
+    provider_metric_name: str | None = Field(default=None,max_length=80)
+    provider_metric_value: float | None = None
+
+PUBLIC_MODELS += [MediaCredentials,VoiceStartResult,VoiceInterruptRequest,VoiceHeartbeat,VoiceTelemetry]

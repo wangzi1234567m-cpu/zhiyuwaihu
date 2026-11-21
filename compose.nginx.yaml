@@ -1,0 +1,10 @@
+# Host Nginx owns 80/443. Requires Docker Compose >=2.24.4.
+# Use with compose.yaml and compose.cloud.yaml, without either Caddy overlay.
+services:
+  backend:
+    environment:
+      APP_ENV: staging
+      ENABLE_FAULTS: 'false'
+  frontend:
+    # Replace the base mapping rather than appending a second port (3000 is occupied).
+    ports: !override ['127.0.0.1:13000:3000']

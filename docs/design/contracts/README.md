@@ -17,3 +17,9 @@ ActionCommand只能由服务端守门后构造。confirmation_ref的存在只满
 TextTurn、StartSession、InterruptRequest 已提供公共定义。媒体凭证和管理台DTO由王梓恒在基础骨架PR中补充OpenAPI；当前核心契约支持文本Agent、Mock端口和业务状态展示并行开工。provider turn字段必须通过声网云端实测固定，不能假造已经贯通。
 
 ActionCommand.payload 按 type 判别：驳回包含依据ID、原因与书面意见；预约引用确认记录，由工具从服务器读取时间窗；人工跟进包含原因及原操作ID；回写引用已持久化CallRecord及其版本。BusinessPort.writeback(command, record)须核对两处ID／版本一致。未接通的系统二次跟进使用create_followup，不虚构商家确认记录。
+
+## 语音增量（2026-11-18）
+
+本轮保留原有业务端口和必填字段，新增语音媒体／生命周期／观测DTO，SessionView增加默认text的mode，ModelRequest增加可选相关ID及allow_rephrase，Capabilities.model允许deepseek。Event.text.delta允许voice_transport；语音UI不把该流当字幕。实际接口签名及验收状态见 [语音接入交接](../../voice-integration.md)。
+
+Qwen TTS增量：新增会话绑定的`POST /integrations/agora/sessions/{sid}/v1/audio/speech`，仅供声网调用，不供浏览器提交业务。供应商协议结构唯一手写源为`backend/app/tts.py::SpeechRequest`，其JSON Schema自动进入OpenAPI；输出24kHz单声道PCM16。model／voice由服务端固定，鉴权与LLM入口分离，允许starting状态的主动开场，拒绝结束／过期会话；不会改变Agent或BusinessPort签名。详细错误与配置见接入交接。

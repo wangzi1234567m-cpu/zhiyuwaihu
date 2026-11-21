@@ -137,9 +137,9 @@ ALLOWED_PAYLOAD_KEYS = frozenset({
     'clarification_reason', 'contact_outcome_hint', 'evidence_message_ids', 'source',
 })
 
-#: 模型自述意图必须能在原文里找到依据：只用于**降级**（不安全方向），不做关键词计分。
-#: 方向安全性：这些意图会结束会话或转人工，误判代价高，必须有原文支撑。
-_HIGH_IMPACT_INTENTS = ('deny_identity', 'refuse_contact', 'complaint_risk')
+#: 高影响意图必须有原文依据；同时恢复模型遗漏的明确例外，避免 ack 掩盖投诉等诉求。
+#: 这些意图会结束会话、转人工或请求回电，误判代价高，必须有原文支撑。
+_HIGH_IMPACT_INTENTS = ('deny_identity', 'refuse_contact', 'complaint_risk', 'request_callback')
 
 
 def normalize(text: str) -> str:
@@ -155,7 +155,12 @@ def _clause_prefix(text: str, start: int, window: int) -> str:
     cut = 0
     for match in CLAUSE_BREAK.finditer(prefix):
         cut = match.end()
-    return prefix[cut:]
+    prefix = prefix[cut:]
+    turn_break = re.compile(r'(?:但是|不过|而是|但)')
+    turn = 0
+    for match in turn_break.finditer(prefix):
+        turn = match.end()
+    return prefix[turn:]
 
 
 def _clause_tail(text: str, start: int, window: int) -> str:
@@ -453,6 +458,10 @@ def validate_understanding(payload: dict, *, case: ReviewCase | None = None,
                    if i in _HIGH_IMPACT_INTENTS and i not in grounded]
     if unsupported:
         intents = [i for i in intents if i not in unsupported]
+    # 模型可能只 ack 而漏掉原文明确可证的重要意图；以原文为准恢复。
+    for important in _HIGH_IMPACT_INTENTS:
+        if important in grounded and important not in intents:
+            intents.append(important)
     if 'deny_identity' in intents and 'confirm_identity' in intents:
         intents = [i for i in intents if i != 'confirm_identity']
     if 'refuse_contact' in intents and 'acknowledge' in intents:

@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 from ..contracts import (AgentDecision, KnowledgeEntry, ReviewCase, SessionContext,
                          TurnInput, Understanding)
-from ..semantic import RuleUnderstanding, UnderstandingPort, parse_understanding
+from ..semantic import RuleUnderstanding, UnderstandingPort, parse_understanding, validate_understanding
 
 
 # ------------------------------------------------------------------ 依据选择
@@ -71,7 +71,7 @@ class ReplyTemplates:
 
     identity_ask: str = '这里是模拟商户服务AI。请确认您是否是{company}的联系人。'
     identity_clarify: str = '抱歉没听清。为保护商家信息，请确认您是否是{company}的联系人，我再按已审核依据说明。'
-    guarantee_refusal: str = '补齐材料后仍需审核，不能保证通过，也不能承诺时限；是否通过以审核结论为准。'
+    guarantee_refusal: str = '补齐材料后仍需审核，不能保证通过。不能承诺时限；是否通过以审核结论为准。'
     source_grounding: str = '以上结论来自已审核依据，具体数字和时限未核实前我们不作答复。'
     missing_knowledge: str = '当前缺少已审核依据，需要人工核实，暂不办理。'
     conflict_escalation: str = '当前知识依据存在冲突，已转人工核实，暂不给出具体标准。'
@@ -95,7 +95,7 @@ class SemanticAgent:
     """结构化理解驱动的 Agent（生产实现）。
 
     理解端口可注入：默认 `RuleUnderstanding()`（确定性，测试可重复）；
-    真实模型模式由 `Services` 注入 `GlmUnderstanding`（见 `app.semantic`）。
+    结构化理解可显式注入；生产流式模型由 main 的 MODEL_PROVIDER 配置负责。
     """
 
     def __init__(self, understanding: UnderstandingPort | None = None, *,
@@ -163,6 +163,14 @@ class SemanticAgent:
                 contact_outcome=outcome,  # type: ignore[arg-type]
                 required_slot_missing=missing or [])
 
+        # 防御：模型输出可能不可信，入口按原文重验；失败则转人工。
+        try:
+            understanding = validate_understanding(
+                understanding.model_dump(), text=input.text, case=case, context=context)
+        except ValueError:
+            return decision(reply(templates.ungrounded_escalation), 'MANUAL_REVIEW')
+        intents = list(understanding.intents)
+
         # 1) 错人 / 拒绝联系：最先处理，绝不披露任何申请详情，也绝不自动驳回。
         if 'deny_identity' in intents:
             return decision(reply(templates.wrong_person_close), 'CLOSING',
@@ -191,6 +199,9 @@ class SemanticAgent:
             return decision(reply(templates.conflict_escalation), 'MANUAL_REVIEW')
         entry = entries[0]
         ground = entry.approved_text or ''
+        # 已审依据仍含未支持的模板占位符时，不播空模板，转人工。
+        if '{' in ground.replace('{company}', '') and '}' in ground.replace('{company}', ''):
+            return decision(reply(templates.ungrounded_escalation), 'MANUAL_REVIEW')
 
         already_explained = any(n.completed for n in context.notifications)
         wants_reason = any(i in intents for i in ('ask_reason', 'ask_remedy', 'ask_outcome'))
@@ -232,7 +243,8 @@ class SemanticAgent:
         open_questions = [i for i in intents
                           if i in ('ask_reason', 'ask_remedy', 'ask_guarantee', 'ask_source',
                                    'ask_outcome', 'unclear')]
-        if 'acknowledge' in intents and not missing and not open_questions:
+        if ('acknowledge' in intents and not understanding.needs_clarification
+                and not missing and not open_questions):
             return self._action_decision(input=input, context=context, case=case,
                                          entry=entry, understanding=understanding,
                                          reply=reply, prefix=' '.join(sections))

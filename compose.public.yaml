@@ -1,0 +1,21 @@
+# Later: use only after a fixed DNS name and staging authentication are configured.
+services:
+  backend:
+    environment:
+      APP_ENV: staging
+      ENABLE_FAULTS: 'false'
+  gateway:
+    image: caddy:2
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?Set PUBLIC_HOST to your fixed DNS hostname}
+    ports: ['80:80','443:443']
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      backend: {condition: service_healthy}
+      frontend: {condition: service_started}
+volumes:
+  caddy_data:
+  caddy_config:

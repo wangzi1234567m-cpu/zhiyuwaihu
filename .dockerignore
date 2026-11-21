@@ -4,7 +4,14 @@
 **/node_modules
 **/.next
 **/__pycache__
+**/.pytest_cache
+**/test-results
+**/playwright-report
+**/*.tsbuildinfo
 tmp
 .env
+.env.*
+!.env.example
 private-evidence
+infra/private
 docs/archive

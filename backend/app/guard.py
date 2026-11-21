@@ -323,6 +323,10 @@ class ToolGuard:
             raise DomainError('ACTION_FORBIDDEN', '未知动作类型', 403)
 
     def _common(self, case: ReviewCase, data: dict, command: ActionCommand) -> None:
+        from .config import settings
+        if data.get('mode') == 'voice' and command.kind != 'writeback':
+            if not settings.voice_writes_enabled or not data.get('voice_explanation_verified'):
+                raise DomainError('VOICE_EXPLANATION_UNVERIFIED', '尚无可信语音告知完成证据', 403)
         if command.case_revision != case.case_revision:
             raise DomainError('STALE_REVISION', '审核版本已变化，拒绝执行', 409)
         if str(command.application_id) != str(case.application_id):
@@ -349,7 +353,6 @@ class ToolGuard:
             raise DomainError('ACTION_FORBIDDEN', '审核结论不是驳回，不能执行驳回动作', 403)
         route = decision.get('route') or data.get('route')
         if command.kind != 'writeback' and route not in ('phone', 'jingmai'):
-            # manual 路由（缺授权/规则冲突/例外持续未通）一律不派发，交人工。
             raise DomainError('ACTION_FORBIDDEN', '当前路由为人工核实，禁止派发业务动作', 403)
         if data.get('rule_version') not in (None, RULE_VERSION) and command.kind != 'writeback':
             raise DomainError('ACTION_FORBIDDEN', '规则版本已失效，需重新路由', 403)

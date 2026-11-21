@@ -199,6 +199,90 @@ class GateResult:
         }
 
 
+def _validate_runtime_evidence(voice, cost):
+    """验证调用方提交的测量声明；来源引用须由受信报告生产者另行核验。
+
+    单有真值标记、汇总数字或自称 real 不证明真实采样。这里拒绝不完整报告，
+    保留来源与样本标识便于复核；不会采集样本、签署来源或切换策略版本。
+    """
+    import math
+    missing, reasons, metrics = [], [], {}
+    cost_ratio = ttft_ratio = None
+
+    def number(value, *, positive=False):
+        try:
+            return (type(value) in (int, float) and math.isfinite(value)
+                    and (value > 0 if positive else value >= 0))
+        except OverflowError:
+            return False
+
+    def count(value):
+        return type(value) is int and value > 0
+
+    def strings(value):
+        return (isinstance(value, list) and bool(value)
+                and all(isinstance(v, str) and v.strip() for v in value)
+                and len(set(value)) == len(value))
+
+    def envelope(report, kind):
+        return (isinstance(report, dict)
+                and report.get('schema_version') == 'gate-v2-evidence-1'
+                and report.get('source') == kind
+                and strings(report.get('source_refs'))
+                and all(isinstance(report.get(arm), dict) for arm in ('baseline', 'candidate')))
+
+    def voice_arm(arm):
+        return (count(arm.get('calls')) and count(arm.get('turns'))
+                and arm['turns'] >= arm['calls']
+                and type(arm.get('failed_calls')) is int
+                and 0 <= arm['failed_calls'] <= arm['calls']
+                and number(arm.get('p50_ms')) and strings(arm.get('sample_ids'))
+                and len(arm['sample_ids']) == arm['calls'])
+
+    if not envelope(voice, 'real_voice') or not all(
+            voice_arm(voice[arm]) for arm in ('baseline', 'candidate')):
+        missing.append('真实语音报告缺失或非法：需要版本、来源引用和完整 baseline/candidate 逐通标识及统计')
+    else:
+        b, c = voice['baseline'], voice['candidate']
+        b_rate, c_rate = b['failed_calls'] / b['calls'], c['failed_calls'] / c['calls']
+        metrics['voice'] = {'source_refs': voice['source_refs'], 'baseline': b, 'candidate': c,
+                            'baseline_failure_rate': b_rate, 'candidate_failure_rate': c_rate}
+        if c['calls'] < 10 or c['turns'] < 30:
+            missing.append('真实语音候选样本不足：需要 >=10 通且 >=30 轮')
+        if c['p50_ms'] > 2000:
+            reasons.append('真实语音候选 P50 > 2000ms')
+        if c['failed_calls'] * b['calls'] > b['failed_calls'] * c['calls']:
+            reasons.append('真实语音候选失败率高于基线')
+
+    def cost_arm(arm, *, baseline):
+        return (count(arm.get('real_model_requests'))
+                and number(arm.get('model_ttft_p50_ms'), positive=baseline)
+                and number(arm.get('total_cost'), positive=baseline))
+
+    if (not envelope(cost, 'real_model')
+            or not isinstance(cost.get('cost_unit'), str) or not cost['cost_unit'].strip()
+            or not all(cost_arm(cost[arm], baseline=arm == 'baseline') for arm in ('baseline', 'candidate'))):
+        missing.append('真实模型报告缺失或非法：需要来源、币种、baseline/candidate 请求数及有限 TTFT/成本，基线须大于零')
+    else:
+        b, c = cost['baseline'], cost['candidate']
+        cost_ratio = c['total_cost'] / b['total_cost']
+        ttft_ratio = c['model_ttft_p50_ms'] / b['model_ttft_p50_ms']
+        # 除法也可能溢出；无限比值是完整测量的阈值失败，不能变成通过。
+        metrics['model'] = {'source_refs': cost['source_refs'], 'cost_unit': cost['cost_unit'],
+                            'baseline': b, 'candidate': c}
+        if cost_ratio > COST_RATIO_LIMIT:
+            reasons.append(f'实际成本比 > {COST_RATIO_LIMIT}')
+        if ttft_ratio > COST_RATIO_LIMIT:
+            reasons.append(f'模型 TTFT 比 > {COST_RATIO_LIMIT}')
+        # 报告保持标准 JSON；不可表示的比值已触发上述阈值拒绝。
+        if not math.isfinite(cost_ratio):
+            cost_ratio = None
+        if not math.isfinite(ttft_ratio):
+            ttft_ratio = None
+    return {'missing': missing, 'reasons': reasons, 'metrics': metrics,
+            'cost_ratio': cost_ratio, 'ttft_ratio': ttft_ratio, 'threshold_failed': bool(reasons)}
+
+
 def evaluate_gate(*, dev_baseline, dev_candidate, holdout_baseline, holdout_candidate,
                   repeats: int, budget_snapshot: dict, voice_evidence: dict | None = None,
                   cost_evidence: dict | None = None, baseline_arm=None, candidate_arm=None,
@@ -239,12 +323,8 @@ def evaluate_gate(*, dev_baseline, dev_candidate, holdout_baseline, holdout_cand
         missing.append(f'holdout 运行数不足：baseline={len(holdout_baseline)} candidate={len(holdout_candidate)}')
     if budget_snapshot.get('exhausted') or budget_snapshot.get('rejected_by_budget', 0) > 0:
         missing.append('请求预算耗尽或出现被拒请求，评测不完整')
-    if not (voice_evidence and voice_evidence.get('real_voice_samples')):
-        missing.append('缺少真实语音验证样本（>=10 通 / 30 轮、P50<=2s），无法验证语音门槛')
-    if not (cost_evidence and cost_evidence.get('model_ttft_p50_ms') is not None):
-        missing.append('缺少真实模型 TTFT/成本采样，无法验证成本门槛')
-    if not (cost_evidence and cost_evidence.get('real_model_requests', 0) > 0):
-        missing.append('本轮未发生真实 GLM 请求（假模型仅用于可重复测试），成本证据为空')
+    runtime = _validate_runtime_evidence(voice_evidence, cost_evidence)
+    missing.extend(runtime['missing'])
     if not holdout_unbiased:
         missing.append(f'保留集 {holdout_split} 已泄漏、不具无偏性'
                        f'（{provenance.get("reason")}），其提升不能作为采纳证据')
@@ -275,9 +355,8 @@ def evaluate_gate(*, dev_baseline, dev_candidate, holdout_baseline, holdout_cand
     effective_delta_pp = holdout_delta_pp if holdout_unbiased else None
     effective_improved = improved if holdout_unbiased else None
 
-    cost_ratio = None
-    if cost_evidence and cost_evidence.get('baseline_ttft_p50_ms') and cost_evidence.get('model_ttft_p50_ms'):
-        cost_ratio = cost_evidence['model_ttft_p50_ms'] / cost_evidence['baseline_ttft_p50_ms']
+    cost_ratio = runtime['cost_ratio']
+    ttft_ratio = runtime['ttft_ratio']
 
     result.metrics = {
         'dev_baseline_completion': round(dev_b_rate, 4),
@@ -296,6 +375,8 @@ def evaluate_gate(*, dev_baseline, dev_candidate, holdout_baseline, holdout_cand
         'actionable_completion': round(actionable_rate, 4),
         'actionable_scenarios': len(actionable),
         'cost_ratio': round(cost_ratio, 4) if cost_ratio is not None else None,
+        'ttft_ratio': round(ttft_ratio, 4) if ttft_ratio is not None else None,
+        'runtime_evidence': runtime['metrics'],
         'dev_runs': {'baseline': len(dev_baseline), 'candidate': len(dev_candidate)},
         'holdout_runs': {'baseline': len(holdout_baseline), 'candidate': len(holdout_candidate)},
         'repeats': repeats,
@@ -310,6 +391,7 @@ def evaluate_gate(*, dev_baseline, dev_candidate, holdout_baseline, holdout_cand
 
     # ---- 逐条门槛 ----
     reasons = result.reasons
+    reasons.extend(runtime['reasons'])
     if not holdout_unbiased:
         reasons.append(f'保留集 {holdout_split} 不具无偏性：提升值 '
                        f'{holdout_delta_pp:.2f}pp 只记为 reference_only，不参与采纳判定')
@@ -333,7 +415,7 @@ def evaluate_gate(*, dev_baseline, dev_candidate, holdout_baseline, holdout_cand
                     and effective_delta_pp < HOLDOUT_IMPROVEMENT_PP)
                 or (effective_improved is not None and not effective_improved)
                 or actionable_rate < COMPLETION_THRESHOLD
-                or (cost_ratio is not None and cost_ratio > COST_RATIO_LIMIT))
+                or runtime['threshold_failed'])
 
     if missing:
         # 证据不足永远不能 adopt；若安全或提升硬性不达标则明确 reject。
