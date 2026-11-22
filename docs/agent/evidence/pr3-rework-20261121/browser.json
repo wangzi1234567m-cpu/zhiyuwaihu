@@ -1,0 +1,14 @@
+{
+  "exit_code": 0,
+  "database": "zhiyu_pr3_browser_origin_20261121_test",
+  "cloud_calls": 0,
+  "frontend_ui": "exact origin/main; generated types only differ",
+  "sessions": [
+    {
+      "state": "CLOSED",
+      "verified": "true"
+    }
+  ],
+  "effects": 1,
+  "records": 1
+}

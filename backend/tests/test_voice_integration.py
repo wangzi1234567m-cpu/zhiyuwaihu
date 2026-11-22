@@ -149,12 +149,25 @@ async def test_start_is_idempotent_and_single_session_limit(voice_setup):
 async def test_stale_interrupt_does_not_cancel_new_turn(voice_setup):
     client,app,gateway,sid,auth,calls=voice_setup
     from app.voice import ProviderRequest
+    from test_integration import HeldModel
+    # 明确保持生成中，避免短答复先完成而把机器速度误报成取消缺陷。
+    held=HeldModel()
+    held.enter()
+    app.state.services.model=held
     stream=await gateway.completion(sid,ProviderRequest(messages=[{'role':'user','content':'我是演示商家1','turn_id':2}]),auth['Authorization'])
     await anext(stream)
-    response=await client.post(f'/api/v1/sessions/{sid}/voice/interrupt',json={'client_event_id':str(uuid4()),'provider_turn_id':1})
-    assert response.json()=={'applied':False}
-    with Session() as db:assert db.get(Conversation,sid).data['busy']
-    await stream.aclose()
+    try:
+        await asyncio.wait_for(held.entered.wait(),2)
+        with Session() as db:assert db.get(Conversation,sid).data['busy']
+        response=await client.post(f'/api/v1/sessions/{sid}/voice/interrupt',json={'client_event_id':str(uuid4()),'provider_turn_id':1})
+        assert response.json()=={'applied':False}
+        with Session() as db:assert db.get(Conversation,sid).data['busy']
+        held.release()
+        packets=[packet async for packet in stream]
+        assert any('data: [DONE]' in packet for packet in packets)
+    finally:
+        held.release()
+        await stream.aclose()
 
 async def test_expired_lease_stops_cloud_agent(voice_setup):
     client,app,gateway,sid,auth,calls=voice_setup

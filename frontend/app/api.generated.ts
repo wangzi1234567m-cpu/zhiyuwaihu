@@ -466,7 +466,7 @@ export interface components {
              * Contact Status
              * @enum {string}
              */
-            contact_status: "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required";
+            contact_status: "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
             /**
              * Explanation Status
              * @enum {string}
@@ -961,6 +961,15 @@ export interface components {
              * @default null
              */
             action_payload: (components["schemas"]["RejectPayload"] | components["schemas"]["CallbackPayload"] | components["schemas"]["FollowupPayload"] | components["schemas"]["WritebackPayload"]) | null;
+            /** @default null */
+            understanding: components["schemas"]["Understanding"] | null;
+            /**
+             * Contact Outcome
+             * @default null
+             */
+            contact_outcome: ("verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown") | null;
+            /** Required Slot Missing */
+            required_slot_missing?: string[];
         };
         /** CallbackConfirmation */
         CallbackConfirmation: {
@@ -1204,6 +1213,29 @@ export interface components {
              */
             generation_id: string | null;
         };
+        /**
+         * NotificationEvidence
+         * @description 已发出的告知证据；由服务端在消息落库后写入，Agent 只读。
+         */
+        NotificationEvidence: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "explanation" | "reason_notice" | "remedy_notice" | "callback_notice";
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /** Knowledge Entry Ids */
+            knowledge_entry_ids?: string[];
+            /**
+             * Completed
+             * @default false
+             */
+            completed: boolean;
+        };
         /** OperationUpdated */
         OperationUpdated: {
             /**
@@ -1292,8 +1324,49 @@ export interface components {
             rule_version: string;
             /** Required Evidence */
             required_evidence: string[];
+            /** Evidence */
+            evidence?: components["schemas"]["RoutingEvidence"][];
+            /**
+             * Submission Attempt
+             * @default 1
+             */
+            submission_attempt: number;
+            /**
+             * Call Attempt
+             * @default 0
+             */
+            call_attempt: number;
         };
-        /** SessionContext */
+        /**
+         * RoutingEvidence
+         * @description 规则命中证据：为什么得到这个 route，可追溯、不含个人信息。
+         */
+        RoutingEvidence: {
+            /** Code */
+            code: string;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /**
+             * Source
+             * @default rule
+             * @enum {string}
+             */
+            source: "case" | "rule" | "knowledge" | "contact_history" | "authorization" | "attempts";
+            /**
+             * Ref
+             * @default null
+             */
+            ref: string | null;
+            /** Knowledge Entry Ids */
+            knowledge_entry_ids?: string[];
+        };
+        /**
+         * SessionContext
+         * @description 服务端组装的可信只读上下文。Agent 只能读，不能写入或回填。
+         */
         SessionContext: {
             /**
              * Session Id
@@ -1329,6 +1402,40 @@ export interface components {
             knowledge_version: string;
             /** Model Version */
             model_version: string;
+            /**
+             * State
+             * @default CASE_READY
+             * @enum {string}
+             */
+            state: "CASE_READY" | "ROUTING" | "OPENING" | "VERIFYING" | "EXPLAINING" | "QA" | "CALLBACK_PENDING" | "CLOSING" | "ACTION_READY" | "EXECUTING" | "RECONCILING" | "WRITEBACK_PENDING" | "CLOSED" | "MANUAL_REVIEW";
+            /** @default null */
+            routing_decision: components["schemas"]["RoutingDecision"] | null;
+            /** Notifications */
+            notifications?: components["schemas"]["NotificationEvidence"][];
+            /**
+             * Contact Outcome
+             * @default unknown
+             * @enum {string}
+             */
+            contact_outcome: "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
+            /**
+             * Contact Outcome Source
+             * @default none
+             * @enum {string}
+             */
+            contact_outcome_source: "none" | "domain_event" | "demo_text_rule";
+            /**
+             * Submission Attempt
+             * @default 1
+             */
+            submission_attempt: number;
+            /**
+             * Call Attempt
+             * @default 0
+             */
+            call_attempt: number;
+            /** Operation Ids */
+            operation_ids?: string[];
         };
         /** SessionEnded */
         SessionEnded: {
@@ -1427,6 +1534,51 @@ export interface components {
              * Format: uuid
              */
             message_id: string;
+        };
+        /**
+         * Understanding
+         * @description 结构化理解结果（内部 DTO，服务器再校验）。模型不能写 verified/审核结论/成功。
+         */
+        Understanding: {
+            /** Intents */
+            intents: ("confirm_identity" | "deny_identity" | "ask_reason" | "ask_remedy" | "ask_guarantee" | "ask_source" | "ask_outcome" | "refuse_contact" | "request_callback" | "acknowledge" | "unclear" | "complaint_risk")[];
+            /** Slots */
+            slots?: {
+                [key: string]: string;
+            };
+            /** Evidence Message Ids */
+            evidence_message_ids?: string[];
+            /**
+             * Needs Clarification
+             * @default false
+             */
+            needs_clarification: boolean;
+            /**
+             * Clarification Reason
+             * @default null
+             */
+            clarification_reason: string | null;
+            /**
+             * Negated
+             * @default false
+             */
+            negated: boolean;
+            /**
+             * Multi Intent
+             * @default false
+             */
+            multi_intent: boolean;
+            /**
+             * Contact Outcome Hint
+             * @default null
+             */
+            contact_outcome_hint: ("verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown") | null;
+            /**
+             * Source
+             * @default fake
+             * @enum {string}
+             */
+            source: "fake" | "glm" | "rules";
         };
         /** WritebackPayload */
         WritebackPayload: {

@@ -126,6 +126,6 @@ export default function Home() {
     </div>}
     {logged && capabilities?.routing_preview && <RoutingPreview/>}
     {logged && <RsiPanel/>}
-    <footer>当前为确定性 DemoAgent 和模拟业务。文字响应不代表语音性能。</footer>
+    <footer>当前使用语义 Agent、规则理解和模拟业务。文字响应不代表语音性能。</footer>
   </main>;
 }

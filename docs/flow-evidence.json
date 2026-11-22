@@ -1,11 +1,11 @@
 {
-  "session_id": "1f0131d9-8855-4481-b82e-fea2d8761dbe",
+  "session_id": "45c887b0-9470-42e0-9569-dd354e6e755d",
   "state": "CLOSED",
   "verified": true,
   "counts": {
     "sessions": 1,
     "messages": 7,
-    "events": 58,
+    "events": 63,
     "operations": 1,
     "business_effects": 1,
     "call_records": 1
@@ -13,7 +13,7 @@
   "operation_status": "succeeded",
   "event_sequence_contiguous": true,
   "postgres": "PostgreSQL 18.7 on x86_64-windows, compiled by msvc-19.44.35229, 64-bit",
-  "agent": "DemoAgent",
+  "agent": "SemanticAgent",
   "model": "FakeModel",
   "business": "MockBusiness",
   "browser_flow": "login/start/3 turns/writeback/reload passed"

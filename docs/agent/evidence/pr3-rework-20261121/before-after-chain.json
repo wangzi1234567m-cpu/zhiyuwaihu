@@ -1,0 +1,156 @@
+{
+  "before": {
+    "cloud_calls": 0,
+    "transport": "httpx.MockTransport through actual GlmUnderstanding",
+    "cases": [
+      {
+        "raw_text": "明白了，但我要投诉",
+        "mock_model_payload": {
+          "intents": [
+            "acknowledge"
+          ]
+        },
+        "state": "CLOSED",
+        "effects": 1,
+        "operation_kinds": [
+          "reject_application"
+        ],
+        "reply": "已记录您的反馈，正在提交模拟处理；请以页面业务结果为准。"
+      },
+      {
+        "raw_text": "明白了",
+        "mock_model_payload": {
+          "intents": [
+            "acknowledge"
+          ]
+        },
+        "state": "CLOSED",
+        "effects": 1,
+        "operation_kinds": [
+          "reject_application"
+        ],
+        "reply": "已记录您的反馈，正在提交模拟处理；请以页面业务结果为准。"
+      },
+      {
+        "raw_text": "不用回电，直接说原因",
+        "mock_model_payload": {
+          "intents": [
+            "request_callback",
+            "ask_reason"
+          ]
+        },
+        "state": "CALLBACK_PENDING",
+        "effects": 0,
+        "operation_kinds": [],
+        "reply": "模拟授权书缺项。请在模拟业务入口补充完整授权书。 回电或改期需要人工确认具体时间窗，本演示不自动预约，也不代表真人已接通。"
+      },
+      {
+        "raw_text": "我不想回电",
+        "mock_model_payload": {
+          "intents": [
+            "request_callback",
+            "ask_reason"
+          ]
+        },
+        "state": "CALLBACK_PENDING",
+        "effects": 0,
+        "operation_kinds": [],
+        "reply": "模拟授权书缺项。请在模拟业务入口补充完整授权书。 回电或改期需要人工确认具体时间窗，本演示不自动预约，也不代表真人已接通。"
+      },
+      {
+        "raw_text": "我不愿意回电",
+        "mock_model_payload": {
+          "intents": [
+            "request_callback",
+            "ask_reason"
+          ]
+        },
+        "state": "CALLBACK_PENDING",
+        "effects": 0,
+        "operation_kinds": [],
+        "reply": "模拟授权书缺项。请在模拟业务入口补充完整授权书。 回电或改期需要人工确认具体时间窗，本演示不自动预约，也不代表真人已接通。"
+      }
+    ],
+    "one_sample_gate": {
+      "decision": "adopt",
+      "evidence_sufficient": true
+    }
+  },
+  "after": {
+    "cloud_calls": 0,
+    "transport": "httpx.MockTransport through actual GlmUnderstanding",
+    "cases": [
+      {
+        "raw_text": "明白了，但我要投诉",
+        "mock_model_payload": {
+          "intents": [
+            "acknowledge"
+          ]
+        },
+        "state": "MANUAL_REVIEW",
+        "effects": 0,
+        "operation_kinds": [],
+        "reply": "已记录投诉风险，转人工处理，本次不自动办理驳回。"
+      },
+      {
+        "raw_text": "明白了",
+        "mock_model_payload": {
+          "intents": [
+            "acknowledge"
+          ]
+        },
+        "state": "CLOSED",
+        "effects": 1,
+        "operation_kinds": [
+          "reject_application"
+        ],
+        "reply": "已记录您的反馈，正在提交模拟处理；请以页面业务结果为准。"
+      },
+      {
+        "raw_text": "不用回电，直接说原因",
+        "mock_model_payload": {
+          "intents": [
+            "request_callback",
+            "ask_reason"
+          ]
+        },
+        "state": "QA",
+        "effects": 0,
+        "operation_kinds": [],
+        "reply": "模拟授权书缺项。请在模拟业务入口补充完整授权书。"
+      },
+      {
+        "raw_text": "我不想回电",
+        "mock_model_payload": {
+          "intents": [
+            "request_callback",
+            "ask_reason"
+          ]
+        },
+        "state": "QA",
+        "effects": 0,
+        "operation_kinds": [],
+        "reply": "模拟授权书缺项。请在模拟业务入口补充完整授权书。"
+      },
+      {
+        "raw_text": "我不愿意回电",
+        "mock_model_payload": {
+          "intents": [
+            "request_callback",
+            "ask_reason"
+          ]
+        },
+        "state": "QA",
+        "effects": 0,
+        "operation_kinds": [],
+        "reply": "模拟授权书缺项。请在模拟业务入口补充完整授权书。"
+      }
+    ],
+    "one_sample_gate": {
+      "decision": "refuse_auto_adopt",
+      "evidence_sufficient": false
+    }
+  },
+  "baseline_commit": "af883f8404a82ac41166217cd5e9b97f6441b1fb",
+  "main_commit": "e381f53341fdf146294781a508f1643ffbbaab54"
+}
