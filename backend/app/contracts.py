@@ -191,6 +191,7 @@ class ApiError(DTO):
     operation_id: UUID | None = None
 
 class OperationResult(DTO):
+    kind: Literal["reject_application", "create_callback", "create_followup", "writeback"] | None = None
     operation_id: UUID
     status: Literal["pending", "succeeded", "failed", "unknown", "not_found_yet"]
     resource_id: str | None = None
@@ -317,6 +318,8 @@ class SessionView(DTO):
     generation_id: UUID | None = None
     reason: str | None = None
     remedy: str | None = None
+    source_refs: list[SourceRef] = Field(default_factory=list)
+    metrics: list[MetricRecorded] = Field(default_factory=list)
     messages: list['MessageView'] = Field(default_factory=list)
     record: CallRecord | None = None
     mode: Literal['text','voice'] = 'text'
@@ -353,6 +356,7 @@ class ApplicationView(DTO):
     company_hint: str
 
 class Capabilities(DTO):
+    routing_preview: bool = False
     text: bool = True
     voice: bool = False
     model: Literal['fake','deepseek'] = 'fake'

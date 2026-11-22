@@ -1,4 +1,4 @@
-"""W4 跨模块验收探针：预期未修的 Mock 将返回非零；不是豁免或成功用例。
+"""W4 跨模块验收探针：确认事务内拒绝陈旧命令且保留历史成功查证。
 
 仅显式 RUN_DB_TESTS=1 + *_test PostgreSQL，重置指定测试库的合成数据。
 先核验魏侧守卫拒绝陈旧命令，再检查翟侧 execute 原子拒绝及历史成功查证。
@@ -44,7 +44,10 @@ async def probe():
             try:ToolGuard().authorize(fresh,session_data,command,())
             except DomainError as exc:guard_denied=exc.code=='STALE_REVISION'
             execute_denied=False;error_code=None
-            try:await services.business.execute(command)
+            try:
+                rejected=await services.business.execute(command)
+                execute_denied=rejected.status=='failed' and rejected.error is not None and rejected.error.code=='STALE_REVISION'
+                error_code=rejected.error.code if rejected.error else None
             except DomainError as exc:execute_denied=True;error_code=exc.code
             with Session() as db:stale_effect=db.get(Effect,command.idempotency_key) is not None
             # 独立重置同一专用测试库：先真正成功，再升版，必须仍能查到历史事实。

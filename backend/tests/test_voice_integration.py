@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import select,func,text
 from app.main import create_app
 from app.adapters import Services,DomainError
-from app.db import Session,Conversation,Message,EventRow,Operation,engine
+from app.db import Session,Application,Conversation,Message,EventRow,Operation,engine
 from app.seed import seed,fixture_id
 from app.voice import AgoraVoiceGateway
 from test_voice import configured
@@ -48,6 +48,24 @@ async def complete(client,sid,auth,turn,text):
     assert response.status_code==200,response.text
     assert 'data: [DONE]' in response.text,response.text
     return response
+
+
+async def test_invalid_company_stops_before_voice_join(voice_setup):
+    client, _, _, first_sid, _, calls = voice_setup
+    await client.post(f'/api/v1/sessions/{first_sid}/end', json={})
+    with Session.begin() as db:
+        case = db.get(Application, fixture_id(2))
+        case.data = {**case.data, 'slots': {**case.data['slots'], 'company_name':'【company_name】'}}
+    response = await client.post('/api/v1/sessions', json={'application_id':fixture_id(2),'mode':'voice'},
+                                 headers={'Idempotency-Key':str(uuid4())})
+    sid = response.json()['session_id']
+    assert (await client.post(f'/api/v1/sessions/{sid}/credentials', json={})).status_code == 200
+    before = len(calls)
+    response = await client.post(f'/api/v1/sessions/{sid}/voice/start', json={'expected_revision':0})
+    assert response.json()['code'] == 'INVALID_IDENTITY_SUBJECT'
+    view = (await client.get(f'/api/v1/sessions/{sid}')).json()
+    assert view['state'] == 'MANUAL_REVIEW' and view['ended'] and not view['operations']
+    assert len(calls) == before
 
 async def test_tts_binding_allows_greeting_startup_but_rejects_llm_key_and_ended_session(voice_setup):
     client,app,gateway,sid,auth,calls=voice_setup

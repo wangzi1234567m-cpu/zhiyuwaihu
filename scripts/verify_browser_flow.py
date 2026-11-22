@@ -65,7 +65,7 @@ def main():
             version=db.execute('select version()').fetchone()[0]
             evidence={'session_id':session[0],'state':session[1],'verified':True,'counts':counts,
                 'operation_status':'succeeded','event_sequence_contiguous':True,'postgres':version,
-                'agent':'DemoAgent','model':'FakeModel','business':'MockBusiness',
+                'agent':'SemanticAgent','model':'FakeModel','business':'MockBusiness',
                 'browser_flow':'login/start/3 turns/writeback/reload passed'}
         (ROOT/'docs/flow-evidence.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
         print('PASS: database facts match browser flow:',counts)
