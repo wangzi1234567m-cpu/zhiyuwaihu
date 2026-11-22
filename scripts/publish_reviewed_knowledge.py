@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 from app.contracts import KnowledgeEntry
-from clean_competition import QUARANTINE, SCRIPT_SHEET
+from clean_competition import MAIN, QUARANTINE, SCRIPT_SHEET
 from app.knowledge_templates import REQUIRED_SLOTS, check_template
 
 
@@ -45,8 +45,14 @@ def validate(staging_bytes, review):
                 raise ValueError('Reviewed authorization entry omits required slots')
             if entry.scenario_id == 'demo.authorization_chain':
                 refs = {(ref.sheet, ref.row, col) for ref in entry.source_refs for col in ref.columns}
-                if (SCRIPT_SHEET, 27, 'B') not in refs or (SCRIPT_SHEET, 50, 'B') in refs:
-                    raise ValueError('Generic authorization chain requires the reviewed general source')
+                required = {(MAIN, 22, 'D'), (MAIN, 22, 'E'), (MAIN, 52, 'D'), (MAIN, 52, 'E'),
+                            ('特殊场景', 26, 'B'), (SCRIPT_SHEET, 27, 'B')}
+                missing = sorted(required - refs)
+                if missing:
+                    cells = '、'.join(f'{sheet} {col}{row}' for sheet, row, col in missing)
+                    raise ValueError(f'通用授权链缺少已审来源：{cells}')
+                if (SCRIPT_SHEET, 50, 'B') in refs:
+                    raise ValueError('通用授权链不能引用全球购医药 B50')
         for ref in entry.source_refs:
             key = (ref.file_sha256, ref.sheet, ref.row)
             if entry.status == 'approved' and any((ref.sheet, ref.row, col) in QUARANTINE for col in ref.columns):

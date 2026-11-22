@@ -79,8 +79,12 @@ async def test_missing_slots_go_manual_before_phone_disclosure(setup, value):
         assert db.scalar(select(func.count()).select_from(Effect)) == 0
 
 
-@pytest.mark.parametrize('missing', [True, False])
-async def test_written_command_checked_at_mock_boundary(setup, missing):
+@pytest.mark.parametrize('brand,template,written,success', [
+    ('', '【授权时间】请核对【brand_name】', '【授权时间】请核对【brand_name】', False),
+    ('合成乙', '【授权时间】请核对【brand_name】', '【授权时间】请核对合成乙', True),
+    ('合成乙', '【类目：正确类似群：】', '【类目：正确类似群：】', False),
+])
+async def test_written_command_checked_at_mock_boundary(setup, brand, template, written, success):
     client, _, services = setup
     seed(include_routing_fixtures=True)
     aid = fixture_id(4)
@@ -90,10 +94,10 @@ async def test_written_command_checked_at_mock_boundary(setup, missing):
     oid = uuid4()
     with Session.begin() as db:
         case = db.get(Application, aid)
-        slots = {**case.data['slots'], 'brand_name': '' if missing else '合成乙'}
+        slots = {**case.data['slots'], 'brand_name': brand}
         case.data = {**case.data, 'slots': slots}
         kb = db.get(Knowledge, fixture_id(204))
-        kb.data = {**kb.data, 'approved_text': '【授权时间】请核对【brand_name】',
+        kb.data = {**kb.data, 'approved_text': template,
                    'required_slots': ['brand_name']}
         # The team policy supplies a written routing decision at this port boundary.
         session = db.get(Conversation, sid)
@@ -101,13 +105,28 @@ async def test_written_command_checked_at_mock_boundary(setup, missing):
         command = ActionCommand(session_id=sid, application_id=aid, case_revision=1,
             decision_id=uuid4(), operation_id=oid, kind='reject_application', idempotency_key=str(oid),
             evidence_refs=[], payload={'type': 'reject_application', 'reason_codes': ['demo.no_brand'],
-                'knowledge_entry_ids': [kb.id], 'written_text': kb.data['approved_text'] if missing else '【授权时间】请核对合成乙'})
+                'knowledge_entry_ids': [kb.id], 'written_text': written})
         db.add(Operation(id=str(oid), session_id=sid, key=command.idempotency_key, status='pending',
                          data={'manual': True, 'command': command.model_dump(mode='json')}))
     result = await services.business.execute(command)
-    assert result.status == ('failed' if missing else 'succeeded')
+    assert result.status == ('succeeded' if success else 'failed')
     with Session() as db:
-        assert db.scalar(select(func.count()).select_from(Effect)) == int(not missing)
+        assert db.scalar(select(func.count()).select_from(Effect)) == int(success)
+
+
+@pytest.mark.parametrize('company', [' ', '【company_name】', '{company_name}', 'XXX'])
+async def test_opening_requires_a_real_company(setup, company):
+    client, _, _ = setup
+    with Session.begin() as db:
+        case = db.get(Application, fixture_id(1))
+        case.data = {**case.data, 'slots': {**case.data['slots'], 'company_name': company}}
+    tasks = (await client.get('/api/v1/applications')).json()
+    assert next(t for t in tasks if t['application_id'] == fixture_id(1))['company_hint'] == '待核实主体'
+    sid = await opened(client)
+    view = await wait_idle(client, sid)
+    assert view['state'] == 'MANUAL_REVIEW' and view['ended'] and not view['verified']
+    assert '已转人工' in view['messages'][-1]['text']
+    assert not view['operations'] and not view['source_refs']
 
 
 async def test_three_releases_render_task_values_and_writeback(setup, monkeypatch):

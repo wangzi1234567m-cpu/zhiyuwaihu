@@ -12,6 +12,7 @@ from .config import settings
 from .contracts import *
 from .db import Session, Application, Operation, EventRow, now
 from . import mock_routing
+from .knowledge_templates import task_slot
 from .adapters import DomainError, Services
 from .coordinator import Coordinator, owned, snapshot
 
@@ -137,7 +138,7 @@ def create_app(services=None, *, tts=None):
     @app.get('/api/v1/applications',response_model=list[ApplicationView])
     def applications(user=Depends(owner)):
         with Session() as db:
-            return [ApplicationView(application_id=a.id,label=f'合成申请单 {i+1}',company_hint=a.data['slots'].get('company_name') or '待核实主体')
+            return [ApplicationView(application_id=a.id,label=f'合成申请单 {i+1}',company_hint=task_slot(a.data['slots'], 'company_name') or '待核实主体')
                 for i,a in enumerate(db.scalars(select(Application).where(Application.owner==user).order_by(Application.id)))]
 
     @app.post('/api/v1/sessions',response_model=SessionView,status_code=201)

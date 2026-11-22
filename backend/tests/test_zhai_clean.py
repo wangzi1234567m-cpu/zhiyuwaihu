@@ -7,6 +7,9 @@ import pytest
 from clean_competition import MAIN, QUARANTINE, SCRIPT_SHEET, clean
 from convert_private_sources import save_private_json
 from publish_reviewed_knowledge import validate
+from prepare_knowledge_review import draft
+from app.contracts import KnowledgeEntry
+from app.knowledge_templates import check_template
 
 
 def staging():
@@ -69,3 +72,45 @@ def test_publisher_refuses_quarantined_cell_even_if_marked_approved():
                   reviewers=['test-a','test-b'], entries=[entry])
     with pytest.raises(ValueError, match='quarantined'):
         validate(raw, review)
+
+
+def approved_chain():
+    raw = json.dumps(staging()).encode()
+    review = draft(raw, 'test')
+    entry = next(e for e in review['entries'] if e['scenario_id'] == 'demo.authorization_chain')
+    entry.update(status='approved', approved_text='合成模板', reviewer='test-a', issue_codes=[])
+    review.update(entries=[entry], reviewers=['test-a', 'test-b'])
+    return raw, review, entry
+
+
+@pytest.mark.parametrize('sheet,row,col', [
+    (MAIN, 22, 'D'), (MAIN, 22, 'E'), (MAIN, 52, 'D'), (MAIN, 52, 'E'),
+    ('特殊场景', 26, 'B'), (SCRIPT_SHEET, 27, 'B')
+])
+def test_chain_requires_each_reviewed_cell(sheet, row, col):
+    raw, review, entry = approved_chain()
+    validate(raw, review)
+    ref = next(r for r in entry['source_refs'] if (r['sheet'], r['row']) == (sheet, row))
+    ref['columns'].remove(col)
+    if not ref['columns']:
+        entry['source_refs'].remove(ref)
+    with pytest.raises(ValueError, match='缺少已审来源') as error:
+        validate(raw, review)
+    assert f'{sheet} {col}{row}' in str(error.value)
+
+
+def test_chain_cannot_add_scoped_invoice_source():
+    raw, review, entry = approved_chain()
+    entry['source_refs'].append({'file_sha256': 'a'*64, 'sheet': SCRIPT_SHEET, 'row': 50, 'columns': ['B']})
+    with pytest.raises(ValueError, match='B50'):
+        validate(raw, review)
+
+
+@pytest.mark.parametrize('text', ['【类目：正确类似群：】', '【类目：甲 正确类似群： 】', '【类目: ；正确类似群:乙】'])
+def test_incomplete_classification_cannot_be_published(text):
+    raw, review, entry = approved_chain()
+    entry['approved_text'] = text
+    with pytest.raises(ValueError, match='template variable'):
+        validate(raw, review)
+    entry['approved_text'] = '【授权时间】请核实【类目：甲；正确类似群：乙】'
+    check_template(KnowledgeEntry.model_validate(entry))

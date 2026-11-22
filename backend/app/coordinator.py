@@ -3,7 +3,7 @@ import hashlib
 import json
 import logging
 import os
-from .knowledge_templates import available_entries
+from .knowledge_templates import available_entries, task_slot
 from uuid import UUID
 from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy import select
@@ -188,7 +188,7 @@ class Coordinator:
                 # Demo identity evidence is validated by code against the assigned synthetic entity.
                 import re
                 normalized=re.sub(r'[\s，。！？,.!?、]','',text)
-                company=case.slots.get('company_name', '').strip()
+                company=task_slot(case.slots, 'company_name')
                 aliases={company}
                 if source=='asr':
                     for digit,han in [('1','一'),('2','二'),('3','三')]:aliases.add(company.replace(digit,han))
@@ -205,12 +205,12 @@ class Coordinator:
             if not company:
                 decision=AgentDecision(reply_text='审核任务缺少核验主体，已转人工。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
             elif opening:
-                decision=AgentDecision(reply_text=f'您好，这里是模拟商户服务AI演示。请确认您是否是{case.slots["company_name"]}的联系人。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
+                decision=AgentDecision(reply_text=f'您好，这里是模拟商户服务AI演示。请确认您是否是{company}的联系人。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
             else:
                 decision=await asyncio.wait_for(self.services.agent.handle_turn(TurnInput(message_id=mid,text=text,source=source),context,history,case,tuple(entries),verified,cancel),8)
             # Pre-identity and missing-source output cannot bypass the coordinator via a replacement Agent.
             if company and not verified and decision.next_state != 'CLOSING':
-                decision=AgentDecision(reply_text=f'这里是模拟商户服务AI。请确认身份：输入“我是{case.slots["company_name"]}”。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
+                decision=AgentDecision(reply_text=f'这里是模拟商户服务AI。请确认身份：输入“我是{company}”。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
             if verified and not entries:
                 decision=AgentDecision(reply_text='缺少已审核依据，已转人工核实。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
             if source=='asr' and decision.proposed_action!='none' and (not settings.voice_writes_enabled or not row.data.get('voice_explanation_verified')):
