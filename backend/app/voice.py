@@ -17,6 +17,7 @@ from .contracts import *
 from .db import Session, Conversation, Message, EventRow, RequestReceipt, now, new_id
 from .coordinator import owned, emit, transition, receipt
 from .adapters import DomainError
+from .knowledge_templates import task_slot
 from .cloud_budget import reserve_call
 from .vendor.agora.RtcTokenBuilder2 import RtcTokenBuilder, Role_Publisher
 from .vendor.agora.RtmTokenBuilder2 import RtmTokenBuilder
@@ -151,17 +152,25 @@ class AgoraVoiceGateway:
                 if voice.get('status')=='running':return VoiceStartResult(status='running',agent_id=voice['agent_id'])
                 if row.revision!=revision or row.state!='CASE_READY' or voice.get('status')!='prepared' or row.data.get('ended'):
                     raise DomainError('VOICE_START_CONFLICT','语音启动状态不一致')
-                voice['status']='starting'
-                row.data={**row.data,'voice':voice}
-                transition(db,row,'OPENING')
+                case = self.coordinator.services.cases.get_case(owner, row.application_id)
+                company = task_slot(case.slots, 'company_name')
+                if company:
+                    row.data={**row.data,'voice':{**voice,'status':'starting'}}
+                    transition(db,row,'OPENING')
+                else:
+                    row.data={**row.data,'voice':{**voice,'status':'stopped'},'ended':True}
+                    transition(db,row,'MANUAL_REVIEW')
+                    self.coordinator.save_non_action_record(db,row,case,'disconnected')
+                    emit(db,row,SessionEnded(type='session.ended',reason='manual_review'))
+            if not company:
+                raise DomainError('INVALID_IDENTITY_SUBJECT','审核任务缺少有效核验主体，已转人工。')
             try: reserve_call('voice',self.config.max_daily_voice_calls)
             except DomainError:
                 with Session.begin() as db:
                     row=owned(db,sid,owner,True);row.data={**row.data,'voice':{**voice,'status':'stopped'}}
                     row.data={**row.data,'ended':True};transition(db,row,'MANUAL_REVIEW')
                 raise
-            case=self.coordinator.services.cases.get_case(owner,self.coordinator.application_id(owner,sid))
-            greeting=f'您好，这里是模拟商户服务AI演示，请问您是{case.slots["company_name"]}的联系人吗？'
+            greeting=f'您好，这里是模拟商户服务AI演示，请问您是{company}的联系人吗？'
             expiry=210
             properties={'channel':voice['channel'],'token':RtcTokenBuilder.build_token_with_rtm(self.config.agora_app_id,self.config.agora_certificate,voice['channel'],str(voice['agent_uid']),Role_Publisher,expiry,expiry),
                 'agent_rtc_uid':str(voice['agent_uid']),'remote_rtc_uids':[str(voice['uid'])],

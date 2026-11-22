@@ -89,6 +89,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dev/routing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Routing Catalog */
+        get: operations["routing_catalog_api_v1_dev_routing_get"];
+        put?: never;
+        /** Preview Routing */
+        post: operations["preview_routing_api_v1_dev_routing_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications": {
         parameters: {
             query?: never;
@@ -472,6 +490,11 @@ export interface components {
         /** Capabilities */
         Capabilities: {
             /**
+             * Routing Preview
+             * @default false
+             */
+            routing_preview: boolean;
+            /**
              * Text
              * @default true
              */
@@ -495,6 +518,35 @@ export interface components {
             schema_version: "0.3.0";
             /** Voice Unavailable Reason */
             voice_unavailable_reason?: string | null;
+        };
+        /** Catalog */
+        Catalog: {
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "workbook" | "synthetic";
+            /** Scenarios */
+            scenarios: components["schemas"]["Scenario"][];
+        };
+        /** Conditions */
+        Conditions: {
+            /** Row */
+            row: number;
+            /** Submission */
+            submission: number;
+            /** Missed */
+            missed: number;
+            /**
+             * Callback
+             * @default false
+             */
+            callback: boolean;
+            /**
+             * Risk
+             * @default false
+             */
+            risk: boolean;
         };
         /** CreateSession */
         CreateSession: {
@@ -612,8 +664,34 @@ export interface components {
              */
             playback_status: "not_applicable" | "unknown";
         };
+        /** MetricRecorded */
+        MetricRecorded: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "metric.recorded";
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "model_ttft" | "speech_end_to_text" | "speech_end_to_playback";
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "success" | "timeout" | "cancelled" | "missing";
+            /** Clock Domain */
+            clock_domain: string;
+            /** Measurement Method */
+            measurement_method: string;
+        };
         /** OperationResult */
         OperationResult: {
+            /** Kind */
+            kind?: ("reject_application" | "create_callback" | "create_followup" | "writeback") | null;
             /**
              * Operation Id
              * Format: uuid
@@ -632,6 +710,30 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** Outcome */
+        Outcome: {
+            /** Action */
+            action: ("phone" | "jingmai" | "followup" | "manual") | null;
+            /** Reason */
+            reason: string;
+        };
+        /** Scenario */
+        Scenario: {
+            /** Row */
+            row: number;
+            /** Label */
+            label: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "phone" | "jingmai";
+            /**
+             * Missing Template
+             * @default false
+             */
+            missing_template: boolean;
         };
         /** SessionView */
         SessionView: {
@@ -684,6 +786,10 @@ export interface components {
             reason?: string | null;
             /** Remedy */
             remedy?: string | null;
+            /** Source Refs */
+            source_refs?: components["schemas"]["SourceRef"][];
+            /** Metrics */
+            metrics?: components["schemas"]["MetricRecorded"][];
             /** Messages */
             messages?: components["schemas"]["MessageView"][];
             record?: components["schemas"]["CallRecord"] | null;
@@ -1060,33 +1166,6 @@ export interface components {
             entry_ids: string[];
             /** Source Refs */
             source_refs: components["schemas"]["SourceRef"][];
-        };
-        /** MetricRecorded */
-        MetricRecorded: {
-            /**
-             * @description discriminator enum property added by openapi-typescript
-             * @enum {string}
-             */
-            type: "metric.recorded";
-            /**
-             * Name
-             * @enum {string}
-             */
-            name: "model_ttft" | "speech_end_to_text" | "speech_end_to_playback";
-            /**
-             * Duration Ms
-             * @default null
-             */
-            duration_ms: number | null;
-            /**
-             * Outcome
-             * @enum {string}
-             */
-            outcome: "success" | "timeout" | "cancelled" | "missing";
-            /** Clock Domain */
-            clock_domain: string;
-            /** Measurement Method */
-            measurement_method: string;
         };
         /** ModelMessage */
         ModelMessage: {
@@ -1495,6 +1574,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Capabilities"];
+                };
+            };
+        };
+    };
+    routing_catalog_api_v1_dev_routing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Catalog"];
+                };
+            };
+        };
+    };
+    preview_routing_api_v1_dev_routing_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Conditions"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Outcome"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

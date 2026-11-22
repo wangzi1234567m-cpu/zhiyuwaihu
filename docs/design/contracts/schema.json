@@ -501,6 +501,11 @@
     "Capabilities": {
       "additionalProperties": false,
       "properties": {
+        "routing_preview": {
+          "default": false,
+          "title": "Routing Preview",
+          "type": "boolean"
+        },
         "text": {
           "default": true,
           "title": "Text",
@@ -1279,6 +1284,24 @@
     "OperationResult": {
       "additionalProperties": false,
       "properties": {
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "reject_application",
+                "create_callback",
+                "create_followup",
+                "writeback"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        },
         "operation_id": {
           "format": "uuid",
           "title": "Operation Id",
@@ -1733,6 +1756,20 @@
           ],
           "default": null,
           "title": "Remedy"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/MetricRecorded"
+          },
+          "title": "Metrics",
+          "type": "array"
         },
         "messages": {
           "items": {
