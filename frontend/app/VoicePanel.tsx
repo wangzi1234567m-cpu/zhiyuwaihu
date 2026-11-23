@@ -4,6 +4,9 @@ import type {IAgoraRTCClient, ILocalAudioTrack, IRemoteAudioTrack} from 'agora-r
 import type {AgoraVoiceAI, TranscriptHelperItem, UserTranscription, AgentTranscription} from 'agora-agent-client-toolkit';
 import type {RTMClient} from 'agora-rtm';
 import type {components} from './api.generated';
+import {Hand, Mic, PhoneOff} from 'lucide-react';
+import {Badge, Button, Card} from './components/ui';
+import {EmptyConversation, Message} from './components/message';
 
 type View=components['schemas']['SessionView'];
 type Credentials=components['schemas']['MediaCredentials'];
@@ -144,11 +147,32 @@ export default function VoicePanel({view,onError}:{view:View;onError:(message:st
     catch(e){onError(e instanceof Error?e.message:String(e));}
   }
 
-  return <section className="voice-panel"><h2>实时语音联调</h2><p>{status}</p><p className="hint">使用麦克风和耳机。单次最多三分钟；本轮默认关闭语音业务写入。</p>
-    <div className="actions"><button disabled={active||working||view.ended||view.state!=='CASE_READY'} onClick={()=>void start()}>开始语音</button>
-    <button disabled={!active||working} onClick={()=>void interrupt()}>语音打断</button><button disabled={!active||working} onClick={()=>void stop()}>结束语音</button></div>
-    <div className="messages" aria-live="polite">{transcript.map((item,index)=><article key={`${item.turn_id}:${item.stream_id}:${index}`} className={Number(item.uid)===uid.current?'assistant':'user'}>
-      <strong>{Number(item.uid)===uid.current?'AI':'商户'}</strong><p>{item.text}</p></article>)}</div>
-    <p className="hint">字幕来自声网消息；播放状态与SDK事件不等于端到端音频时延测量。</p>
-  </section>;
+  return <Card className="flex min-h-[560px] flex-col overflow-hidden">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <h2 className="text-sm font-semibold text-ink">实时语音联调</h2>
+        <Badge tone={active ? 'success' : working ? 'brand' : 'neutral'} dot pulse={active || working}>{active ? '通话中' : working ? '处理中' : '未通话'}</Badge>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button size="sm" disabled={active||working||view.ended||view.state!=='CASE_READY'} loading={working && !active} onClick={()=>void start()}>
+          {!(working && !active) && <Mic aria-hidden className="size-3.5"/>}开始语音
+        </Button>
+        <Button size="sm" variant="secondary" disabled={!active||working} onClick={()=>void interrupt()}><Hand aria-hidden className="size-3.5"/>语音打断</Button>
+        <Button size="sm" variant="danger" disabled={!active||working} onClick={()=>void stop()}><PhoneOff aria-hidden className="size-3.5"/>结束语音</Button>
+      </div>
+    </div>
+    <div className="border-b border-line bg-subtle/60 px-5 py-2.5">
+      <p className="text-sm text-ink">{status}</p>
+      <p className="mt-0.5 text-xs text-ink-faint">使用麦克风和耳机。单次最多三分钟；本轮默认关闭语音业务写入。</p>
+    </div>
+    <div className="h-[400px] flex-1 space-y-5 overflow-y-auto px-4 py-6 sm:px-6" aria-live="polite">
+      {transcript.length === 0
+        ? <EmptyConversation icon={<Mic className="size-5"/>}>开始语音后，双方字幕会实时显示在这里。</EmptyConversation>
+        : transcript.map((item,index)=>{
+          const ai = Number(item.uid)===uid.current;
+          return <Message key={`${item.turn_id}:${item.stream_id}:${index}`} role={ai?'assistant':'user'} label={ai?'AI':'商户'}>{item.text}</Message>;
+        })}
+    </div>
+    <p className="border-t border-line px-5 py-2.5 text-[11px] text-ink-faint">字幕来自声网消息；播放状态与SDK事件不等于端到端音频时延测量。</p>
+  </Card>;
 }

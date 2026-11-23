@@ -6,12 +6,17 @@ import RoutingPreview from './routing-preview';
 import RsiPanel from './rsi-panel';
 import {api} from '../lib/api';
 import VoicePanel from './VoicePanel';
+import {AlertCircle, X} from 'lucide-react';
+import TopBar from './components/top-bar';
+import LoginCard from './components/login-card';
+import TaskPanel from './components/task-panel';
+import SessionProgress from './components/session-progress';
+import TextConversation from './components/text-conversation';
 
 type View = components['schemas']['SessionView'];
 type Application = components['schemas']['ApplicationView'];
 type Accepted = components['schemas']['AcceptedTurn'];
 type Event = components['schemas']['Event'];
-const stateLabels: Record<string,string> = {CASE_READY:'待开始',OPENING:'开场',VERIFYING:'核验身份',QA:'整改问答',ACTION_READY:'准备处理',EXECUTING:'处理中',RECONCILING:'结果待查证',WRITEBACK_PENDING:'等待回写',CLOSED:'已完成',CLOSING:'结束中',MANUAL_REVIEW:'需人工处理',ROUTING:'判断渠道',EXPLAINING:'说明整改',CALLBACK_PENDING:'等待预约'};
 
 
 export default function Home() {
@@ -28,6 +33,7 @@ export default function Home() {
   const [connecting,setConnecting] = useState(false);
   const [submitting,setSubmitting] = useState(false);
   const [live,setLive] = useState('');
+  const [pending,setPending] = useState('');
   const generation = useRef<string|null>(null);
   const cursor = useRef(0);
   const activeSid = useRef('');
@@ -90,9 +96,9 @@ export default function Home() {
     return ()=>{closed=true; source?.close(); if(retry)clearTimeout(retry);};
   },[sid,logged]);
 
-  async function run(fn: ()=>Promise<void>) {
-    setError(''); setSubmitting(true);
-    try {await fn();} catch(e) {setError(e instanceof Error?e.message:String(e));} finally {setSubmitting(false);}
+  async function run(fn: ()=>Promise<void>, name='') {
+    setError(''); setSubmitting(true); setPending(name);
+    try {await fn();} catch(e) {setError(e instanceof Error?e.message:String(e));} finally {setSubmitting(false); setPending('');}
   }
   async function create() {
     const next=await api<View>('/sessions',{application_id:selected,mode},crypto.randomUUID());
@@ -115,17 +121,52 @@ export default function Home() {
       setLive('');
     }
   }
-  return <main>
-    <header><div><p className="eyebrow">智语外呼 / 开发联调</p><h1>商户资质告知助手</h1><p>合成申请单 · 业务联调环境</p></div><span className="badge">{capabilities?.voice?'语音可联调':'语音未配置'}</span></header>
-    {error && <div role="alert" className="error">{error}</div>}
-    {!logged ? <section className="login"><h2>进入演示环境</h2><p>使用本地配置的演示密码。默认值见启动说明。</p><form onSubmit={e=>{e.preventDefault();run(async()=>{await api('/auth/login',{username:'demo',password});await initialize();});}}><label>演示密码<input aria-label="演示密码" type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={submitting}>登录</button></form></section> : <div className="grid">
-      <aside><h2>合成任务</h2><label>交互模式<select value={mode} onChange={e=>setMode(e.target.value as 'text'|'voice')}><option value="text">文本联调</option><option value="voice" disabled={!capabilities?.voice}>实时语音</option></select></label>{capabilities?.voice_unavailable_reason&&<p className="hint">{capabilities.voice_unavailable_reason}</p>}<label>选择申请单<select value={selected} onChange={e=>setSelected(e.target.value)}>{applications.map(a=><option key={a.application_id} value={a.application_id}>{a.label} · {a.company_hint}</option>)}</select></label><button disabled={submitting||!selected||!!view?.busy} onClick={()=>run(create)}>创建会话</button><p className="hint">身份输入：我是演示商家1（按所选商家编号调整）</p><p className="hint">之后可问“补齐材料一定必过吗”，再说“明白了”。</p><hr/><h2>业务事实</h2><p>状态：{view ? stateLabels[view.state] ?? view.state : '尚未创建'}</p><p>身份：{view?.verified?'已核对':'尚未核对'}</p>{view && <BusinessFacts view={view}/>}</aside>
-      <section className="conversation">{view?.mode==='voice'?<VoicePanel key={view.session_id} view={view} onError={setError}/>:<><div className="toolbar"><h2>文本会话</h2><span>{sid?(connecting?'事件连接中':'已连接'):'待连接'}</span></div><div className="actions"><button disabled={!view||view.state!=='CASE_READY'||submitting} onClick={()=>run(start)}>开始</button><button disabled={!view?.busy||!view.generation_id||submitting} onClick={()=>run(async()=>{await api(`/sessions/${sid}/interruptions`,{generation_id:view!.generation_id,client_event_id:crypto.randomUUID()});setView(await api<View>(`/sessions/${sid}`));setLive('');})}>打断</button><button disabled={!view||view.ended||submitting} onClick={()=>run(async()=>{setView(await api<View>(`/sessions/${sid}/end`,{reason:'user_ended'}));setLive('');})}>结束</button></div>
-      <div className="messages" aria-live="polite">{!view?.messages?.length && <p className="empty">创建会话后点击开始，AI 会主动开场。</p>}{view?.messages?.filter(m=>!(live && m.status==='generating' && m.generation_id===generation.current)).map(m=><article key={m.message_id} className={m.role}><strong>{m.role==='user'?'商户':'AI'}</strong><p>{m.text || '…'}</p>{m.status==='interrupted'&&<small>已打断</small>}{m.status==='failed'&&<small>生成失败，可重试</small>}</article>)}{live && <article className="assistant"><strong>AI · 正在回复</strong><p>{live}</p></article>}</div>
-      <form className="composer" onSubmit={e=>{e.preventDefault();run(send);}}><input aria-label="商户回复" placeholder="输入商户回复；新输入会打断旧生成" value={input} onChange={e=>setInput(e.target.value)} disabled={!view||view.ended||view.state==='CASE_READY'}/><button disabled={!view||view.ended||view.state==='CASE_READY'||submitting||!input.trim()}>发送</button></form></>}</section>
-    </div>}
-    {logged && capabilities?.routing_preview && <RoutingPreview/>}
-    {logged && <RsiPanel/>}
-    <footer>当前使用语义 Agent、规则理解和模拟业务。文字响应不代表语音性能。</footer>
-  </main>;
+  async function interrupt() {
+    await api(`/sessions/${sid}/interruptions`,{generation_id:view!.generation_id,client_event_id:crypto.randomUUID()});
+    setView(await api<View>(`/sessions/${sid}`)); setLive('');
+  }
+  async function end() {
+    setView(await api<View>(`/sessions/${sid}/end`,{reason:'user_ended'})); setLive('');
+  }
+  return <div className="min-h-dvh bg-canvas">
+    <TopBar capabilities={capabilities}/>
+    <main className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-ink text-balance">商户资质告知助手</h1>
+          <p className="mt-1 text-sm text-ink-muted">合成申请单 · 业务联调环境</p>
+        </div>
+      </div>
+
+      {error && <div role="alert" className="flex animate-fade-in items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+        <AlertCircle aria-hidden className="mt-0.5 size-4 shrink-0"/>
+        <p className="min-w-0 flex-1 break-words">{error}</p>
+        <button type="button" aria-label="关闭提示" onClick={()=>setError('')} className="rounded p-0.5 text-rose-600 hover:bg-rose-100"><X aria-hidden className="size-4"/></button>
+      </div>}
+
+      {!logged
+        ? <LoginCard password={password} onPasswordChange={setPassword} submitting={submitting}
+            onSubmit={()=>run(async()=>{await api('/auth/login',{username:'demo',password});await initialize();})}/>
+        : <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <aside className="space-y-6 lg:sticky lg:top-20">
+            <TaskPanel mode={mode} onModeChange={setMode} capabilities={capabilities} applications={applications}
+              selected={selected} onSelectedChange={setSelected}
+              createDisabled={submitting||!selected||!!view?.busy} creating={pending==='create'} onCreate={()=>run(create,'create')}/>
+            <BusinessFacts view={view}/>
+          </aside>
+          <section className="min-w-0 space-y-6" aria-label="会话">
+            {view && <SessionProgress view={view}/>}
+            {view?.mode==='voice'
+              ? <VoicePanel key={view.session_id} view={view} onError={setError}/>
+              : <TextConversation view={view} sid={sid} connecting={connecting} submitting={submitting} pending={pending}
+                  live={live} generationId={generation.current} input={input} onInputChange={setInput}
+                  onStart={()=>run(start,'start')} onInterrupt={()=>run(interrupt,'interrupt')} onEnd={()=>run(end,'end')} onSend={()=>run(send,'send')}/>}
+          </section>
+        </div>}
+
+      {logged && capabilities?.routing_preview && <RoutingPreview/>}
+      {logged && <RsiPanel/>}
+      <footer className="pt-2 pb-6 text-center text-xs text-ink-faint">当前使用语义 Agent、规则理解和模拟业务。文字响应不代表语音性能。</footer>
+    </main>
+  </div>;
 }
