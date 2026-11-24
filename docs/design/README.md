@@ -6,6 +6,7 @@
 
 ## 文档入口
 
+- [V0.4 实时交互与业务封装升级契约（双人开发草案）](../v04-realtime-business-contract.md)：并行化目标、五条契约、GitHub分工与验收，以及现有资产保留/清理边界。下列原三人分工保留为历史设计，V0.4分工以新契约双方确认结果为准。
 - [需求与验收](01-requirements.md)
 - [技术选型](02-decisions.md)
 - [架构与语音链路](03-architecture.md)
