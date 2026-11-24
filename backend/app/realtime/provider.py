@@ -61,7 +61,10 @@ class NativeInput:
                 await self.send('session.update', session={
                     'modalities': ['text'], 'tools': [], 'max_tokens': 512,
                     'instructions': ('你是音频输入理解器，不对用户回答。只输出JSON：transcript为本轮用户原话，'
-                        'intents为意图列表，slots只取本轮原话片段，needs_clarification和negated为布尔。'
+                        '顶层仅包含transcript、intents、slots、needs_clarification、negated。'
+                        'intents为意图列表，needs_clarification和negated为布尔。'
+                        'slots仅允许callback_time、callback_window、timezone，且仅预约回电时从本轮原话提取。'
+                        '其他意图的slots必须为{}；不得输出identity_claim、company_name等额外槽位。'
                         '不得补写用户授权、身份或业务成功。意图仅允许confirm_identity,deny_identity,ask_reason,'
                         'ask_remedy,ask_guarantee,ask_source,ask_outcome,refuse_contact,request_callback,'
                         'acknowledge,unclear,complaint_risk。未知或歧义用unclear。当前业务状态：'+snapshot.state),
