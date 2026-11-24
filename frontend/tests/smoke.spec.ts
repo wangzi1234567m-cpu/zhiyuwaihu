@@ -24,6 +24,7 @@ test('three text rounds, writeback and reload',async({page})=>{
   await page.goto('/');
   await page.getByLabel('演示密码').fill(process.env.DEMO_PASSWORD ?? 'demo-local-only');
   await page.getByRole('button',{name:'登录',exact:true}).click();
+  await page.getByLabel('交互方式').selectOption('text');
   await page.getByRole('button',{name:'创建会话'}).click();
   await completeTurn('/start',()=>page.getByRole('button',{name:'开始通话',exact:true}).click());
   for(const text of ['我是演示商家1','补齐材料一定必过吗','明白了']){
@@ -36,6 +37,6 @@ test('three text rounds, writeback and reload',async({page})=>{
   await expect.poll(async()=>{const snapshot=await (await page.request.get(`/api/v1/sessions/${sid}`)).json();return snapshot.state;}).toBe('CLOSED');
   await page.reload();
   await expect(page.getByRole('log')).toContainText('明白了');
-  await expect(page.locator('header').getByText('语音未配置')).toBeVisible();
+  await expect(page.locator('header').getByText('通话已结束')).toBeVisible();
   await page.screenshot({path:test.info().outputPath('completed-flow.png'),fullPage:true});
 });
