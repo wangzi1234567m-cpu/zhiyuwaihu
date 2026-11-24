@@ -1,0 +1,74 @@
+{
+  "date": "2026-11-24",
+  "baseline_commit": "657310e74b6ef19bd3ecaa9fd0cd4afda159225b",
+  "branch": "codex/v04-realtime",
+  "scope": "local adapters and dedicated test database; not real cloud latency",
+  "checks": {
+    "backend_full_passed": 458,
+    "backend_failed": 0,
+    "database": "new isolated PostgreSQL test cluster; stopped after tests",
+    "warnings": [
+      "existing Starlette/httpx deprecation"
+    ],
+    "frontend_typecheck": "passed",
+    "frontend_webpack_build": "passed",
+    "default_turbopack": "local dependency junction blocked; normal npm ci build pending CI",
+    "schema_consistency": "passed",
+    "browser_cycles": 20
+  },
+  "real_provider_calls": 0,
+  "teammate_mock_integrated": false,
+  "deployed": false,
+  "voice_business_writes_enabled": false,
+  "effective_answer_gate": {
+    "p50_ms_must_be_strictly_below": 2000,
+    "minimum_valid_samples_per_scheme": 30,
+    "real_p50_ms": null,
+    "accepted": false
+  },
+  "buffer_caps_ms": {
+    "input": 500,
+    "output": 240,
+    "note": "not a latency baseline"
+  },
+  "browser_observations": [
+    {
+      "name": "first_answer_audio",
+      "duration_ms": 326.90000000037253,
+      "measurement_method": "controlled_input_end_to_remote_pcm",
+      "evidence": false
+    },
+    {
+      "name": "interrupt_stopped",
+      "duration_ms": 270.09999999962747,
+      "measurement_method": "interrupt_request_to_remote_silence",
+      "evidence": false
+    },
+    {
+      "name": "first_answer_audio",
+      "duration_ms": 298.69999999925494,
+      "measurement_method": "controlled_input_end_to_remote_pcm",
+      "evidence": false
+    },
+    {
+      "name": "interrupt_stopped",
+      "duration_ms": 240.2000000011176,
+      "measurement_method": "interrupt_request_to_remote_silence",
+      "evidence": false
+    }
+  ],
+  "browser_raw_report_sha256": "bb99c344956429f69183f2c79f7ed0fed643401bca26ecc463f12978c65612ea",
+  "tested_source_sha256": {
+    "backend/app/realtime/session.py": "49805fd56ea62ed92a76f19e8af088dd6c63eb387b3cf0dae0f18255e440309c",
+    "backend/app/realtime/media.py": "47e2e30d9271a0afa56e35f744fdb28adc18f8fc1cfc8b26e2a0171cdca2971e",
+    "backend/app/realtime/provider.py": "8ccf63bc0e6996e217c73aef446a1b2f44ab87d78cec4d7ed2ff688541d04fba",
+    "frontend/lib/realtime.ts": "f4339ba6531694874b1db53d67115f47e3837aab665094f72c655978bd72e104"
+  },
+  "pending": [
+    "teammate seven-scenario Mock integration",
+    "real supplier compatibility and accuracy",
+    "30 comparable effective-answer samples",
+    "weak-network/TURN",
+    "trusted playback evidence"
+  ]
+}

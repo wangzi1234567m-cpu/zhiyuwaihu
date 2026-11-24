@@ -76,6 +76,13 @@ class NotificationEvidence(DTO):
 class CreateSession(DTO):
     application_id: UUID
     mode: Literal["voice", "text"]
+    voice_transport: Literal['agora', 'native_webrtc'] = 'agora'
+
+    @model_validator(mode='after')
+    def transport_matches_mode(self):
+        if self.mode != 'voice' and self.voice_transport != 'agora':
+            raise ValueError('WebRTC requires voice mode')
+        return self
 
 class TextTurn(DTO):
     text: str = Field(min_length=1, max_length=8000)
@@ -323,6 +330,7 @@ class SessionView(DTO):
     messages: list['MessageView'] = Field(default_factory=list)
     record: CallRecord | None = None
     mode: Literal['text','voice'] = 'text'
+    voice_transport: Literal['agora', 'native_webrtc'] = 'agora'
 
 class MessageView(DTO):
     message_id: UUID
@@ -356,6 +364,8 @@ class ApplicationView(DTO):
     company_hint: str
 
 class Capabilities(DTO):
+    realtime_webrtc: bool = False
+    realtime_unavailable_reason: str | None = None
     routing_preview: bool = False
     text: bool = True
     voice: bool = False

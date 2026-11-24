@@ -15,3 +15,22 @@ jobs:
       - run: pip install -r backend/requirements.lock
       - run: python scripts/export_realtime_contract.py --check
       - run: python -m pytest -c backend/pytest.ini backend/tests/test_realtime_contract.py
+  realtime-runtime:
+    runs-on: ubuntu-latest
+    env:
+      CLOUD_CALLS_ENABLED: 'false'
+      VOICE_ENABLED: 'false'
+      VOICE_WRITES_ENABLED: 'false'
+      MODEL_PROVIDER: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: pip install -r backend/requirements.lock -r backend/requirements-rtc.lock
+      - run: python -m pytest -c backend/pytest.ini backend/tests/test_realtime_runtime.py backend/tests/test_realtime_media.py backend/tests/test_realtime_provider.py backend/tests/test_realtime_boundary.py backend/tests/test_v04_integration.py -W error::RuntimeWarning
+      - run: npm ci --prefix frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: node scripts/verify_realtime_browser.cjs
