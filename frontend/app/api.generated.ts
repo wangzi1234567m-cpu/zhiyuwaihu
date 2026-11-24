@@ -1489,7 +1489,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "asr" | "text";
+            source: "asr" | "text" | "realtime";
             /**
              * Final
              * @default true
@@ -1578,7 +1578,7 @@ export interface components {
              * @default fake
              * @enum {string}
              */
-            source: "fake" | "glm" | "rules";
+            source: "fake" | "glm" | "rules" | "realtime_candidate";
         };
         /** WritebackPayload */
         WritebackPayload: {

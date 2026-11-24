@@ -2205,7 +2205,8 @@
         "source": {
           "enum": [
             "asr",
-            "text"
+            "text",
+            "realtime"
           ],
           "title": "Source",
           "type": "string"
@@ -2391,7 +2392,8 @@
           "enum": [
             "fake",
             "glm",
-            "rules"
+            "rules",
+            "realtime_candidate"
           ],
           "title": "Source",
           "type": "string"
