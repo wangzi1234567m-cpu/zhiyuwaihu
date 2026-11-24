@@ -1,0 +1,13 @@
+# Optional Python 3.12 RTC runtime; base application does not import these eagerly.
+aiortc==1.14.0
+av==16.0.1
+aioice==0.14.0
+cffi==2.1.1
+cryptography==50.0.2
+dnspython==2.9.2
+google-crc32c==1.9.0
+ifaddr==0.2.0
+pycparser==3.12
+pyee==16.1.0
+pylibsrtp==1.0.0
+pyOpenSSL==26.4.0

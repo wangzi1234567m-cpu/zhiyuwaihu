@@ -18,7 +18,8 @@ from .coordinator import Coordinator, owned, snapshot
 
 log=logging.getLogger('zhiyu')
 
-def create_app(services=None, *, tts=None):
+def create_app(services=None, *, tts=None, realtime_business=None,
+               realtime_input_factory=None, realtime_speech_factory=None, realtime_media_factory=None):
     services=services or Services()
     from .tts import QwenTTS, SpeechRequest
     from .cloud_budget import reserve_call
@@ -26,6 +27,9 @@ def create_app(services=None, *, tts=None):
     services.voice.cancel_tts=tts.cancel_session
     coordinator=Coordinator(services)
     signer=URLSafeTimedSerializer(settings.cookie_secret)
+    from .realtime.manager import RealtimeManager
+    realtime=RealtimeManager(settings, realtime_business, realtime_input_factory,
+                             realtime_speech_factory, realtime_media_factory)
 
     @asynccontextmanager
     async def lifespan(app):
@@ -33,11 +37,13 @@ def create_app(services=None, *, tts=None):
         await services.voice.startup(coordinator)
         try:yield
         finally:
+            await realtime.close()
             await services.voice.shutdown()
             await coordinator.shutdown()
 
     app=FastAPI(title='智语外呼文本联调骨架',version='0.3.0',lifespan=lifespan)
     app.state.services,app.state.coordinator=services,coordinator
+    app.state.realtime=realtime
 
     def error_response(request,code,message,status):
         error=ApiError(code=code,message=message,retryable=status>=500,request_id=request.state.request_id)
@@ -81,6 +87,20 @@ def create_app(services=None, *, tts=None):
         if not value or len(value)>100: raise DomainError('INVALID_IDEMPOTENCY_KEY','需要长度不超过100的Idempotency-Key',422)
         return value
 
+    async def authorize_realtime(user, sid):
+        # Entire short transaction stays in one worker thread, never blocks audio tasks.
+        def check():
+            with Session() as db:
+                row=owned(db,str(sid),user)
+                if row.data.get('voice_transport')!='native_webrtc' or row.data.get('ended'):
+                    raise DomainError('WRONG_INPUT_MODE','不是活动实时会话',409)
+                if not realtime.allowed_application(row.application_id):
+                    raise DomainError('REALTIME_NOT_ALLOWED','申请单未在实时白名单中',403)
+        await asyncio.to_thread(check)
+
+    from .realtime.routes import mount_realtime
+    mount_realtime(app,realtime,owner,authorize_realtime,settings.public_origin)
+
     @app.get('/health/live')
     def live(): return {'status':'ok'}
 
@@ -116,7 +136,9 @@ def create_app(services=None, *, tts=None):
 
     @app.get('/api/v1/capabilities',response_model=Capabilities)
     def capabilities(user=Depends(owner)):
-        return Capabilities(routing_preview=settings.environment in ('development', 'test'), voice=services.voice.available(),model=settings.model_provider,
+        return Capabilities(realtime_webrtc=realtime.unavailable_reason() is None,
+            realtime_unavailable_reason=realtime.unavailable_reason(),
+            routing_preview=settings.environment in ('development', 'test'), voice=services.voice.available(),model=settings.model_provider,
             voice_unavailable_reason=services.voice.unavailable_reason())
 
     def demo_catalog(user=Depends(owner)):
@@ -143,7 +165,11 @@ def create_app(services=None, *, tts=None):
 
     @app.post('/api/v1/sessions',response_model=SessionView,status_code=201)
     def create(body: CreateSession,user=Depends(owner),idempotency_key: str | None=Header(default=None)):
-        return coordinator.create(user,body,key(idempotency_key))
+        if body.voice_transport=='native_webrtc':
+            realtime.require()
+            if not realtime.allowed_application(body.application_id):
+                raise DomainError('REALTIME_NOT_ALLOWED','申请单未在实时白名单中',403)
+        return coordinator.create(user,body,key(idempotency_key),realtime_available=body.voice_transport=='native_webrtc')
 
     @app.get('/api/v1/sessions/{sid}',response_model=SessionView)
     def get_session(sid: UUID,user=Depends(owner)):
@@ -167,7 +193,8 @@ def create_app(services=None, *, tts=None):
     @app.post('/api/v1/sessions/{sid}/end',response_model=SessionView)
     async def end(sid: UUID,body: EndRequest,user=Depends(owner)):
         result=coordinator.end(user,str(sid))
-        if result.mode=='voice':await services.voice.stop(user,str(sid))
+        if result.voice_transport=='native_webrtc':await realtime.close_session(sid)
+        elif result.mode=='voice':await services.voice.stop(user,str(sid))
         return result
 
     @app.get('/api/v1/operations/{oid}',response_model=OperationResult)

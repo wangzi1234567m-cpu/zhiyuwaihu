@@ -541,6 +541,23 @@
     "Capabilities": {
       "additionalProperties": false,
       "properties": {
+        "realtime_webrtc": {
+          "default": false,
+          "title": "Realtime Webrtc",
+          "type": "boolean"
+        },
+        "realtime_unavailable_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Realtime Unavailable Reason"
+        },
         "routing_preview": {
           "default": false,
           "title": "Routing Preview",
@@ -601,6 +618,15 @@
             "text"
           ],
           "title": "Mode",
+          "type": "string"
+        },
+        "voice_transport": {
+          "default": "agora",
+          "enum": [
+            "agora",
+            "native_webrtc"
+          ],
+          "title": "Voice Transport",
           "type": "string"
         }
       },
@@ -840,6 +866,49 @@
         "message_id"
       ],
       "title": "GenerationFinished",
+      "type": "object"
+    },
+    "IceServer": {
+      "additionalProperties": false,
+      "properties": {
+        "urls": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 1,
+          "title": "Urls",
+          "type": "array"
+        },
+        "username": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Username"
+        },
+        "credential": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Credential"
+        }
+      },
+      "required": [
+        "urls"
+      ],
+      "title": "IceServer",
       "type": "object"
     },
     "InterruptRequest": {
@@ -1454,6 +1523,161 @@
       "title": "OperationUpdated",
       "type": "object"
     },
+    "RealtimeAnswer": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "answer",
+          "default": "answer",
+          "title": "Type",
+          "type": "string"
+        },
+        "sdp": {
+          "title": "Sdp",
+          "type": "string"
+        },
+        "connection_binding": {
+          "format": "uuid",
+          "title": "Connection Binding",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "sdp",
+        "connection_binding",
+        "expires_at"
+      ],
+      "title": "RealtimeAnswer",
+      "type": "object"
+    },
+    "RealtimeControl": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "ready",
+            "heartbeat",
+            "interrupt",
+            "playback_ready",
+            "observation",
+            "end"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "playback_instance_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Playback Instance Id"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "enum": [
+                "first_answer_audio",
+                "interrupt_stopped",
+                "speech_ended"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Name"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "maximum": 180000,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        }
+      },
+      "required": [
+        "type",
+        "request_id"
+      ],
+      "title": "RealtimeControl",
+      "type": "object"
+    },
+    "RealtimeIce": {
+      "additionalProperties": false,
+      "properties": {
+        "ice_servers": {
+          "items": {
+            "$ref": "#/$defs/IceServer"
+          },
+          "title": "Ice Servers",
+          "type": "array"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ice_servers",
+        "expires_at"
+      ],
+      "title": "RealtimeIce",
+      "type": "object"
+    },
+    "RealtimeOffer": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "offer",
+          "default": "offer",
+          "title": "Type",
+          "type": "string"
+        },
+        "sdp": {
+          "maxLength": 65536,
+          "minLength": 1,
+          "title": "Sdp",
+          "type": "string"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "sdp",
+        "expected_state_revision"
+      ],
+      "title": "RealtimeOffer",
+      "type": "object"
+    },
     "RejectPayload": {
       "additionalProperties": false,
       "properties": {
@@ -2036,6 +2260,15 @@
             "voice"
           ],
           "title": "Mode",
+          "type": "string"
+        },
+        "voice_transport": {
+          "default": "agora",
+          "enum": [
+            "agora",
+            "native_webrtc"
+          ],
+          "title": "Voice Transport",
           "type": "string"
         }
       },

@@ -46,5 +46,12 @@ class Settings:
     max_daily_model_calls: int = int(os.getenv('MAX_DAILY_MODEL_CALLS', '30'))
     max_daily_voice_calls: int = int(os.getenv('MAX_DAILY_VOICE_CALLS', '3'))
     staging_password: str = os.getenv('STAGING_PASSWORD', '')
+    realtime_enabled: bool = os.getenv('REALTIME_WEBRTC_ENABLED', 'false').lower() == 'true'
+    realtime_application_ids: str = os.getenv('REALTIME_APPLICATION_IDS', '')
+    realtime_stun_urls: str = os.getenv('REALTIME_STUN_URLS', '[]')
+    realtime_turn_urls: str = os.getenv('REALTIME_TURN_URLS', '')
+    realtime_turn_secret: str = os.getenv('REALTIME_TURN_SECRET', '')
+    max_daily_native_sessions: int = int(os.getenv('MAX_DAILY_NATIVE_SESSIONS', '2'))
+    max_daily_native_turns: int = int(os.getenv('MAX_DAILY_NATIVE_TURNS', '8'))
 
 settings = Settings()

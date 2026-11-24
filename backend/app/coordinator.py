@@ -110,7 +110,8 @@ def snapshot(db, row):
         state=row.state, state_revision=row.revision, route=row.data['route'], last_event_seq=row.seq,
         source_refs=refs, metrics=metrics, operations=ops, verified=verified, busy=row.data.get('busy',False), ended=row.data.get('ended',False),
         generation_id=row.data.get('generation_id'), reason=row.data.get('reason') if verified else None,
-        remedy=row.data.get('remedy') if verified else None, messages=messages(db,row.id), record=record.data if record else None, mode=row.data.get('mode','text'))
+        remedy=row.data.get('remedy') if verified else None, messages=messages(db,row.id), record=record.data if record else None, mode=row.data.get('mode','text'),
+        voice_transport=row.data.get('voice_transport','agora'))
 
 def published_channel(entries):
     """发布渠道来自已审核知识条目，不由模型或用户文本猜测。"""
@@ -192,11 +193,14 @@ class Coordinator:
         if self.operation_worker: self.operation_worker.cancel()
         await asyncio.gather(*pending, *([self.operation_worker] if self.operation_worker else []), return_exceptions=True)
 
-    def create(self, owner, request, key):
-        if request.mode == 'voice' and not self.services.voice.available():
+    def create(self, owner, request, key, *, realtime_available=False):
+        if request.voice_transport == 'native_webrtc' and not realtime_available:
+            raise DomainError('REALTIME_NOT_CONFIGURED', '实时传输尚未配置', 503)
+        if request.mode == 'voice' and request.voice_transport == 'agora' and not self.services.voice.available():
             raise DomainError('VOICE_NOT_CONFIGURED', '语音配置尚未完成', 503)
         # 模型版本只用于证据留档；真实模型配置由 MODEL_PROVIDER 决定，不读工作台 GLM key。
-        model = self.require_model()
+        model = ({'mode':'native_qwen','model_version':'qwen3.8-omni-flash-realtime'}
+                 if request.voice_transport=='native_webrtc' else self.require_model())
         case = self.services.cases.get_case(owner, str(request.application_id))
         knowledge_version = os.getenv('ZHIYU_KNOWLEDGE_VERSION', 'demo-k1')
         entries = self.services.knowledge.lookup(case.scenario_id, '', ['synthetic'], knowledge_version)
@@ -207,7 +211,10 @@ class Coordinator:
             from sqlalchemy import text
             db.execute(text('SELECT pg_advisory_xact_lock(hashtext(:key))'), {'key': owner+key})
             rkey = f'{owner}:create:{key}'
-            digest, previous = receipt(db,rkey,request.model_dump(mode='json'))
+            creation_payload=request.model_dump(mode='json')
+            # Preserve pre-V0.4 receipt hashes for the default transport.
+            if request.voice_transport=='agora':creation_payload.pop('voice_transport')
+            digest, previous = receipt(db,rkey,creation_payload)
             if previous: return snapshot(db,owned(db,previous['session_id'],owner))
             row = Conversation(id=new_id(),owner=owner,application_id=str(case.application_id), state='CASE_READY',revision=0,seq=0,
                 data={'case_revision':case.case_revision,'strategy_version':'demo-p1','knowledge_version':knowledge_version,
@@ -217,7 +224,7 @@ class Coordinator:
                       'notifications':[],'contact_outcome':'unknown','contact_outcome_source':'none',
                       'submission_attempt':case.submission_attempt,'call_attempt':case.call_attempt,
                       'model_version':model['model_version'],'model_mode':model['mode'],
-                      'mode':request.mode})
+                      'mode':request.mode,'voice_transport':request.voice_transport})
             db.add(row)
             db.flush()
             emit(db,row,StateChanged(type='state.changed',state='CASE_READY'))
@@ -240,6 +247,8 @@ class Coordinator:
     async def accept(self,owner,sid,text,key,*,start_revision=None,source='text',provider_turn=None):
         with self.repo.transaction() as db:
             row=owned(db,sid,owner,True)
+            if row.data.get('voice_transport') == 'native_webrtc':
+                raise DomainError('WRONG_INPUT_MODE', '实时会话仅通过注入的业务公共接口受理', 409)
             kind='start' if start_revision is not None else 'turn'
             rkey=f'{sid}:{kind}:{key}'
             digest,old=receipt(db,rkey,{'text':text,'revision':start_revision})
