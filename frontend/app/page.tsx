@@ -1,9 +1,7 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
 import type {components} from './api.generated';
-import BusinessFacts from './BusinessFacts';
-import RoutingPreview from './routing-preview';
-import RsiPanel from './rsi-panel';
+import SubtitlePanel from './SubtitlePanel';
 import {api} from '../lib/api';
 import VoicePanel from './VoicePanel';
 import RealtimeVoicePanel from './RealtimeVoicePanel';
@@ -12,10 +10,11 @@ type View = components['schemas']['SessionView'];
 type Application = components['schemas']['ApplicationView'];
 type Accepted = components['schemas']['AcceptedTurn'];
 type Event = components['schemas']['Event'];
-const stateLabels: Record<string,string> = {CASE_READY:'待开始',OPENING:'开场',VERIFYING:'核验身份',QA:'整改问答',ACTION_READY:'准备处理',EXECUTING:'处理中',RECONCILING:'结果待查证',WRITEBACK_PENDING:'等待回写',CLOSED:'已完成',CLOSING:'结束中',MANUAL_REVIEW:'需人工处理',ROUTING:'判断渠道',EXPLAINING:'说明整改',CALLBACK_PENDING:'等待预约'};
+
 
 
 export default function Home() {
+  const [callStatus,setCallStatus]=useState('等待开始');
   const [logged,setLogged] = useState(false);
   const [capabilities,setCapabilities]=useState<components['schemas']['Capabilities']|null>(null);
   const [mode,setMode]=useState<'text'|'voice'|'native_webrtc'>('text');
@@ -35,7 +34,7 @@ export default function Home() {
 
   async function initialize() {
     const items = await api<Application[]>('/applications');
-    setCapabilities(await api<components['schemas']['Capabilities']>('/capabilities'));
+    const caps=await api<components['schemas']['Capabilities']>('/capabilities'); setCapabilities(caps); setMode(caps.voice?'voice':caps.realtime_webrtc?'native_webrtc':'text');
     setApplications(items); setSelected(items[0]?.application_id ?? ''); setLogged(true);
     const saved = localStorage.getItem('zhiyu.session');
     if(saved) setSid(saved);
@@ -60,13 +59,15 @@ export default function Home() {
       try {
         const next = await api<View>(`/sessions/${sid}`);
         if(closed) return;
-        setView(next); generation.current=next.generation_id ?? null; cursor.current=next.last_event_seq;
+        setView(next); setSelected(next.application_id); generation.current=next.generation_id ?? null; cursor.current=next.last_event_seq;
+        if(next.ended){setConnecting(false);return;}
         source=new EventSource(`/api/v1/sessions/${sid}/events?after_seq=${cursor.current}`);
         source.onopen=()=>setConnecting(false);
         const receive = (raw: MessageEvent<string>) => {
           const event=JSON.parse(raw.data) as Event;
           if(closed || event.seq<=cursor.current) return;
           cursor.current=event.seq;
+          if(event.payload.type==='session.ended'){source?.close();setLive('');generation.current=null;}
           if(event.payload.type==='turn.started') {
             generation.current=event.generation_id ?? null; setLive('');
             setView(previous=>previous ? {...previous,busy:true,generation_id:event.generation_id} : previous);
@@ -74,7 +75,7 @@ export default function Home() {
             const delta=event.payload.text;
             if(event.generation_id===generation.current) setLive(x=>x+delta);
           } else if(event.payload.type==='turn.interrupted') {
-            if(event.payload.invalidated_generation_id===generation.current) setLive('');
+            if(event.payload.invalidated_generation_id===generation.current) {generation.current=null; setLive('');}
           }
           if(['generation.finished','operation.updated','session.ended'].includes(event.payload.type)) {
             refresh().catch(e=>setError(String(e)));
@@ -118,16 +119,19 @@ export default function Home() {
     }
   }
   return <main>
-    <header><div><p className="eyebrow">智语外呼 / 开发联调</p><h1>商户资质告知助手</h1><p>合成申请单 · 业务联调环境</p></div><span className="badge">{(capabilities?.voice||capabilities?.realtime_webrtc)?'语音可联调':'语音未配置'}</span></header>
+    <header><div className="brand"><span className="logo"><img src="/zhiyu-logo.jpg" alt="智语外呼" width="64" height="64"/></span><div><p className="eyebrow">智语外呼</p><h1>商户资质告知助手</h1></div></div><span className="badge">{view?.ended?'通话已结束':view?.mode==='voice'?callStatus:connecting?'正在连接':(capabilities?.voice||capabilities?.realtime_webrtc)?'等待开始':'语音未配置'}</span></header>
     {error && <div role="alert" className="error">{error}</div>}
-    {!logged ? <section className="login"><h2>进入演示环境</h2><p>使用本地配置的演示密码。默认值见启动说明。</p><form onSubmit={e=>{e.preventDefault();run(async()=>{await api('/auth/login',{username:'demo',password});await initialize();});}}><label>演示密码<input aria-label="演示密码" type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={submitting}>登录</button></form></section> : <div className="grid">
-      <aside><h2>合成任务</h2><label>交互模式<select value={mode} onChange={e=>setMode(e.target.value as 'text'|'voice'|'native_webrtc')}><option value="text">文本联调</option><option value="voice" disabled={!capabilities?.voice}>实时语音</option><option value="native_webrtc" disabled={!capabilities?.realtime_webrtc}>实时语音升级</option></select></label>{capabilities?.voice_unavailable_reason&&<p className="hint">{capabilities.voice_unavailable_reason}</p>}<label>选择申请单<select value={selected} onChange={e=>setSelected(e.target.value)}>{applications.map(a=><option key={a.application_id} value={a.application_id}>{a.label} · {a.company_hint}</option>)}</select></label><button disabled={submitting||!selected||!!view?.busy} onClick={()=>run(create)}>创建会话</button><p className="hint">身份输入：我是演示商家1（按所选商家编号调整）</p><p className="hint">之后可问“补齐材料一定必过吗”，再说“明白了”。</p><hr/><h2>业务事实</h2><p>状态：{view ? stateLabels[view.state] ?? view.state : '尚未创建'}</p><p>身份：{view?.verified?'已核对':'尚未核对'}</p>{view && <BusinessFacts view={view}/>}</aside>
-      <section className="conversation">{view?.mode==='voice'?(view.voice_transport==='native_webrtc'?<RealtimeVoicePanel key={view.session_id} view={view} onError={setError}/>:<VoicePanel key={view.session_id} view={view} onError={setError}/>):<><div className="toolbar"><h2>文本会话</h2><span>{sid?(connecting?'事件连接中':'已连接'):'待连接'}</span></div><div className="actions"><button disabled={!view||view.state!=='CASE_READY'||submitting} onClick={()=>run(start)}>开始</button><button disabled={!view?.busy||!view.generation_id||submitting} onClick={()=>run(async()=>{await api(`/sessions/${sid}/interruptions`,{generation_id:view!.generation_id,client_event_id:crypto.randomUUID()});setView(await api<View>(`/sessions/${sid}`));setLive('');})}>打断</button><button disabled={!view||view.ended||submitting} onClick={()=>run(async()=>{setView(await api<View>(`/sessions/${sid}/end`,{reason:'user_ended'}));setLive('');})}>结束</button></div>
-      <div className="messages" aria-live="polite">{!view?.messages?.length && <p className="empty">创建会话后点击开始，AI 会主动开场。</p>}{view?.messages?.filter(m=>!(live && m.status==='generating' && m.generation_id===generation.current)).map(m=><article key={m.message_id} className={m.role}><strong>{m.role==='user'?'商户':'AI'}</strong><p>{m.text || '…'}</p>{m.status==='interrupted'&&<small>已打断</small>}{m.status==='failed'&&<small>生成失败，可重试</small>}</article>)}{live && <article className="assistant"><strong>AI · 正在回复</strong><p>{live}</p></article>}</div>
-      <form className="composer" onSubmit={e=>{e.preventDefault();run(send);}}><input aria-label="商户回复" placeholder="输入商户回复；新输入会打断旧生成" value={input} onChange={e=>setInput(e.target.value)} disabled={!view||view.ended||view.state==='CASE_READY'}/><button disabled={!view||view.ended||view.state==='CASE_READY'||submitting||!input.trim()}>发送</button></form></>}</section>
-    </div>}
-    {logged && capabilities?.routing_preview && <RoutingPreview/>}
-    {logged && <RsiPanel/>}
-    <footer>当前使用语义 Agent、规则理解和模拟业务。文字响应不代表语音性能。</footer>
+    {!logged ? <section className="login"><h2>欢迎使用</h2><form onSubmit={e=>{e.preventDefault();run(async()=>{await api('/auth/login',{username:'demo',password});await initialize();});}}><label>演示密码<input autoComplete="current-password" aria-label="演示密码" type="password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={submitting}>登录</button></form></section> : <>
+      <div className="selection"><label>申请单<select aria-label="选择申请单" value={selected} disabled={!!view&&!view.ended&&(view.busy||view.state!=='CASE_READY')} onChange={e=>setSelected(e.target.value)}>{applications.map(a=><option key={a.application_id} value={a.application_id}>{a.label} · {a.company_hint}</option>)}</select></label><label>交互方式<select value={mode} disabled={!!view&&!view.ended&&view.state!=='CASE_READY'} onChange={e=>setMode(e.target.value as typeof mode)}><option value="voice" disabled={!capabilities?.voice}>实时语音</option><option value="native_webrtc" disabled={!capabilities?.realtime_webrtc}>实时语音升级</option><option value="text">文字对话</option></select></label><button className="secondary" disabled={submitting||!selected||!!view?.busy||!!view&&!view.ended&&view.state!=='CASE_READY'} onClick={()=>run(create)}>创建会话</button></div>
+      <div className="service-note"><p className="service-motto">匠心兼程，服务立行</p></div>
+      <section className="conversation">
+        {view?.mode==='voice' ? (view.voice_transport==='native_webrtc'?<><SubtitlePanel view={view} live={live} generation={generation.current}/><RealtimeVoicePanel key={view.session_id} view={view} onError={setError} onStatus={setCallStatus}/></>:<VoicePanel key={view.session_id} view={view} onError={setError} onStatus={setCallStatus}/>) : <>
+          <SubtitlePanel view={view} live={live} generation={generation.current}/>
+          <div className="call-status" role="status">{view?.ended?'通话已结束':view?.busy?'AI 正在思考':view&&view.state!=='CASE_READY'?'等待回复':'等待开始'}</div>
+          <div className="actions"><button disabled={!view||view.state!=='CASE_READY'||submitting} onClick={()=>run(start)}>开始通话</button><button className="secondary" disabled={!view?.busy||!view.generation_id||submitting} onClick={()=>run(async()=>{generation.current=null;setLive('');await api(`/sessions/${sid}/interruptions`,{generation_id:view!.generation_id,client_event_id:crypto.randomUUID()});setView(await api<View>(`/sessions/${sid}`));})}>打断播报</button><button className="secondary" disabled={!view||view.ended||submitting} onClick={()=>run(async()=>{generation.current=null;setLive('');setView(await api<View>(`/sessions/${sid}/end`,{reason:'user_ended'}));})}>结束通话</button></div>
+          <form className="composer" onSubmit={e=>{e.preventDefault();run(send);}}><input aria-label="商户回复" placeholder="输入商户回复…" value={input} onChange={e=>setInput(e.target.value)} disabled={!view||view.ended||view.state==='CASE_READY'}/><button disabled={!view||view.ended||view.state==='CASE_READY'||submitting||!input.trim()}>发送</button></form>
+        </>}
+      </section>
+    </>}
   </main>;
 }

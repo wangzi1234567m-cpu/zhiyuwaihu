@@ -18,6 +18,8 @@ export class RealtimeVoice {
   private closed=false;
   private lastRemote=0;
   private remoteObserved=false;
+  private ready=false;
+  private reportConnection() {if(this.ready&&this.pc?.connectionState==='connected')this.callbacks.status('实时语音已连接，正在聆听');}
   private stoppedEpoch=0;
   private awaitingStop=false;
   private pendingPermit?:Notice;
@@ -97,15 +99,16 @@ export class RealtimeVoice {
   private async notice(data:Notice) {
     if(this.closed)return;
     if(data.type==='error')throw new Error(`实时通话停止：${data.code??'UNKNOWN'}`);
-    if(data.type==='ready')this.callbacks.status('实时语音已连接，可以讲话');
+    if(data.type==='ready'){this.ready=true;this.reportConnection();}
     if(data.type==='waiting')this.callbacks.status(data.text??'正在核实，请稍等');
     if(data.type==='playback.stop') {
+      this.callbacks.status('已打断');
       this.stoppedEpoch=Math.max(this.stoppedEpoch,data.epoch??0);
       this.awaitingStop=false;this.mute();
     }
     if(data.type==='playback.permit') {
       if(this.awaitingStop||(data.epoch??0)<this.stoppedEpoch)return;
-      this.pendingPermit=data;this.currentGeneration=data.generation_id;
+      this.pendingPermit=data;this.currentGeneration=data.generation_id;this.callbacks.status('AI 正在播报');
       if(data.requires_ready) {
         if(this.drain)clearInterval(this.drain);
         const requested=performance.now();
@@ -155,6 +158,7 @@ export class RealtimeVoice {
         void this.meter(remote,true).catch(()=>void this.fail('无法监测远端音频'));
       };
       pc.onconnectionstatechange=()=>{
+        this.reportConnection();
         if(pc.connectionState==='failed'||pc.connectionState==='disconnected')void this.fail('媒体连接断开，请重新连接');
       };
       this.stream.getTracks().forEach(track=>pc.addTrack(track,this.stream!));
