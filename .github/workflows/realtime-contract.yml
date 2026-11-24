@@ -1,0 +1,17 @@
+name: realtime-contract
+on: [push, pull_request]
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    env:
+      CLOUD_CALLS_ENABLED: 'false'
+      VOICE_ENABLED: 'false'
+      VOICE_WRITES_ENABLED: 'false'
+      MODEL_PROVIDER: fake
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -r backend/requirements.lock
+      - run: python scripts/export_realtime_contract.py --check
+      - run: python -m pytest -c backend/pytest.ini backend/tests/test_realtime_contract.py

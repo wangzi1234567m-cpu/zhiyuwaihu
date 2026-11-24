@@ -1,0 +1,1083 @@
+{
+  "$defs": {
+    "AcceptedTurn": {
+      "additionalProperties": false,
+      "properties": {
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "turn_id",
+        "generation_id"
+      ],
+      "title": "AcceptedTurn",
+      "type": "object"
+    },
+    "ApiError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "operation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Id"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable",
+        "request_id"
+      ],
+      "title": "ApiError",
+      "type": "object"
+    },
+    "BusinessSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": "0.4.0",
+          "default": "0.4.0",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "CASE_READY",
+            "ROUTING",
+            "OPENING",
+            "VERIFYING",
+            "EXPLAINING",
+            "QA",
+            "CALLBACK_PENDING",
+            "CLOSING",
+            "ACTION_READY",
+            "EXECUTING",
+            "RECONCILING",
+            "WRITEBACK_PENDING",
+            "CLOSED",
+            "MANUAL_REVIEW"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "state_revision": {
+          "minimum": 0,
+          "title": "State Revision",
+          "type": "integer"
+        },
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "knowledge_version": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Knowledge Version",
+          "type": "string"
+        },
+        "generation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Id"
+        },
+        "last_event_seq": {
+          "minimum": 0,
+          "title": "Last Event Seq",
+          "type": "integer"
+        },
+        "oldest_available_seq": {
+          "minimum": 1,
+          "title": "Oldest Available Seq",
+          "type": "integer"
+        },
+        "operations": {
+          "items": {
+            "$ref": "#/$defs/OperationResult"
+          },
+          "title": "Operations",
+          "type": "array"
+        },
+        "playback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PlaybackProgress"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "session_id",
+        "state",
+        "state_revision",
+        "case_revision",
+        "knowledge_version",
+        "last_event_seq",
+        "oldest_available_seq"
+      ],
+      "title": "BusinessSnapshot",
+      "type": "object"
+    },
+    "BusinessTurnInput": {
+      "additionalProperties": false,
+      "properties": {
+        "input_id": {
+          "format": "uuid",
+          "title": "Input Id",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 8000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        },
+        "final": {
+          "const": true,
+          "default": true,
+          "title": "Final",
+          "type": "boolean"
+        },
+        "understanding_candidate": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UnderstandingCandidate"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "input_id",
+        "text"
+      ],
+      "title": "BusinessTurnInput",
+      "type": "object"
+    },
+    "ContractError": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "enum": [
+            "UNAUTHORIZED",
+            "SESSION_NOT_FOUND",
+            "BINDING_EXPIRED",
+            "CONTRACT_VERSION_UNSUPPORTED",
+            "INVALID_INPUT",
+            "INPUT_NOT_FINAL",
+            "REQUEST_CONFLICT",
+            "REVISION_CONFLICT",
+            "STALE_GENERATION",
+            "CURSOR_EXPIRED",
+            "CURSOR_AHEAD",
+            "SUBSCRIBER_LIMIT",
+            "SLOW_CONSUMER",
+            "BUSY",
+            "BUSINESS_TIMEOUT",
+            "OPERATION_UNKNOWN",
+            "SERVICE_UNAVAILABLE",
+            "PLAYBACK_EVIDENCE_REJECTED",
+            "INTERNAL_ERROR"
+          ],
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "maxLength": 400,
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "retryable": {
+          "title": "Retryable",
+          "type": "boolean"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "current_state_revision": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current State Revision"
+        },
+        "retry_after_ms": {
+          "anyOf": [
+            {
+              "maximum": 60000,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Retry After Ms"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "title": "ContractError",
+      "type": "object"
+    },
+    "EventSubscription": {
+      "additionalProperties": false,
+      "properties": {
+        "after_seq": {
+          "default": 0,
+          "minimum": 0,
+          "title": "After Seq",
+          "type": "integer"
+        }
+      },
+      "title": "EventSubscription",
+      "type": "object"
+    },
+    "GenerationFinished": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "generation.finished",
+          "title": "Type",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "completed",
+            "interrupted",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "status",
+        "message_id"
+      ],
+      "title": "GenerationFinished",
+      "type": "object"
+    },
+    "GenerationInterrupt": {
+      "additionalProperties": false,
+      "properties": {
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "generation_id"
+      ],
+      "title": "GenerationInterrupt",
+      "type": "object"
+    },
+    "Interrupted": {
+      "additionalProperties": false,
+      "properties": {
+        "applied": {
+          "title": "Applied",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "applied"
+      ],
+      "title": "Interrupted",
+      "type": "object"
+    },
+    "OperationResult": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "reject_application",
+                "create_callback",
+                "create_followup",
+                "writeback"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        },
+        "operation_id": {
+          "format": "uuid",
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pending",
+            "succeeded",
+            "failed",
+            "unknown",
+            "not_found_yet"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "resource_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resource Id"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ApiError"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation_id",
+        "status",
+        "updated_at"
+      ],
+      "title": "OperationResult",
+      "type": "object"
+    },
+    "OperationUpdated": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "operation.updated",
+          "title": "Type",
+          "type": "string"
+        },
+        "result": {
+          "$ref": "#/$defs/OperationResult"
+        }
+      },
+      "required": [
+        "type",
+        "result"
+      ],
+      "title": "OperationUpdated",
+      "type": "object"
+    },
+    "PlaybackProgress": {
+      "additionalProperties": false,
+      "properties": {
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "verified_segment_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Verified Segment Ids",
+          "type": "array"
+        },
+        "message_fully_notified": {
+          "default": false,
+          "title": "Message Fully Notified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "generation_id",
+        "message_id"
+      ],
+      "title": "PlaybackProgress",
+      "type": "object"
+    },
+    "PlaybackReport": {
+      "additionalProperties": false,
+      "properties": {
+        "report_id": {
+          "format": "uuid",
+          "title": "Report Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "playback_instance_id": {
+          "format": "uuid",
+          "title": "Playback Instance Id",
+          "type": "string"
+        },
+        "text_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Text Sha256",
+          "type": "string"
+        },
+        "observation": {
+          "enum": [
+            "started",
+            "completed",
+            "interrupted",
+            "failed"
+          ],
+          "title": "Observation",
+          "type": "string"
+        },
+        "clock_domain": {
+          "enum": [
+            "browser.performance",
+            "server.monotonic"
+          ],
+          "title": "Clock Domain",
+          "type": "string"
+        },
+        "elapsed_ms": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Elapsed Ms"
+        },
+        "evidence_ref": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Ref"
+        }
+      },
+      "required": [
+        "report_id",
+        "generation_id",
+        "message_id",
+        "segment_id",
+        "playback_instance_id",
+        "text_sha256",
+        "observation",
+        "clock_domain"
+      ],
+      "title": "PlaybackReport",
+      "type": "object"
+    },
+    "PlaybackReportResult": {
+      "additionalProperties": false,
+      "properties": {
+        "report_id": {
+          "format": "uuid",
+          "title": "Report Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "observation_recorded",
+            "evidence_verified",
+            "evidence_rejected"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "reason_code": {
+          "enum": [
+            "OBSERVATION_ONLY",
+            "SERVER_PROOF_MATCHED",
+            "PROOF_NOT_FOUND",
+            "PROOF_BINDING_MISMATCH",
+            "INCOMPLETE_PLAYBACK",
+            "STALE_GENERATION"
+          ],
+          "title": "Reason Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "report_id",
+        "status",
+        "reason_code"
+      ],
+      "title": "PlaybackReportResult",
+      "type": "object"
+    },
+    "RealtimeBusinessEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": "0.4.0",
+          "default": "0.4.0",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "turn_id": {
+          "format": "uuid",
+          "title": "Turn Id",
+          "type": "string"
+        },
+        "generation_id": {
+          "format": "uuid",
+          "title": "Generation Id",
+          "type": "string"
+        },
+        "operation_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Operation Id"
+        },
+        "seq": {
+          "minimum": 1,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "state_revision": {
+          "minimum": 0,
+          "title": "State Revision",
+          "type": "integer"
+        },
+        "occurred_at": {
+          "format": "date-time",
+          "title": "Occurred At",
+          "type": "string"
+        },
+        "knowledge_version": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Knowledge Version",
+          "type": "string"
+        },
+        "payload": {
+          "discriminator": {
+            "mapping": {
+              "generation.finished": "#/$defs/GenerationFinished",
+              "operation.updated": "#/$defs/OperationUpdated",
+              "reply.completed": "#/$defs/ReplyCompleted",
+              "reply.segment_ready": "#/$defs/ReplySegmentReady",
+              "turn.failed": "#/$defs/TurnFailed",
+              "turn.interrupted": "#/$defs/TurnInterrupted",
+              "turn.started": "#/$defs/TurnStarted",
+              "writeback.completed": "#/$defs/WritebackCompleted"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/TurnStarted"
+            },
+            {
+              "$ref": "#/$defs/TurnInterrupted"
+            },
+            {
+              "$ref": "#/$defs/GenerationFinished"
+            },
+            {
+              "$ref": "#/$defs/OperationUpdated"
+            },
+            {
+              "$ref": "#/$defs/ReplySegmentReady"
+            },
+            {
+              "$ref": "#/$defs/ReplyCompleted"
+            },
+            {
+              "$ref": "#/$defs/TurnFailed"
+            },
+            {
+              "$ref": "#/$defs/WritebackCompleted"
+            }
+          ],
+          "title": "Payload"
+        }
+      },
+      "required": [
+        "event_id",
+        "session_id",
+        "turn_id",
+        "generation_id",
+        "seq",
+        "state_revision",
+        "occurred_at",
+        "knowledge_version",
+        "payload"
+      ],
+      "title": "RealtimeBusinessEvent",
+      "type": "object"
+    },
+    "ReplyCompleted": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "reply.completed",
+          "default": "reply.completed",
+          "title": "Type",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "segment_count": {
+          "minimum": 0,
+          "title": "Segment Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "message_id",
+        "segment_count"
+      ],
+      "title": "ReplyCompleted",
+      "type": "object"
+    },
+    "ReplySegmentReady": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "reply.segment_ready",
+          "default": "reply.segment_ready",
+          "title": "Type",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        },
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "segment_index": {
+          "minimum": 0,
+          "title": "Segment Index",
+          "type": "integer"
+        },
+        "text": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "pattern": "\\S",
+          "title": "Text",
+          "type": "string"
+        },
+        "text_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Text Sha256",
+          "type": "string"
+        },
+        "speech_policy": {
+          "const": "verbatim",
+          "default": "verbatim",
+          "title": "Speech Policy",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_id",
+        "segment_id",
+        "segment_index",
+        "text",
+        "text_sha256"
+      ],
+      "title": "ReplySegmentReady",
+      "type": "object"
+    },
+    "TrustedSessionContext": {
+      "additionalProperties": false,
+      "description": "Server-only argument; never bind to a browser or model request body.",
+      "properties": {
+        "contract_version": {
+          "const": "0.4.0",
+          "default": "0.4.0",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "connection_binding": {
+          "format": "uuid",
+          "title": "Connection Binding",
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner",
+        "session_id",
+        "connection_binding"
+      ],
+      "title": "TrustedSessionContext",
+      "type": "object"
+    },
+    "TrustedTurnContext": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {
+          "const": "0.4.0",
+          "default": "0.4.0",
+          "title": "Contract Version",
+          "type": "string"
+        },
+        "owner": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Owner",
+          "type": "string"
+        },
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "connection_binding": {
+          "format": "uuid",
+          "title": "Connection Binding",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        },
+        "provider_input_id": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Provider Input Id",
+          "type": "string"
+        },
+        "expected_state_revision": {
+          "minimum": 0,
+          "title": "Expected State Revision",
+          "type": "integer"
+        },
+        "expected_case_revision": {
+          "minimum": 1,
+          "title": "Expected Case Revision",
+          "type": "integer"
+        },
+        "knowledge_version": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Knowledge Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "owner",
+        "session_id",
+        "connection_binding",
+        "request_id",
+        "provider_input_id",
+        "expected_state_revision",
+        "expected_case_revision",
+        "knowledge_version"
+      ],
+      "title": "TrustedTurnContext",
+      "type": "object"
+    },
+    "TurnFailed": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "turn.failed",
+          "default": "turn.failed",
+          "title": "Type",
+          "type": "string"
+        },
+        "error": {
+          "$ref": "#/$defs/ContractError"
+        }
+      },
+      "required": [
+        "error"
+      ],
+      "title": "TurnFailed",
+      "type": "object"
+    },
+    "TurnInterrupted": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "turn.interrupted",
+          "title": "Type",
+          "type": "string"
+        },
+        "invalidated_generation_id": {
+          "format": "uuid",
+          "title": "Invalidated Generation Id",
+          "type": "string"
+        },
+        "new_epoch": {
+          "minimum": 1,
+          "title": "New Epoch",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "type",
+        "invalidated_generation_id",
+        "new_epoch"
+      ],
+      "title": "TurnInterrupted",
+      "type": "object"
+    },
+    "TurnStarted": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "turn.started",
+          "title": "Type",
+          "type": "string"
+        },
+        "message_id": {
+          "format": "uuid",
+          "title": "Message Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "message_id"
+      ],
+      "title": "TurnStarted",
+      "type": "object"
+    },
+    "UnderstandingCandidate": {
+      "additionalProperties": false,
+      "description": "Untrusted suggestions; grounding and state checks are still required.",
+      "properties": {
+        "intents": {
+          "items": {
+            "enum": [
+              "confirm_identity",
+              "deny_identity",
+              "ask_reason",
+              "ask_remedy",
+              "ask_guarantee",
+              "ask_source",
+              "ask_outcome",
+              "refuse_contact",
+              "request_callback",
+              "acknowledge",
+              "unclear",
+              "complaint_risk"
+            ],
+            "type": "string"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Intents",
+          "type": "array"
+        },
+        "slots": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 16,
+          "title": "Slots",
+          "type": "object"
+        },
+        "needs_clarification": {
+          "default": false,
+          "title": "Needs Clarification",
+          "type": "boolean"
+        },
+        "negated": {
+          "default": false,
+          "title": "Negated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "intents"
+      ],
+      "title": "UnderstandingCandidate",
+      "type": "object"
+    },
+    "WritebackCompleted": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "writeback.completed",
+          "default": "writeback.completed",
+          "title": "Type",
+          "type": "string"
+        },
+        "record_id": {
+          "format": "uuid",
+          "title": "Record Id",
+          "type": "string"
+        },
+        "record_revision": {
+          "minimum": 1,
+          "title": "Record Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "record_id",
+        "record_revision"
+      ],
+      "title": "WritebackCompleted",
+      "type": "object"
+    }
+  },
+  "title": "Realtime business internal contract 0.4.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -1,5 +1,7 @@
 # 公共结构 0.3.0
 
+V0.4新增进程内[实时交互与业务公共契约](realtime-v04.md)，DTO源位于 `backend/app/realtime_contract/`，生成物为 [realtime-v04.schema.json](realtime-v04.schema.json)。本轮只交付接口定义，不实现替身或运行接线；原0.3 API与下述生成流程保持不变。
+
 唯一手写源已迁移到 [backend/app/contracts.py](../../../backend/app/contracts.py)。本目录contracts.py仅为兼容导入入口；生成字段与实际签名以新源和 [OpenAPI](openapi.json) 为准。运行 `python scripts/export_contracts.py` 和 `npm run types --prefix frontend` 同步前端类型。
 
 # 0.2设计说明（历史语义，差异见骨架交接）
