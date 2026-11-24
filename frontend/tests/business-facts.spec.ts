@@ -1,6 +1,6 @@
 import {test, expect} from '@playwright/test';
 
-test('shows only verified facts, distinguishes unknown writes and restores metrics', async ({page}) => {
+test('keeps internal business facts and evaluation tools off the merchant page', async ({page}) => {
   const id = '00000000-0000-0000-0000-000000000001';
   let verified = false;
   await page.addInitScript(sid => localStorage.setItem('zhiyu.session', sid), id);
@@ -15,19 +15,12 @@ test('shows only verified facts, distinguishes unknown writes and restores metri
     metrics:[{name:'model_ttft',outcome:'success',duration_ms:123,measurement_method:'模拟首段'}]
   }}));
   await page.goto('/');
-  await expect(page.getByTestId('operation-status')).toHaveText('创建人工跟进 · 结果待确认');
-  await expect(page.getByText('关单渠道：京麦书面')).toBeVisible();
+  await expect(page.getByRole('log')).toBeVisible();
+  await expect(page.getByTestId('operation-status')).toHaveCount(0);
   await expect(page.getByText('原因：合成原因')).toHaveCount(0);
   await expect(page.getByText('查看整改依据')).toHaveCount(0);
-  verified = true;
+  await expect(page.getByLabel('评测报告（JSON）')).toHaveCount(0);
+  verified=true;
   await page.reload();
-  await expect(page.getByText('原因：合成原因')).toBeVisible();
-  await page.getByText('查看整改依据').click();
-  await expect(page.getByText('模拟规则 · 第 27 行 · B')).toBeVisible();
-  await page.getByText('查看本次响应指标').click();
-  await expect(page.getByText('模型首段响应 · 123 ms')).toBeVisible();
-  await page.getByLabel('评测报告（JSON）').setInputFiles({name:'test.json',mimeType:'application/json',
-    buffer:Buffer.from(JSON.stringify({arm_summary:{baseline:{runs:2,passed:1},candidate:{runs:2,passed:2}}}))});
-  await expect(page.getByRole('cell',{name:'50.0%'})).toBeVisible();
-  await expect(page.getByRole('cell',{name:'100.0%'})).toBeVisible();
+  await expect(page.getByText('原因：合成原因')).toHaveCount(0);
 });

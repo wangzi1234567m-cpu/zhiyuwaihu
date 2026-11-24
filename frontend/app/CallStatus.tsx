@@ -1,0 +1,3 @@
+export default function CallStatus({active,working,status}:{active:boolean;working:boolean;status:string}) {
+  return <div className={`call-status ${active?'in-call':''}`} role="status">{(active||working)&&<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M5 3h4l2 5-3 2c1 3 3 5 6 6l2-3 5 2v4c0 2-2 3-4 2C9 19 5 15 3 7c-1-2 0-4 2-4Z"/></svg>}<span>{working?'正在连接':active?'正在进行语音通话 · ':''}{!working&&status}</span>{active&&<span className="wave" aria-label="语音连接中">{[0,1,2,3,4].map(i=><i key={i} style={{animationDelay:`${i*120}ms`}}/>)}</span>}</div>;
+}
