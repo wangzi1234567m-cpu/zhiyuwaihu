@@ -427,7 +427,7 @@ def validate_understanding(payload: dict, *, case: ReviewCase | None = None,
 
     clean = dict(payload)
     clean['source'] = clean.get('source') or 'glm'
-    if clean['source'] not in ('fake', 'glm', 'rules'):
+    if clean['source'] not in ('fake', 'glm', 'rules', 'realtime_candidate'):
         clean['source'] = 'glm'
     hint = clean.get('contact_outcome_hint')
     if hint is not None and hint not in SAFE_OUTCOME_HINTS:

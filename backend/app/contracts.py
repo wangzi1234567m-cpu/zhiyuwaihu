@@ -114,7 +114,7 @@ class SessionContext(DTO):
 class TurnInput(DTO):
     message_id: UUID
     text: str = Field(min_length=1, max_length=8000)
-    source: Literal["asr", "text"]
+    source: Literal["asr", "text", "realtime"]
     final: Literal[True] = True
     provider_binding_id: str | None = None
     provider_turn_id: str | None = None
@@ -229,7 +229,7 @@ class Understanding(DTO):
     negated: bool = False
     multi_intent: bool = False
     contact_outcome_hint: ContactOutcome | None = None
-    source: Literal["fake", "glm", "rules"] = "fake"
+    source: Literal["fake", "glm", "rules", "realtime_candidate"] = "fake"
 
 class AgentDecision(DTO):
     reply_text: str
