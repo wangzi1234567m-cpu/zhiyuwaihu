@@ -43,6 +43,9 @@ def emit(db, row, payload, *, turn=None, generation=None, operation=None):
         occurred_at=now(), strategy_version=row.data['strategy_version'], knowledge_version=row.data['knowledge_version'],
         turn_id=turn, generation_id=generation, operation_id=operation, payload=payload)
     db.add(EventRow(id=str(event.event_id), session_id=row.id, seq=row.seq, data=event.model_dump(mode='json')))
+    if row.data.get('realtime_enabled'):
+        from .realtime_business.events import project_event
+        project_event(db, row, event)
 
 def transition(db, row, state):
     """唯一状态写入口：走显式转移表，非法转移拒绝。
@@ -110,7 +113,8 @@ def snapshot(db, row):
         state=row.state, state_revision=row.revision, route=row.data['route'], last_event_seq=row.seq,
         source_refs=refs, metrics=metrics, operations=ops, verified=verified, busy=row.data.get('busy',False), ended=row.data.get('ended',False),
         generation_id=row.data.get('generation_id'), reason=row.data.get('reason') if verified else None,
-        remedy=row.data.get('remedy') if verified else None, messages=messages(db,row.id), record=record.data if record else None, mode=row.data.get('mode','text'))
+        remedy=row.data.get('remedy') if verified else None, messages=messages(db,row.id), record=record.data if record else None, mode=row.data.get('mode','text'),
+        voice_transport=row.data.get('voice_transport','agora'))
 
 def published_channel(entries):
     """发布渠道来自已审核知识条目，不由模型或用户文本猜测。"""
@@ -181,7 +185,11 @@ class Coordinator:
     async def startup(self):
         with self.repo.transaction() as db:
             for row in db.scalars(select(Conversation).with_for_update()):
-                if row.data.get('busy'):
+                if row.data.get('busy') and row.data.get('realtime_job', {}).get('status') != 'queued':
+                    if row.data.get('realtime_enabled'):
+                        row.data = {**row.data, 'realtime_failure': 'SERVICE_UNAVAILABLE'}
+                        self._invalidate(db, row, 'failed')
+                        continue
                     self._invalidate(db, row, 'interrupted')
         self.operation_worker = asyncio.create_task(self.reconcile_loop())
 
@@ -192,11 +200,14 @@ class Coordinator:
         if self.operation_worker: self.operation_worker.cancel()
         await asyncio.gather(*pending, *([self.operation_worker] if self.operation_worker else []), return_exceptions=True)
 
-    def create(self, owner, request, key):
-        if request.mode == 'voice' and not self.services.voice.available():
+    def create(self, owner, request, key, *, realtime_available=False):
+        if request.voice_transport == 'native_webrtc' and not realtime_available:
+            raise DomainError('REALTIME_NOT_CONFIGURED', '实时传输尚未配置', 503)
+        if request.mode == 'voice' and request.voice_transport == 'agora' and not self.services.voice.available():
             raise DomainError('VOICE_NOT_CONFIGURED', '语音配置尚未完成', 503)
         # 模型版本只用于证据留档；真实模型配置由 MODEL_PROVIDER 决定，不读工作台 GLM key。
-        model = self.require_model()
+        model = ({'mode':'native_qwen','model_version':'qwen3.8-omni-flash-realtime'}
+                 if request.voice_transport=='native_webrtc' else self.require_model())
         case = self.services.cases.get_case(owner, str(request.application_id))
         knowledge_version = os.getenv('ZHIYU_KNOWLEDGE_VERSION', 'demo-k1')
         entries = self.services.knowledge.lookup(case.scenario_id, '', ['synthetic'], knowledge_version)
@@ -207,7 +218,10 @@ class Coordinator:
             from sqlalchemy import text
             db.execute(text('SELECT pg_advisory_xact_lock(hashtext(:key))'), {'key': owner+key})
             rkey = f'{owner}:create:{key}'
-            digest, previous = receipt(db,rkey,request.model_dump(mode='json'))
+            creation_payload=request.model_dump(mode='json')
+            # Preserve pre-V0.4 receipt hashes for the default transport.
+            if request.voice_transport=='agora':creation_payload.pop('voice_transport')
+            digest, previous = receipt(db,rkey,creation_payload)
             if previous: return snapshot(db,owned(db,previous['session_id'],owner))
             row = Conversation(id=new_id(),owner=owner,application_id=str(case.application_id), state='CASE_READY',revision=0,seq=0,
                 data={'case_revision':case.case_revision,'strategy_version':'demo-p1','knowledge_version':knowledge_version,
@@ -217,7 +231,7 @@ class Coordinator:
                       'notifications':[],'contact_outcome':'unknown','contact_outcome_source':'none',
                       'submission_attempt':case.submission_attempt,'call_attempt':case.call_attempt,
                       'model_version':model['model_version'],'model_mode':model['mode'],
-                      'mode':request.mode})
+                      'mode':request.mode,'voice_transport':request.voice_transport})
             db.add(row)
             db.flush()
             emit(db,row,StateChanged(type='state.changed',state='CASE_READY'))
@@ -237,14 +251,19 @@ class Coordinator:
         if row.id in self.cancels: self.cancels[row.id].set()
         return True
 
-    async def accept(self,owner,sid,text,key,*,start_revision=None,source='text',provider_turn=None):
+    async def accept(self,owner,sid,text,key,*,start_revision=None,source='text',provider_turn=None,admission=None):
         with self.repo.transaction() as db:
             row=owned(db,sid,owner,True)
+            if admission is not None:
+                previous = admission.check(db, row)
+                if previous is not None: return previous
+            elif row.data.get('realtime_enabled') or row.data.get('voice_transport') == 'native_webrtc':
+                raise DomainError('WRONG_INPUT_MODE', 'Use the bound realtime business adapter', 409)
             kind='start' if start_revision is not None else 'turn'
             rkey=f'{sid}:{kind}:{key}'
             digest,old=receipt(db,rkey,{'text':text,'revision':start_revision})
             if old: return AcceptedTurn(**old)
-            if row.data.get('mode','text')=='voice' and source!='asr':
+            if row.data.get('mode','text')=='voice' and source not in ('asr', 'realtime'):
                 raise DomainError('WRONG_INPUT_MODE','语音会话只能接收绑定的声网输入',409)
             if provider_turn is not None and provider_turn<=row.data.get('last_provider_turn',-1):
                 raise DomainError('STALE_PROVIDER_TURN','收到过期语音轮次',409)
@@ -271,10 +290,31 @@ class Coordinator:
             emit(db,row,TurnStarted(type='turn.started',message_id=mid),turn=turn,generation=generation)
             result=AcceptedTurn(turn_id=turn,generation_id=generation)
             db.add(RequestReceipt(key=rkey,payload_hash=digest,data=result.model_dump(mode='json')))
+            job = dict(owner=owner, sid=sid, text=text, mid=mid, assistant_id=assistant_id,
+                       turn=turn, generation=generation, opening=start_revision is not None, source=source)
+            if admission is not None:
+                admission.record(db, row, result, job)
+        try:
+            self.launch_generation(job)
+        except Exception:
+            # v0.4 admission persists the queued job in the acceptance transaction.
+            if admission is None: raise
+            log.warning('realtime_launch_deferred session=%s', sid)
+        return result
+
+    def launch_generation(self, job):
+        sid = job['sid']
         cancel=asyncio.Event()
         self.cancels[sid]=cancel
         # Existing work receives cancel; its finally blocks may finish without blocking this request.
-        task=asyncio.create_task(self.generate(owner,sid,text,mid,assistant_id,turn,generation,cancel,start_revision is not None,source))
+        async def run():
+            with self.repo.transaction() as db:
+                row = owned(db, sid, job['owner'], True)
+                if not self.current(row, job['generation']): return
+                if row.data.get('realtime_enabled'):
+                    row.data = {**row.data, 'realtime_job': {**job, 'status': 'running'}}
+            await self.generate(**job, cancel=cancel)
+        task=asyncio.create_task(run())
         self.tasks[sid]=task
         self.all_tasks.add(task)
         def done(t):
@@ -284,7 +324,6 @@ class Coordinator:
                 self.cancels.pop(sid,None)
             if not t.cancelled(): t.exception()
         task.add_done_callback(done)
-        return result
 
     def build_context(self, db, row, turn, generation):
         '''可信只读上下文：状态、路由决策、告知证据都取自数据库，不从话术推断。'''
@@ -393,7 +432,7 @@ class Coordinator:
                                  knowledge_entry_ids=[], next_state='QA', understanding=understanding)
         return decision
 
-    async def generate(self,owner,sid,text,mid,assistant_id,turn,generation,cancel,opening,source='text'):
+    async def generate(self,owner,sid,text,mid,assistant_id,turn,generation,cancel,opening,source='text',candidate=None):
         try:
             case=self.services.cases.get_case(owner,self.application_id(owner,sid))
             with self.repo.transaction() as db:
@@ -404,7 +443,7 @@ class Coordinator:
                 normalized=re.sub(r'[\s，。！？,.!?、]','',text)
                 company=task_slot(case.slots, 'company_name')
                 aliases={company}
-                if source=='asr':
+                if source in ('asr', 'realtime'):
                     for digit,han in [('1','一'),('2','二'),('3','三')]:aliases.add(company.replace(digit,han))
                 identities={phrase for alias in aliases for phrase in [f'我是{alias}',f'我是{alias}的联系人',f'对我是{alias}的联系人']}
                 if company and not opening and normalized in identities:
@@ -422,7 +461,14 @@ class Coordinator:
             elif opening:
                 decision=AgentDecision(reply_text=f'您好，这里是模拟商户服务AI演示。请确认您是否是{company}的联系人。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
             else:
-                decision=await asyncio.wait_for(self.services.agent.handle_turn(TurnInput(message_id=mid,text=text,source=source),context,history,case,tuple(entries),verified,cancel),8)
+                turn_input = TurnInput(message_id=mid,text=text,source=source)
+                if candidate is not None:
+                    from .realtime_business.candidates import grounded_candidate
+                    understanding = grounded_candidate(candidate, text, case=case, context=context)
+                    decision = self.services.agent.decide(input=turn_input, context=context,
+                        case=case, knowledge=tuple(entries), verified=verified, understanding=understanding)
+                else:
+                    decision=await asyncio.wait_for(self.services.agent.handle_turn(turn_input,context,history,case,tuple(entries),verified,cancel),8)
             # Pre-identity and missing-source output cannot bypass the coordinator via a replacement Agent.
             if company and not verified and decision.next_state != 'CLOSING':
                 decision=AgentDecision(reply_text=f'这里是模拟商户服务AI。请确认身份：输入“我是{company}”。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
@@ -440,7 +486,7 @@ class Coordinator:
                 decision=decision.model_copy(update={'proposed_action':'none','action_payload':None})
                 if decision.next_state not in ('CLOSING','MANUAL_REVIEW'):
                     decision=decision.model_copy(update={'next_state':'CLOSING'})
-            if source=='asr' and decision.proposed_action!='none' and (not settings.voice_writes_enabled or not row.data.get('voice_explanation_verified')):
+            if source in ('asr', 'realtime') and decision.proposed_action!='none' and (not settings.voice_writes_enabled or not row.data.get('voice_explanation_verified')):
                 decision=AgentDecision(reply_text='本次语音链路演示已完成，业务写入尚未通过语音告知验收。后续由人工核实处理。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
             violation=None
             with self.repo.transaction() as db:
@@ -477,10 +523,18 @@ class Coordinator:
                 *prior[-12:],ModelMessage(role='user',content=text)],fixture_response=decision.reply_text,allow_rephrase=bool(rephrase),session_id=sid,turn_id=turn,generation_id=generation)
             from .adapters import FakeModel
             output_model=FakeModel() if getattr(self.services.model,'name','fake')=='deepseek' and not model_request.allow_rephrase else self.services.model
+            if row.data.get('realtime_enabled'):
+                # The adapter publishes an exact reviewed answer, never arbitrary token deltas.
+                output_model = FakeModel()
             import time
             model_started=time.monotonic()
             first_content=True
             async def output_stream():
+                if row.data.get('realtime_enabled'):
+                    # Already reviewed deterministic text: no simulated token delay
+                    # or second model call before the speech adapter can begin.
+                    yield decision.reply_text
+                    return
                 if getattr(output_model,'name','fake')!='deepseek':
                     async for piece in output_model.stream(model_request,cancel):yield piece
                     return
@@ -508,6 +562,12 @@ class Coordinator:
             with self.repo.transaction() as db:
                 row=owned(db,sid,owner,True)
                 if not self.current(row,generation) or cancel.is_set(): return
+                if row.data.get('realtime_enabled'):
+                    application = db.scalar(select(Application).where(Application.id == row.application_id).with_for_update())
+                    if application.owner != owner or application.data['case_revision'] != row.data['case_revision']:
+                        row.data = {**row.data, 'realtime_failure': 'REVISION_CONFLICT'}
+                        self._invalidate(db, row, 'failed')
+                        return
                 case=self.services.cases.get_case(owner,row.application_id)
                 entries=self.services.knowledge.lookup(case.scenario_id,text,['synthetic'],row.data['knowledge_version'])
                 entries=available_entries([e for e in entries if e.channel == row.data['route']], case)
@@ -515,7 +575,7 @@ class Coordinator:
                 msg.data={**msg.data,'view':{**msg.data['view'],'status':'completed'}}
                 row.data={**row.data,'busy':False}
                 used=[e for e in entries if e.approved_text and e.approved_text in decision.reply_text]
-                if verified and used:
+                if verified and used and source != 'realtime':
                     notifications=list(row.data.get('notifications') or [])
                     notifications.append(NotificationEvidence(kind='explanation',message_id=assistant_id,
                         knowledge_entry_ids=[e.entry_id for e in used],completed=True).model_dump(mode='json'))
@@ -541,6 +601,8 @@ class Coordinator:
             with self.repo.transaction() as db:
                 row=owned(db,sid,owner,True)
                 if self.current(row,generation):
+                    if row.data.get('realtime_enabled'):
+                        row.data = {**row.data, 'realtime_failure': 'BUSINESS_TIMEOUT' if isinstance(exc, TimeoutError) else 'INTERNAL_ERROR'}
                     emit(db,row,MetricRecorded(type='metric.recorded',name='model_ttft',outcome='timeout' if getattr(exc,'code','')=='MODEL_TIMEOUT' or isinstance(exc,TimeoutError) else 'missing',
                         clock_domain='server.monotonic',measurement_method='failed_generation_no_latency_claim'),turn=turn,generation=generation)
                     self._invalidate(db,row,'failed')
@@ -727,6 +789,8 @@ class Coordinator:
         if not db.scalar(select(Record).where(Record.session_id==row.id)):
             record=self.make_record(row,case,[],contact)
             db.add(Record(id=str(record.record_id),session_id=row.id,data=record.model_dump(mode='json')))
+            from .realtime_business.events import publish_writeback
+            publish_writeback(db, row, record)
 
     async def reconcile_loop(self):
         while True:
@@ -814,6 +878,8 @@ class Coordinator:
                 return
             row=db.scalar(select(Conversation).where(Conversation.id==op.session_id).with_for_update())
             op.data={**op.data,'writeback_done':True,'writeback_attempts':writeback_attempts+1}
+            from .realtime_business.events import publish_writeback
+            publish_writeback(db, row, record)
             transition(db,row,'CLOSED' if result.status=='succeeded' else 'MANUAL_REVIEW')
             row.data={**row.data,'ended':True}
             emit(db,row,SessionEnded(type='session.ended',reason='business_completed'))

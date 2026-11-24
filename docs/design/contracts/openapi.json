@@ -5,6 +5,96 @@
     "version": "0.3.0"
   },
   "paths": {
+    "/api/v1/sessions/{sid}/realtime/ice": {
+      "get": {
+        "summary": "Ice",
+        "operationId": "ice_api_v1_sessions__sid__realtime_ice_get",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealtimeIce"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sessions/{sid}/realtime/offer": {
+      "post": {
+        "summary": "Offer",
+        "operationId": "offer_api_v1_sessions__sid__realtime_offer_post",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RealtimeOffer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RealtimeAnswer"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health/live": {
       "get": {
         "summary": "Live",
@@ -1280,6 +1370,22 @@
       },
       "Capabilities": {
         "properties": {
+          "realtime_webrtc": {
+            "type": "boolean",
+            "title": "Realtime Webrtc",
+            "default": false
+          },
+          "realtime_unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Realtime Unavailable Reason"
+          },
           "routing_preview": {
             "type": "boolean",
             "title": "Routing Preview",
@@ -1401,6 +1507,15 @@
               "text"
             ],
             "title": "Mode"
+          },
+          "voice_transport": {
+            "type": "string",
+            "enum": [
+              "agora",
+              "native_webrtc"
+            ],
+            "title": "Voice Transport",
+            "default": "agora"
           }
         },
         "additionalProperties": false,
@@ -1436,6 +1551,47 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "IceServer": {
+        "properties": {
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Urls"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          },
+          "credential": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "urls"
+        ],
+        "title": "IceServer"
       },
       "InterruptRequest": {
         "properties": {
@@ -1775,6 +1931,89 @@
         ],
         "title": "Outcome"
       },
+      "RealtimeAnswer": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "answer",
+            "title": "Type",
+            "default": "answer"
+          },
+          "sdp": {
+            "type": "string",
+            "title": "Sdp"
+          },
+          "connection_binding": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Connection Binding"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sdp",
+          "connection_binding",
+          "expires_at"
+        ],
+        "title": "RealtimeAnswer"
+      },
+      "RealtimeIce": {
+        "properties": {
+          "ice_servers": {
+            "items": {
+              "$ref": "#/components/schemas/IceServer"
+            },
+            "type": "array",
+            "title": "Ice Servers"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "ice_servers",
+          "expires_at"
+        ],
+        "title": "RealtimeIce"
+      },
+      "RealtimeOffer": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "offer",
+            "title": "Type",
+            "default": "offer"
+          },
+          "sdp": {
+            "type": "string",
+            "maxLength": 65536,
+            "minLength": 1,
+            "title": "Sdp"
+          },
+          "expected_state_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected State Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "sdp",
+          "expected_state_revision"
+        ],
+        "title": "RealtimeOffer"
+      },
       "Scenario": {
         "properties": {
           "row": {
@@ -1958,6 +2197,15 @@
             ],
             "title": "Mode",
             "default": "text"
+          },
+          "voice_transport": {
+            "type": "string",
+            "enum": [
+              "agora",
+              "native_webrtc"
+            ],
+            "title": "Voice Transport",
+            "default": "agora"
           }
         },
         "additionalProperties": false,
@@ -3104,6 +3352,78 @@
         "title": "OperationUpdated",
         "type": "object"
       },
+      "RealtimeControl": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "ready",
+              "heartbeat",
+              "interrupt",
+              "playback_ready",
+              "observation",
+              "end"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "playback_instance_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Playback Instance Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "enum": [
+                  "first_answer_audio",
+                  "interrupt_stopped",
+                  "speech_ended"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Name"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "maximum": 180000,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Duration Ms"
+          }
+        },
+        "required": [
+          "type",
+          "request_id"
+        ],
+        "title": "RealtimeControl",
+        "type": "object"
+      },
       "RejectPayload": {
         "additionalProperties": false,
         "properties": {
@@ -3613,7 +3933,8 @@
           "source": {
             "enum": [
               "asr",
-              "text"
+              "text",
+              "realtime"
             ],
             "title": "Source",
             "type": "string"
@@ -3799,7 +4120,8 @@
             "enum": [
               "fake",
               "glm",
-              "rules"
+              "rules",
+              "realtime_candidate"
             ],
             "title": "Source",
             "type": "string"

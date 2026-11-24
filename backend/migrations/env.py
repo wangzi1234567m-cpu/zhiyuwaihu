@@ -1,5 +1,6 @@
 from alembic import context
 from app.db import Base, engine
+from app.realtime_business.events import RealtimeEventRow  # register additive table metadata
 from app.config import settings
 
 def run():

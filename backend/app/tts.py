@@ -4,6 +4,7 @@ import base64
 import binascii
 import json
 import re
+from contextlib import asynccontextmanager
 from contextlib import suppress
 import httpx
 from pydantic import BaseModel, ConfigDict, Field
@@ -22,9 +23,18 @@ class SpeechRequest(BaseModel):
 
 
 class QwenTTS:
-    def __init__(self, config=settings, transport=None, reserve=None):
+    def __init__(self, config=settings, transport=None, reserve=None, client=None):
         self.config, self.transport, self.reserve = config, transport, reserve
         self.active = {}
+        self.client = client
+
+    @asynccontextmanager
+    async def connection(self):
+        if self.client is not None:
+            yield self.client
+        else:
+            async with httpx.AsyncClient(transport=self.transport, timeout=httpx.Timeout(8, connect=3), follow_redirects=False) as client:
+                yield client
 
     def register(self, sid, cancel):
         self.active.setdefault(sid, set()).add(cancel)
@@ -76,7 +86,7 @@ class QwenTTS:
             payload = {'model': self.config.dashscope_tts_model, 'input': {
                 'text': body.input, 'voice': self.config.dashscope_tts_voice,
                 'format': 'pcm', 'sample_rate': 24000, 'rate': 1.0, 'enable_ssml': False}}
-            async with httpx.AsyncClient(transport=self.transport, timeout=httpx.Timeout(8, connect=3), follow_redirects=False) as client:
+            async with self.connection() as client:
                 async with client.stream('POST', self.endpoint(), json=payload, headers={
                     'Authorization': 'Bearer '+self.config.dashscope_api_key,
                     'X-DashScope-SSE': 'enable'}) as response:

@@ -126,7 +126,7 @@ class AgoraVoiceGateway:
         c=self.config
         with Session.begin() as db:
             row=db.scalar(select(Conversation).where(Conversation.id==sid).with_for_update())
-            if row.data.get('mode')!='voice' or row.data.get('ended'): raise DomainError('VOICE_SESSION_INVALID','不是可用语音会话')
+            if row.data.get('mode')!='voice' or row.data.get('voice_transport','agora')!='agora' or row.data.get('ended'): raise DomainError('VOICE_SESSION_INVALID','不是可用声网语音会话')
             db.execute(text("SELECT pg_advisory_xact_lock(hashtext('single-voice-session'))"))
             others=list(db.scalars(select(Conversation).where(Conversation.id!=sid)))
             if any(r.data.get('voice',{}).get('status') in ['prepared','starting','running','cleanup_pending'] for r in others):
@@ -148,6 +148,8 @@ class AgoraVoiceGateway:
         async with self.lock(sid):
             with Session.begin() as db:
                 row=owned(db,sid,owner,True)
+                if row.data.get('voice_transport','agora')!='agora':
+                    raise DomainError('WRONG_INPUT_MODE','实时会话不能启动旧声网链路',409)
                 voice=dict(row.data.get('voice',{}))
                 if voice.get('status')=='running':return VoiceStartResult(status='running',agent_id=voice['agent_id'])
                 if row.revision!=revision or row.state!='CASE_READY' or voice.get('status')!='prepared' or row.data.get('ended'):

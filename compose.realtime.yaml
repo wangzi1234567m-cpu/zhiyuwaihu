@@ -1,0 +1,14 @@
+# Optional overlay only. A RealtimeBusinessPort must also be injected by app assembly.
+services:
+  backend:
+    build:
+      args:
+        INSTALL_REALTIME: 'true'
+    environment:
+      REALTIME_WEBRTC_ENABLED: ${REALTIME_WEBRTC_ENABLED:-false}
+      REALTIME_APPLICATION_IDS: ${REALTIME_APPLICATION_IDS:-}
+      REALTIME_STUN_URLS: ${REALTIME_STUN_URLS:-[]}
+      REALTIME_TURN_URLS: ${REALTIME_TURN_URLS:-}
+      REALTIME_TURN_SECRET: ${REALTIME_TURN_SECRET:-}
+      MAX_DAILY_NATIVE_SESSIONS: ${MAX_DAILY_NATIVE_SESSIONS:-2}
+      MAX_DAILY_NATIVE_TURNS: ${MAX_DAILY_NATIVE_TURNS:-8}

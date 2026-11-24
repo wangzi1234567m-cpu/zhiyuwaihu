@@ -4,6 +4,40 @@
  */
 
 export interface paths {
+    "/api/v1/sessions/{sid}/realtime/ice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ice */
+        get: operations["ice_api_v1_sessions__sid__realtime_ice_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{sid}/realtime/offer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Offer */
+        post: operations["offer_api_v1_sessions__sid__realtime_offer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health/live": {
         parameters: {
             query?: never;
@@ -490,6 +524,13 @@ export interface components {
         /** Capabilities */
         Capabilities: {
             /**
+             * Realtime Webrtc
+             * @default false
+             */
+            realtime_webrtc: boolean;
+            /** Realtime Unavailable Reason */
+            realtime_unavailable_reason?: string | null;
+            /**
              * Routing Preview
              * @default false
              */
@@ -560,6 +601,12 @@ export interface components {
              * @enum {string}
              */
             mode: "voice" | "text";
+            /**
+             * Voice Transport
+             * @default agora
+             * @enum {string}
+             */
+            voice_transport: "agora" | "native_webrtc";
         };
         /** EndRequest */
         EndRequest: {
@@ -573,6 +620,15 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** IceServer */
+        IceServer: {
+            /** Urls */
+            urls: string[];
+            /** Username */
+            username?: string | null;
+            /** Credential */
+            credential?: string | null;
         };
         /** InterruptRequest */
         InterruptRequest: {
@@ -718,6 +774,50 @@ export interface components {
             /** Reason */
             reason: string;
         };
+        /** RealtimeAnswer */
+        RealtimeAnswer: {
+            /**
+             * Type
+             * @default answer
+             * @constant
+             */
+            type: "answer";
+            /** Sdp */
+            sdp: string;
+            /**
+             * Connection Binding
+             * Format: uuid
+             */
+            connection_binding: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** RealtimeIce */
+        RealtimeIce: {
+            /** Ice Servers */
+            ice_servers: components["schemas"]["IceServer"][];
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+        };
+        /** RealtimeOffer */
+        RealtimeOffer: {
+            /**
+             * Type
+             * @default offer
+             * @constant
+             */
+            type: "offer";
+            /** Sdp */
+            sdp: string;
+            /** Expected State Revision */
+            expected_state_revision: number;
+        };
         /** Scenario */
         Scenario: {
             /** Row */
@@ -799,6 +899,12 @@ export interface components {
              * @enum {string}
              */
             mode: "text" | "voice";
+            /**
+             * Voice Transport
+             * @default agora
+             * @enum {string}
+             */
+            voice_transport: "agora" | "native_webrtc";
         };
         /** SourceRef */
         SourceRef: {
@@ -1245,6 +1351,34 @@ export interface components {
             type: "operation.updated";
             result: components["schemas"]["OperationResult"];
         };
+        /** RealtimeControl */
+        RealtimeControl: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "ready" | "heartbeat" | "interrupt" | "playback_ready" | "observation" | "end";
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Playback Instance Id
+             * @default null
+             */
+            playback_instance_id: string | null;
+            /**
+             * Name
+             * @default null
+             */
+            name: ("first_answer_audio" | "interrupt_stopped" | "speech_ended") | null;
+            /**
+             * Duration Ms
+             * @default null
+             */
+            duration_ms: number | null;
+        };
         /** RejectPayload */
         RejectPayload: {
             /**
@@ -1489,7 +1623,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "asr" | "text";
+            source: "asr" | "text" | "realtime";
             /**
              * Final
              * @default true
@@ -1578,7 +1712,7 @@ export interface components {
              * @default fake
              * @enum {string}
              */
-            source: "fake" | "glm" | "rules";
+            source: "fake" | "glm" | "rules" | "realtime_candidate";
         };
         /** WritebackPayload */
         WritebackPayload: {
@@ -1604,6 +1738,72 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    ice_api_v1_sessions__sid__realtime_ice_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealtimeIce"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    offer_api_v1_sessions__sid__realtime_offer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RealtimeOffer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealtimeAnswer"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     live_health_live_get: {
         parameters: {
             query?: never;

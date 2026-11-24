@@ -5,6 +5,8 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'backend'))
 from app.contracts import PUBLIC_MODELS
+from app.realtime.wire import IceServer, RealtimeOffer, RealtimeAnswer, RealtimeIce, RealtimeControl
+PUBLIC_MODELS = [*PUBLIC_MODELS, IceServer, RealtimeOffer, RealtimeAnswer, RealtimeIce, RealtimeControl]
 from app.main import app
 from pydantic.json_schema import models_json_schema
 
