@@ -1,7 +1,7 @@
 'use client';
 import {useState} from 'react';
 import {useWorkbench} from '../lib/use-workbench';
-import {sourceStats,stateNames,sessionStatus,type Transport,type View} from '../lib/workbench';
+import {stateNames,sessionStatus,type Transport,type View} from '../lib/workbench';
 import WorkbenchOverview from './WorkbenchOverview';
 import TaskQueue from './TaskQueue';
 import TaskContext from './TaskContext';
@@ -71,7 +71,7 @@ export default function WorkbenchPage() {
           <BusinessWorkflow task={application} view={view} events={work.events} connecting={work.connecting} onRefresh={()=>void work.refresh()}/>
         </div>
       </>}
-      <footer className="page-foot">原始数据依据：赛题主表“场景汇总”，电话{sourceStats.phone} / 京麦{sourceStats.jingmai}。{sourceStats.total}条原始场景不代表系统全部支持自动回答。<br/>
+      <footer className="page-foot">原始数据依据：赛题主表“场景汇总”，电话{work.catalog?.original_phone??'—'} / 京麦{work.catalog?.original_jingmai??'—'}。{work.catalog?.original_total??'—'}条原始场景不代表系统全部支持自动回答。<br/>
         书面正文来自已审核知识，执行与回写以服务端持久事实为准；不调用浏览器朗读，不向真实号码外呼，不连接真实京麦写接口。</footer>
     </main>
   </>;

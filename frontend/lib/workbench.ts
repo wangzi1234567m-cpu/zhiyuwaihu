@@ -1,5 +1,4 @@
 import type {components} from '../app/api.generated';
-import manifest from '../../docs/design/source-manifest.json';
 
 export type View = components['schemas']['SessionView'];
 export type Application = components['schemas']['StaffApplication'];
@@ -15,9 +14,6 @@ export const stateNames:Record<View['state'],string> = {
   QA:'整改问答中',CALLBACK_PENDING:'待人工确认回电',CLOSING:'通话结束 · 待查证',ACTION_READY:'待执行书面操作',
   EXECUTING:'业务执行中',RECONCILING:'操作结果待查证',WRITEBACK_PENDING:'等待结果回写',CLOSED:'已完成',MANUAL_REVIEW:'需人工处理',
 };
-const counts = manifest.files.find(file=>'main_channel_counts_D13_D80' in file)?.main_channel_counts_D13_D80;
-export const sourceStats = {total:(counts?.['电话']??0)+(counts?.['京麦驳回']??0),phone:counts?.['电话']??0,
-  jingmai:counts?.['京麦驳回']??0,archiveSha256:manifest.archive_sha256};
 export function taskComplete(view?: View) {
   return !!view && view.state==='CLOSED' && !!view.record && view.operations.some(op=>op.kind==='reject_application') && view.operations.every(op=>op.status==='succeeded');
 }
