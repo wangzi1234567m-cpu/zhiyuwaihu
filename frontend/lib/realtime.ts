@@ -45,8 +45,8 @@ export class RealtimeVoice {
       method:body===undefined?'GET':'POST',signal:this.abort.signal,
       headers:{'Content-Type':'application/json','X-Requested-With':'zhiyu'},
       body:body===undefined?undefined:JSON.stringify(body)});
-    const data=await response.json();
-    if(!response.ok)throw new Error(data.message??'实时连接请求失败');
+    const data=await response.json().catch(()=>{throw new Error(`${suffix==='ice'?'ICE凭据':'媒体协商'}：后端或代理未就绪`);});
+    if(!response.ok)throw new Error(`${suffix==='ice'?'ICE凭据':'媒体协商'}：${data.message??'请求失败'}`);
     return data as T;
   }
   private send(value:Pick<Control,'type'> & Partial<Omit<Control,'type'|'request_id'>>) {
@@ -140,14 +140,18 @@ export class RealtimeVoice {
     this.callbacks.status('已打断，可以继续讲话');
   }
   async start(revision:number) {
+    let stage='麦克风授权';
     try {
+      this.callbacks.status(stage);
       if(!navigator.mediaDevices?.getUserMedia)throw new Error('麦克风需要HTTPS或localhost');
       this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
       if(this.closed){this.stream.getTracks().forEach(t=>t.stop());return;}
       this.timer=setTimeout(()=>void this.fail('实时媒体连接超时'),20000);
+      stage='音频采样初始化';this.callbacks.status(stage);
       this.context=new AudioContext();await this.context.resume();
       await this.context.audioWorklet.addModule('/realtime-meter.js');
       await this.meter(this.stream,false);
+      stage='ICE凭据获取';this.callbacks.status(stage);
       const ice=await this.request<components['schemas']['RealtimeIce']>('ice');
       const pc=new RTCPeerConnection({iceServers:ice.ice_servers.map(s=>({urls:s.urls,
         username:s.username??undefined,credential:s.credential??undefined}))});
@@ -171,9 +175,11 @@ export class RealtimeVoice {
         this.abort.signal.addEventListener('abort',()=>{pc.removeEventListener('icegatheringstatechange',changed);reject(new Error('连接已取消'));},{once:true});
         changed();
       });
+      stage='WebRTC媒体协商';this.callbacks.status(stage);
       const answer=await this.request<components['schemas']['RealtimeAnswer']>('offer',{
         type:'offer',sdp:pc.localDescription!.sdp,expected_state_revision:revision});
       await pc.setRemoteDescription({type:'answer',sdp:answer.sdp});
+      stage='控制通道连接';this.callbacks.status(stage);
       const ws=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}/api/v1/sessions/${this.sid}/realtime/control?binding=${encodeURIComponent(answer.connection_binding)}`);
       this.ws=ws;
       await new Promise<void>((resolve,reject)=>{
@@ -189,7 +195,7 @@ export class RealtimeVoice {
       if(this.timer)clearTimeout(this.timer);
       this.timer=setTimeout(()=>void this.close(true),180000);
     } catch(error) {
-      await this.close();throw error;
+      await this.close();throw new Error(`${stage}失败：${error instanceof Error?error.message:String(error)}`);
     }
   }
   private async fail(message:string) {

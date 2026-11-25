@@ -11,6 +11,8 @@ class Settings:
     database_url: str = os.getenv('DATABASE_URL', 'postgresql+psycopg://zhiyu:local-dev-only@localhost:5432/zhiyu')
     environment: str = os.getenv('APP_ENV', 'development')
     cookie_secret: str = os.getenv('COOKIE_SECRET', 'local-development-secret-change-before-exposure')
+    session_cookie_name: str = os.getenv('SESSION_COOKIE_NAME', 'zhiyu_session')
+    staff_cookie_name: str = os.getenv('STAFF_COOKIE_NAME', 'zhiyu_staff')
     public_origin: str = os.getenv('PUBLIC_ORIGIN', 'http://localhost:3000')
     demo_password: str = os.getenv('DEMO_PASSWORD', 'demo-local-only')
     staff_password: str = os.getenv('STAFF_PASSWORD', 'staff-local-only' if os.getenv('APP_ENV','development') in ('development','test') else '')

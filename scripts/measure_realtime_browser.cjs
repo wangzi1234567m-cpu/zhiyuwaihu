@@ -1,6 +1,7 @@
 /* Real merged browser/RTC -> native understanding -> business -> Qwen TTS.
    Requires explicit --run-real-latency; raw evidence stays in ignored .cache. */
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const {execFileSync}=require('node:child_process');
 const {chromium}=require('../frontend/node_modules/@playwright/test');
 const ts=require('../frontend/node_modules/typescript');
 const root=path.resolve(__dirname,'..');
@@ -27,7 +28,7 @@ const audio=specs.map(([id,name])=>{
 });
 const hash=crypto.createHash('sha256').update(JSON.stringify(audio.map(({encoded,...rest})=>rest))).digest('hex');
 const report=fs.existsSync(output)?JSON.parse(fs.readFileSync(output,'utf8')):{
-  metadata:{run_id:run,commit:'ecefd4b027fcfce71a6d43083980417faa8f4a1b',case_set_sha256:hash,
+  metadata:{run_id:run,commit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),knowledge_version:process.env.ZHIYU_KNOWLEDGE_VERSION||'demo-k1',case_set_sha256:hash,
     code_variant:process.env.LATENCY_VARIANT||'unmodified-main',
     provider_source_sha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'backend/app/realtime/provider.py'))).digest('hex'),
     network_profile:'same Windows host/browser and aiortc loopback; real Beijing provider WAN; no TURN',

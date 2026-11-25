@@ -123,8 +123,10 @@ export function useWorkbench() {
     reload:()=>run(async()=>{await initialize();}),
     refresh:()=>run(async()=>{if(selected){const task=await api<Application>(`/staff/applications/${selected}`);setApplications(old=>old.map(a=>a.application_id===selected?task:a));if(task.snapshot)activate(task.snapshot);else{setViews(old=>{const next={...old};delete next[selected];return next;});setSid('');activeSid.current='';setLive('');}}}),
     changeTransport:(mode:Transport)=>run(async()=>{
+      if(view?.busy||view&&view.state!=='CASE_READY'&&!view.ended)throw new Error('请先结束当前会话，再切换交互方式');
+      if(view?.state==='CASE_READY'){const next=await create(view.application_id,view.route==='phone'?mode:'text');activate(next);}
+      else if(view?.ended){setViews(old=>{const next={...old};delete next[selected];return next;});setSid('');activeSid.current='';setLive('');}
       setTransportState(mode);localStorage.setItem('zhiyu.workbench.transport',mode);
-      if(view?.state==='CASE_READY'&&!view.busy){const next=await create(view.application_id,view.route==='phone'?mode:'text');activate(next);}
     }),
     newSession:()=>run(async()=>{const task=applications.find(a=>a.application_id===selected);if(task)activate(await create(selected,task.effective_route==='phone'?transport:'text'));}),
     rejectWritten:(preview:WrittenPreview,key:string)=>run(async()=>{if(!sid)return;const next=await api<View>(`/staff/sessions/${sid}/reject`,{case_revision:preview.case_revision,expected_revision:preview.state_revision,knowledge_version:preview.knowledge_version,rule_version:preview.rule_version,body_sha256:preview.body_sha256,preview_id:preview.preview_id},key);remember(next);}),

@@ -192,6 +192,34 @@ def measured_decide(**kwargs):
     return result
 app.state.services.agent.decide = measured_decide
 
+# Diagnostic wrappers only: record query/render boundaries without changing results.
+original_lookup=app.state.services.knowledge.lookup
+def measured_lookup(*args,**kwargs):
+    sid=next(iter(app.state.realtime.sessions),None)
+    if sid:trace(sid,'knowledge_lookup_start')
+    result=original_lookup(*args,**kwargs)
+    if sid:trace(sid,'knowledge_lookup_end',entry_count=len(result))
+    return result
+app.state.services.knowledge.lookup=measured_lookup
+
+from app import coordinator as coordinator_module
+original_render=coordinator_module.available_entries
+def measured_render(*args,**kwargs):
+    sid=next(iter(app.state.realtime.sessions),None)
+    if sid:trace(sid,'template_render_start')
+    result=original_render(*args,**kwargs)
+    if sid:trace(sid,'template_render_end',entry_count=len(result))
+    return result
+coordinator_module.available_entries=measured_render
+
+from app.adapters import FakeModel
+original_fake_stream=FakeModel.stream
+async def observed_fake_stream(self,*args,**kwargs):
+    sid=next(iter(app.state.realtime.sessions),None)
+    if sid:trace(sid,'fake_model_stream_invoked')
+    async for chunk in original_fake_stream(self,*args,**kwargs):yield chunk
+FakeModel.stream=observed_fake_stream
+
 async def private(request):
     import secrets
     if not secrets.compare_digest(request.headers.get('x-latency-token', ''), TOKEN):
@@ -215,7 +243,8 @@ async def config(request: Request):
     await private(request)
     return {'run_id': RUN, 'limits': LIMITS, 'model': 'qwen3.8-omni-flash-realtime',
         'region': settings.dashscope_region, 'tts_model': settings.dashscope_tts_model,
-        'voice': settings.dashscope_tts_voice, 'voice_writes': settings.voice_writes_enabled}
+        'voice': settings.dashscope_tts_voice, 'voice_writes': settings.voice_writes_enabled,
+        'knowledge_version':os.getenv('ZHIYU_KNOWLEDGE_VERSION','demo-k1')}
 
 @app.get('/eval/state/{sid}')
 async def state(sid: str, request: Request):

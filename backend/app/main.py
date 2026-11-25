@@ -87,7 +87,7 @@ def create_app(services=None, *, tts=None, realtime_business=None,
 
     def owner(request: Request):
         try:
-            value=signer.loads(request.cookies.get('zhiyu_session',''),max_age=8*3600)
+            value=signer.loads(request.cookies.get(settings.session_cookie_name,''),max_age=8*3600)
             if value.get('owner') not in ['demo','other']: raise BadSignature('owner')
             return value['owner']
         except (BadSignature,SignatureExpired):
@@ -99,7 +99,7 @@ def create_app(services=None, *, tts=None, realtime_business=None,
 
     def staff_owner(request: Request):
         try:
-            value=signer.loads(request.cookies.get('zhiyu_staff',''),max_age=8*3600,salt='staff-v1')
+            value=signer.loads(request.cookies.get(settings.staff_cookie_name,''),max_age=8*3600,salt='staff-v1')
             if value.get('role')!='staff' or value.get('owner') not in ('demo','other'):
                 raise BadSignature('staff')
             return value['owner']
@@ -116,8 +116,8 @@ def create_app(services=None, *, tts=None, realtime_business=None,
             raise DomainError('BAD_CREDENTIALS','工作人员登录失败',401)
         response=JSONResponse({'owner':body.username})
         options=dict(httponly=True,samesite='strict',secure=settings.public_origin.startswith('https://'),max_age=8*3600)
-        response.set_cookie('zhiyu_staff',signer.dumps({'owner':body.username,'role':'staff'},salt='staff-v1'),**options)
-        response.set_cookie('zhiyu_session',signer.dumps({'owner':body.username}),**options)
+        response.set_cookie(settings.staff_cookie_name,signer.dumps({'owner':body.username,'role':'staff'},salt='staff-v1'),**options)
+        response.set_cookie(settings.session_cookie_name,signer.dumps({'owner':body.username}),**options)
         return response
 
     from .staff_routes import mount_staff
@@ -154,8 +154,8 @@ def create_app(services=None, *, tts=None, realtime_business=None,
         if not secrets.compare_digest(body.password,settings.demo_password):
             raise DomainError('BAD_CREDENTIALS','登录失败',401)
         response=JSONResponse({'owner':body.username})
-        response.delete_cookie('zhiyu_staff')
-        response.set_cookie('zhiyu_session',signer.dumps({'owner':body.username}),httponly=True,samesite='strict',
+        response.delete_cookie(settings.staff_cookie_name)
+        response.set_cookie(settings.session_cookie_name,signer.dumps({'owner':body.username}),httponly=True,samesite='strict',
             secure=settings.public_origin.startswith('https://'),max_age=8*3600)
         return response
 
@@ -168,8 +168,8 @@ def create_app(services=None, *, tts=None, realtime_business=None,
         if body.username!='demo' or not secrets.compare_digest(body.password,settings.staging_password):
             raise DomainError('BAD_CREDENTIALS','登录失败',401)
         response=JSONResponse({'owner':'demo'})
-        response.delete_cookie('zhiyu_staff')
-        response.set_cookie('zhiyu_session',signer.dumps({'owner':'demo'}),httponly=True,samesite='strict',secure=True,max_age=3600)
+        response.delete_cookie(settings.staff_cookie_name)
+        response.set_cookie(settings.session_cookie_name,signer.dumps({'owner':'demo'}),httponly=True,samesite='strict',secure=True,max_age=3600)
         return response
 
     @app.get('/api/v1/capabilities',response_model=Capabilities)

@@ -52,7 +52,7 @@ export default function WorkbenchPage() {
               {!view?<section className="notice"><h3>{application.effective_route==='jingmai'?'书面处理准备':'电话告知准备'}</h3><p>任务与渠道已只读加载。开始处理时才创建业务会话。</p><button disabled={work.pending||application.effective_route==='manual'} onClick={()=>void work.newSession()}>{application.effective_route==='jingmai'?'加载书面预览':'进入电话任务'}</button></section>:<>
 
               {view.route==='phone'?<>
-                <section className="phone-interaction" aria-label="电话告知交互"><div className="section-heading"><h3>电话联系与整改告知</h3><span className="muted">{work.connecting?'业务事件重连中':view.mode==='text'?'文字联调':callStatus}</span></div>
+                <section className="phone-interaction" aria-label="电话告知交互">{view.mode==='text'&&work.transport!=='text'&&<div className="notice"><p>当前恢复的是文字会话。语音需要独立的媒体绑定，历史记录会保留。</p><button disabled={work.pending||view.busy||!view.ended&&view.state!=='CASE_READY'} onClick={()=>void work.newSession()}>建立实时语音会话</button>{!view.ended&&view.state!=='CASE_READY'&&<p>请先结束当前文字会话，再建立语音会话。</p>}</div>}<div className="section-heading"><h3>电话联系与整改告知</h3><span className="muted">{work.connecting?'业务事件重连中':view.mode==='text'?'文字联调':callStatus}</span></div>
                   {view.mode==='voice'&&!view.verified&&<p className="voice-guidance">请允许麦克风访问，用自然语言说明您与{application?.company_hint??'该商家'}的关系。说完后，下方显示最终识别字幕。</p>}
                   {view.mode==='voice'?(view.voice_transport==='native_webrtc'?<><SubtitlePanel view={view} live={work.live} generation={work.generation}/><RealtimeVoicePanel key={view.session_id} view={view} onError={work.setError} onStatus={setCallStatus}/></>:
                     <VoicePanel key={view.session_id} view={view} onError={work.setError} onStatus={setCallStatus}/>):<>
