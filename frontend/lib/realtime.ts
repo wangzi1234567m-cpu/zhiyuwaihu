@@ -100,7 +100,7 @@ export class RealtimeVoice {
   }
   private async notice(data:Notice) {
     if(this.closed)return;
-    if(data.type==='error')throw new Error(`实时通话停止：${data.code??'UNKNOWN'}`);
+    if(data.type==='error')throw new Error(data.code==='NATIVE_INPUT_ASSOCIATION_UNCERTAIN'?'本次语音分段无法可靠关联，请重新连接后完整表达。':`实时通话停止：${data.code??'UNKNOWN'}`);
     if(data.type==='ready'){this.ready=true;this.reportConnection();}
     if(data.type==='waiting')this.callbacks.status(data.text??'正在核实，请稍等');
     if(data.type==='playback.stop') {
@@ -135,8 +135,9 @@ export class RealtimeVoice {
   }
   interrupt() {
     if(this.closed)return;
+    const playback=this.pendingPermit?.playback_instance_id;
     this.interruptedAt=performance.now();this.awaitingStop=true;this.mute();
-    this.send({type:'interrupt'});
+    this.send({type:'interrupt',...(playback?{playback_instance_id:playback}:{})});
     this.callbacks.status('已打断，可以继续讲话');
   }
   async start(revision:number) {

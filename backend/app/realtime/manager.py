@@ -25,9 +25,9 @@ class RealtimeManager:
             from ..cloud_budget import reserve_call
             input_factory = lambda: NativeInput(config, reserve_call)
         if speech_factory is None:
-            from .speech import StreamingSpeech
+            from .speech import create_speech
             from ..cloud_budget import reserve_call
-            speech_factory = lambda: StreamingSpeech(config, reserve_call)
+            speech_factory = lambda: create_speech(config, reserve_call)
         self.input_factory, self.speech_factory, self.media_factory = input_factory, speech_factory, media_factory
 
     def unavailable_reason(self):
@@ -44,8 +44,8 @@ class RealtimeManager:
             try:
                 provider = self.input_factory()
                 provider.require()
-                from ..tts import QwenTTS
-                QwenTTS(c).require()
+                from .speech import require_speech
+                require_speech(c)
             except Exception:
                 return '原生理解或流式TTS尚未配置'
         try:

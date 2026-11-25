@@ -64,6 +64,13 @@ def inspect(sample):
 
 def report(path):
     raw=json.loads(path.read_text(encoding='utf-8'));samples=raw['samples']
+    for sample in samples:
+        state=sample.get('server') or {};ref=state.get('diagnostics_ref')
+        if ref:
+            data=(Path(__file__).resolve().parents[1]/ref['path']).read_bytes()
+            if hashlib.sha256(data).hexdigest()!=ref['sha256']:raise ValueError('Diagnostic sidecar hash mismatch')
+            state['diagnostics']=json.loads(data)
+
     valid=[s for s in samples if s['status']=='success' and s.get('cohort',True)]
     rows=[{'call':s['call'],'case':s['case'],'status':s['status'],'cohort':s.get('cohort',True),'failure':s.get('failure'),
        'effective_answer_ms':s.get('effective_answer_ms'),'business_valid':s.get('business_valid'),

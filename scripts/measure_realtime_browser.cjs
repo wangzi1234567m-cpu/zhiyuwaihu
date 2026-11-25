@@ -43,7 +43,8 @@ const report=fs.existsSync(output)?JSON.parse(fs.readFileSync(output,'utf8')):{
 if(report.metadata.case_set_sha256!==hash||report.metadata.run_id!==run)throw new Error('Frozen input mismatch');
 for(const sample of report.samples){if(sample.status==='pending'){sample.status='failed';sample.failure='measurement_client_stopped_to_correct_reviewed_playback_wait';}}
 if(report.stopped_reason){(report.stop_history??=[]).push({reason:report.stopped_reason,after_calls:report.calls.length,resumed_at:new Date().toISOString()});report.stopped_reason=null;}
-const save=()=>fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n');
+const recorder=report.recorder_overhead??{writes:0,total_ms:0,max_ms:0};
+const save=()=>{const start=performance.now();fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n');const ms=performance.now()-start;recorder.writes++;recorder.total_ms+=ms;recorder.max_ms=Math.max(recorder.max_ms,ms);report.recorder_overhead={...recorder};};
 save();
 const validCount=()=>report.samples.filter(s=>s.status==='success'&&s.cohort!==false).length;
 const caseCount=id=>report.samples.filter(s=>s.status==='success'&&s.case===id&&s.cohort!==false).length;
@@ -54,7 +55,7 @@ const watchdog=setTimeout(()=>{report.deadline=true;save();void browser?.close()
 async function evaluate(){
   browser=await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required','--disable-background-timer-throttling']});
   for(let n=0;n<calls&&report.calls.length<15&&!done();n++){
-    const call={code_commit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),index:report.calls.length+1,started_at:new Date().toISOString(),samples:[],harness_revision:'continuous-silent-source-v3-long-reviewed-drain'};
+    const call={code_commit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),index:report.calls.length+1,started_at:new Date().toISOString(),samples:[],harness_revision:'continuous-silent-source-v4-sidecar-diagnostics'};
     report.calls.push(call);save();
     const context=await browser.newContext(),page=await context.newPage();let sid;
     const faults=[];page.on('pageerror',e=>faults.push(e.name));
@@ -88,7 +89,7 @@ async function evaluate(){
       await request('/api/v1/dev/login',{username:'demo',password:'local-latency-only'});
       const actualProvider=await request('/eval/config',undefined,true);
       if(report.metadata.provider){
-        for(const key of ['vad_silence_ms','vad_threshold','tts_drain_enabled','model','voice','knowledge_version'])
+        for(const key of ['vad_silence_ms','vad_threshold','tts_drain_enabled','model','voice','knowledge_version','speech_backend','vad_mode'])
           if(report.metadata.provider[key]!==actualProvider[key])throw new Error('FROZEN_PROVIDER_CONFIG_MISMATCH_'+key);
         if(JSON.stringify(report.metadata.provider.limits)!==JSON.stringify(actualProvider.limits))
           (report.budget_revision_history??=[]).push({after_calls:report.calls.length-1,previous:report.metadata.provider.limits,current:actualProvider.limits});
@@ -180,6 +181,17 @@ async function evaluate(){
     finally{
       call.page_faults=faults;
       try{await page.evaluate(async()=>{await window.client?.close(true);await evalState.input?.ctx.close();await evalState.remoteContext?.close();});}catch{}
+      if(sid){try{
+        const detail=await page.evaluate(async({sid,token})=>{for(let i=0;i<100;i++){const r=await fetch('/eval/diagnostics/'+sid,{headers:{'X-Latency-Token':token}});if(r.ok)return r.json();if(![404,409].includes(r.status))break;await new Promise(resolve=>setTimeout(resolve,100));}return null;},{sid,token});
+        if(detail){
+          const directory=path.join(root,'.cache','realtime-diagnostics',run);fs.mkdirSync(directory,{recursive:true});
+          const file=path.join(directory,sid+'.json'),bytes=JSON.stringify(detail);fs.writeFileSync(file,bytes);
+          const reference={path:path.relative(root,file).replaceAll('\\','/'),sha256:crypto.createHash('sha256').update(bytes).digest('hex')};
+          call.diagnostics_ref=reference;
+          for(const index of call.samples)if(report.samples[index].server)report.samples[index].server.diagnostics_ref=reference;
+          if(call.final)call.final.diagnostics_ref=reference;
+        }else call.diagnostics_export_failed=true;
+      }catch{call.diagnostics_export_failed=true;}}
       if(sid){try{await page.evaluate(async sid=>fetch('/api/v1/sessions/'+sid+'/end',{method:'POST',headers:{'Content-Type':'application/json','X-Requested-With':'zhiyu'},body:JSON.stringify({reason:'user_ended'})}),sid);}catch{}}
       call.finished_at=new Date().toISOString();save();await context.close();
     }

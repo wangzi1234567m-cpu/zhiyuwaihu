@@ -33,7 +33,7 @@ from app.main import create_app
 from app.cloud_budget import reserve_call
 from app.db import Session, Effect, RequestReceipt, Conversation, Message
 from app.realtime.provider import NativeInput, ProviderFailure
-from app.realtime.speech import StreamingSpeech
+from app.realtime.speech import create_speech, speech_profile
 from app.realtime.session import RealtimeSession
 from app.realtime import manager as manager_module
 
@@ -47,6 +47,10 @@ if os.getenv('LATENCY_OPTIMIZATION_AUTHORIZED') in ('20261125-20-62-100','202611
     BUDGET_ID = 'v04-latency-opt-20261125'
     if os.getenv('LATENCY_OPTIMIZATION_AUTHORIZED')=='20261125-24-74-100':
         LIMITS={'native_realtime_session':24,'native_realtime_turn':74,'tts':100}
+
+if os.getenv('LATENCY_PLAN_AUTHORIZED')=='20261125-26-130-200':
+    LIMITS={'native_realtime_session':26,'native_realtime_turn':130,'tts':200}
+    BUDGET_ID='v04-latency-plan-20261125'
 
 
 def ms():
@@ -147,9 +151,10 @@ class MeasuredInput(NativeInput):
             yield event
 
 
-class MeasuredSpeech(StreamingSpeech):
+class MeasuredSpeech:
     def __init__(self):
-        super().__init__(settings, reserve)
+        self.inner=create_speech(settings,reserve)
+        self.tts=self.inner.tts
         self.sid = active_sid()
 
     async def stream(self, text, cancel):
@@ -159,7 +164,7 @@ class MeasuredSpeech(StreamingSpeech):
         first = True
         total = 0
         try:
-            async for chunk in super().stream(text, cancel):
+            async for chunk in self.inner.stream(text, cancel):
                 if first:
                     first = False
                     trace(self.sid, 'synthesis_first_pcm', synthesis_id=identity, waiting=waiting)
@@ -172,6 +177,9 @@ class MeasuredSpeech(StreamingSpeech):
         finally:
             trace(self.sid, 'synthesis_end', synthesis_id=identity, waiting=waiting,
                   pcm_bytes=total, cancelled=cancel.is_set())
+
+    async def close(self):
+        await self.inner.close()
 
 
 class MeasuredSession(RealtimeSession):
@@ -287,8 +295,8 @@ async def clock(request: Request):
 async def config(request: Request):
     await private(request)
     return {'run_id': RUN, 'limits': LIMITS, 'model': 'qwen3.8-omni-flash-realtime',
-        'region': settings.dashscope_region, 'tts_model': settings.dashscope_tts_model,
-        'voice': settings.dashscope_tts_voice, 'voice_writes': settings.voice_writes_enabled,
+        'region': settings.dashscope_region, 'tts_model': speech_profile(settings)['model'],
+        'voice':speech_profile(settings)['voice'],'speech_backend':settings.realtime_speech_backend,'vad_mode':settings.realtime_vad_mode, 'voice_writes': settings.voice_writes_enabled,
         'vad_silence_ms':settings.realtime_vad_silence_ms, 'vad_threshold':settings.realtime_vad_threshold,
         'diagnostics':settings.realtime_diagnostics_enabled, 'tts_drain_enabled':settings.realtime_tts_drain_enabled, 'budget_id':BUDGET_ID,
         'server_clock':'perf_counter_ns',
@@ -307,7 +315,7 @@ async def state(sid: str, request: Request):
         effects = db.scalar(select(func.count()).select_from(Effect))
         receipts = {r.key.rsplit(':', 1)[-1]: r.data for r in db.scalars(
             select(RequestReceipt).where(RequestReceipt.key.contains(BUDGET_ID)))}
-    return {'diagnostics':session.diagnostic_snapshot() if session else DIAGNOSTICS.get(sid),
+    return {'diagnostics':None,
         'traces': TRACES.get(sid, []), 'session_active': bool(session and not session.closed),
         'metrics': list(session.metrics) if session else [], 'messages': messages,
         'state': row.state, 'verified': row.data.get('verified', False), 'effects': effects,
@@ -321,3 +329,11 @@ async def stop_measurement(request:Request):
     if server is None:raise HTTPException(409)
     server.should_exit=True
     return {'stopping':True}
+
+
+@app.get('/eval/diagnostics/{sid}')
+async def diagnostics(sid:str,request:Request):
+    await private(request)
+    if sid in app.state.realtime.sessions:raise HTTPException(409,'Close measured media before exporting diagnostics')
+    if sid not in DIAGNOSTICS:raise HTTPException(404)
+    return DIAGNOSTICS[sid]

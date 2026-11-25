@@ -18,7 +18,7 @@ from app.main import create_app
 from app.config import settings
 from app.cloud_budget import reserve_call
 from app.realtime.provider import NativeInput
-from app.realtime.speech import StreamingSpeech
+from app.realtime.speech import create_speech
 
 # Same bounded profile as the previously verified manual host, not new limits.
 # NativeInput reserves eight turns up front; 320 is the existing daily total cap.
@@ -28,4 +28,4 @@ def reserve(kind,unused_per_connection_limit):
 
 if settings.voice_writes_enabled:raise RuntimeError('This demonstration requires voice writes disabled')
 app=create_app(realtime_input_factory=lambda:NativeInput(settings,reserve),
-               realtime_speech_factory=lambda:StreamingSpeech(settings,reserve))
+               realtime_speech_factory=lambda:create_speech(settings,reserve))

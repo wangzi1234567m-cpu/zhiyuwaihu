@@ -44,7 +44,8 @@ async def test_late_old_response_cannot_be_rebound_to_new_speech():
     old = sequence()
     newer = sequence('item-2', 'r2')
     provider = NativeInput(settings, lambda *a: None)
-    provider.ws = SocketBoundary(old[:3] + newer[:3] + old[3:] + newer[3:])
+    cancelled={'type':'response.done','response':{'id':'r1','status':'cancelled'}}
+    provider.ws = SocketBoundary(old[:3] + newer[:2] + [cancelled] + newer[2:] + old[3:])
     events = provider.events()
     assert (await anext(events))['epoch'] == 1
     assert (await anext(events))['epoch'] == 2
@@ -116,3 +117,20 @@ async def test_tts_http_pool_survives_multiple_segments_and_closes_with_session(
         assert len(requests) == 2
     finally: await speech.close()
     assert speech.client.is_closed
+
+
+async def test_two_committed_inputs_cannot_be_guessed_by_fifo():
+    a,b=sequence(),sequence('item-2','r2')
+    provider=NativeInput(settings,lambda *args:None);provider.ws=SocketBoundary(a[:2]+b[:2]+a[2:])
+    events=provider.events();await anext(events);await anext(events)
+    with pytest.raises(ProviderFailure,match='NATIVE_INPUT_ASSOCIATION_UNCERTAIN'):await anext(events)
+    await events.aclose();await provider.close()
+
+
+async def test_repeated_onset_same_item_stays_one_logical_turn_and_replay_is_ignored():
+    events=sequence();start={**events[0],'event_id':'start-1'}
+    provider=NativeInput(replace(settings,max_daily_native_turns=1),lambda *args:None)
+    provider.ws=SocketBoundary([start,start,{**start,'event_id':'start-2'}]+events[1:])
+    receiver=provider.events();first=await anext(receiver);again=await anext(receiver);final=await anext(receiver)
+    assert first['epoch']==again['epoch']==final['epoch']==1 and again['continuation'] and provider.turns==1
+    await receiver.aclose();await provider.close()

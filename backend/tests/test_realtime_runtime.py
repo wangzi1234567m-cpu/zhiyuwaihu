@@ -300,3 +300,12 @@ async def test_business_timeout_and_unknown_operation_never_generate_success_spe
         await notice(session, 'error')
         assert not speech.calls and not session.media.output.writes
     finally: await session.close()
+
+
+async def test_late_playback_scoped_interrupt_preserves_new_input_epoch():
+    session,port,provider,speech=await running()
+    try:
+        old=uuid4();session.playback_id=uuid4();session.input_epoch=7
+        await session.control(RealtimeControl(type='interrupt',request_id=uuid4(),playback_instance_id=old))
+        assert session.input_epoch==7 and session.playback_id is not None and not port.interrupts
+    finally:await session.close()
