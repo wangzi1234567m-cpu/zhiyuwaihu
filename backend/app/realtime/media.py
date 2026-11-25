@@ -37,6 +37,8 @@ class StreamingAudio(AudioStreamTrack):
                 return
             queued_at = now_ns() if self.probe.enabled else 0
             await self.frames.put((epoch, data[offset:offset+960], queued_at))
+            if self.probe.enabled:
+                self.probe.emit('output_enqueue',queued_at_ns=queued_at,producer_wait_ns=now_ns()-queued_at,queue_depth=self.frames.qsize())
             if epoch != self.epoch:
                 return
         if epoch == self.epoch:
@@ -62,7 +64,7 @@ class StreamingAudio(AudioStreamTrack):
             self.frames.task_done()
             if epoch == self.epoch:
                 if self.probe.enabled:
-                    self.probe.emit('output_frame', epoch=epoch, queue_wait_ns=now_ns()-queued_at,
+                    self.probe.emit('output_frame', epoch=epoch, queued_at_ns=queued_at,queue_wait_including_producer_ns=now_ns()-queued_at,
                                     queue_depth=self.frames.qsize(), schedule_lag_ns=max(0,int((time.perf_counter()-self.next_at+.02)*1e9)))
                 pcm = data
                 break
