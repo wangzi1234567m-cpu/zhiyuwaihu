@@ -38,10 +38,17 @@ from app.realtime.session import RealtimeSession
 from app.realtime import manager as manager_module
 
 TRACES = {}
+DIAGNOSTICS = {}
 LIMITS = {'native_realtime_session': 15, 'native_realtime_turn': 45, 'tts': 120}
+BUDGET_ID = RUN
+if os.getenv('LATENCY_OPTIMIZATION_AUTHORIZED') == '20261125-20-62-100':
+    # User-approved additional budget, shared by ALL variants and final evaluation.
+    LIMITS = {'native_realtime_session':20,'native_realtime_turn':62,'tts':100}
+    BUDGET_ID = 'v04-latency-opt-20261125'
+
 
 def ms():
-    return time.monotonic() * 1000
+    return time.perf_counter_ns() / 1_000_000
 
 def trace(sid, kind, **fields):
     items = TRACES.setdefault(str(sid), [])
@@ -50,7 +57,7 @@ def trace(sid, kind, **fields):
 
 def reserve(kind, ignored_limit):
     # Separate bounded attempt ledger; never alter/reset the ordinary daily ledger.
-    reserve_call(RUN + ':' + kind, LIMITS[kind])
+    reserve_call(BUDGET_ID + ':' + kind, LIMITS[kind])
 
 def active_sid():
     values = list(app.state.realtime.sessions.values())
@@ -142,6 +149,18 @@ class MeasuredSpeech(StreamingSpeech):
 
 
 class MeasuredSession(RealtimeSession):
+    def diagnostic_snapshot(self):
+        return {'session':self.probe.snapshot(),
+            'provider':self.provider.probe.snapshot() if self.provider else None,
+            'tts':self.speech.tts.probe.snapshot() if self.speech else None,
+            'output':self.media.output.probe.snapshot() if self.media else None}
+
+    async def close(self):
+        try:
+            await super().close()
+        finally:
+            DIAGNOSTICS[str(self.context.session_id)]=self.diagnostic_snapshot()
+
     def metric(self, name, duration_ms=None, **fields):
         super().metric(name, duration_ms, **fields)
         trace(self.context.session_id, 'session_metric', name=name, duration_ms=duration_ms,
@@ -244,6 +263,9 @@ async def config(request: Request):
     return {'run_id': RUN, 'limits': LIMITS, 'model': 'qwen3.8-omni-flash-realtime',
         'region': settings.dashscope_region, 'tts_model': settings.dashscope_tts_model,
         'voice': settings.dashscope_tts_voice, 'voice_writes': settings.voice_writes_enabled,
+        'vad_silence_ms':settings.realtime_vad_silence_ms, 'vad_threshold':settings.realtime_vad_threshold,
+        'diagnostics':settings.realtime_diagnostics_enabled, 'budget_id':BUDGET_ID,
+        'server_clock':'perf_counter_ns',
         'knowledge_version':os.getenv('ZHIYU_KNOWLEDGE_VERSION','demo-k1')}
 
 @app.get('/eval/state/{sid}')
@@ -258,8 +280,18 @@ async def state(sid: str, request: Request):
             select(Message).where(Message.session_id == sid).order_by(Message.position))]
         effects = db.scalar(select(func.count()).select_from(Effect))
         receipts = {r.key.rsplit(':', 1)[-1]: r.data for r in db.scalars(
-            select(RequestReceipt).where(RequestReceipt.key.contains(RUN)))}
-    return {'traces': TRACES.get(sid, []), 'session_active': bool(session and not session.closed),
+            select(RequestReceipt).where(RequestReceipt.key.contains(BUDGET_ID)))}
+    return {'diagnostics':session.diagnostic_snapshot() if session else DIAGNOSTICS.get(sid),
+        'traces': TRACES.get(sid, []), 'session_active': bool(session and not session.closed),
         'metrics': list(session.metrics) if session else [], 'messages': messages,
         'state': row.state, 'verified': row.data.get('verified', False), 'effects': effects,
         'busy': row.data.get('busy', False), 'budget': receipts}
+
+
+@app.post('/eval/stop')
+async def stop_measurement(request:Request):
+    await private(request)
+    server=getattr(app.state,'measurement_server',None)
+    if server is None:raise HTTPException(409)
+    server.should_exit=True
+    return {'stopping':True}

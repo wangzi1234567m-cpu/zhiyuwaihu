@@ -5,6 +5,8 @@ from collections import deque
 from contextlib import suppress
 from uuid import uuid4
 
+from .diagnostics import RealtimeProbe, now_ns
+
 from ..realtime_contract.dto import (
     BusinessTurnInput, EventSubscription, GenerationInterrupt, PlaybackReport,
     ReplySegmentReady, TrustedSessionContext, TrustedTurnContext,
@@ -19,6 +21,9 @@ class RealtimeSession:
         self.connected, self.browser_ready = asyncio.Event(), asyncio.Event()
         self.closed = self.input_ready = self.attached = False
         self.tasks = set()
+        self.probe = RealtimeProbe(manager.config.realtime_diagnostics_enabled)
+        self.last_input_at = self.last_send_at = None
+        self.input_sequence = 0
         self.audio = asyncio.Queue(25)  # 25 x 20ms = 500ms input maximum.
         self.events = asyncio.Queue(128)
         self.notices = asyncio.Queue(128)
@@ -86,7 +91,7 @@ class RealtimeSession:
             self.spawn(self.fail('WEBRTC_BAD_INPUT_FRAME'))
             return
         try:
-            self.audio.put_nowait(pcm)
+            self.audio.put_nowait((pcm, now_ns() if self.probe.enabled else 0))
         except asyncio.QueueFull:
             self.input_ready = False
             self.spawn(self.fail('WEBRTC_INPUT_BACKPRESSURE'))
@@ -137,10 +142,23 @@ class RealtimeSession:
 
     async def send_audio(self):
         while not self.closed:
-            pcm = await self.audio.get()
+            pcm, queued_at = await self.audio.get()
+            started = now_ns() if self.probe.enabled else 0
+            self.input_sequence += 1
             try:
                 await self.provider.send_audio(pcm)
             finally:
+                if self.probe.enabled:
+                    from array import array
+                    values=array('h',pcm)
+                    self.probe.emit('input_frame', sequence=self.input_sequence,
+                        rms=(sum(v*v for v in values)/len(values))**.5/32768,
+                        queued_at_ns=queued_at, queue_wait_ns=started-queued_at,
+                        received_gap_ns=queued_at-self.last_input_at if self.last_input_at else None,
+                        send_gap_ns=started-self.last_send_at if self.last_send_at else None,
+                        send_total_ns=now_ns()-started, queue_depth=self.audio.qsize(),
+                        frame_duration_ms=20)
+                    self.last_input_at, self.last_send_at = queued_at, started
                 self.audio.task_done()
 
     async def read_provider(self):

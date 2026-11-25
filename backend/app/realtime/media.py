@@ -2,6 +2,7 @@
 import asyncio
 import time
 from fractions import Fraction
+from .diagnostics import RealtimeProbe, now_ns
 from aiortc import AudioStreamTrack, RTCPeerConnection, RTCConfiguration, RTCIceServer, RTCSessionDescription
 from aiortc.mediastreams import MediaStreamError
 from av import AudioFrame, AudioResampler
@@ -9,8 +10,9 @@ from av import AudioFrame, AudioResampler
 
 class StreamingAudio(AudioStreamTrack):
     """20ms frames, at most 240ms queued; not an end-to-end latency target."""
-    def __init__(self):
+    def __init__(self, diagnostics=False):
         super().__init__()
+        self.probe = RealtimeProbe(diagnostics)
         self.frames = asyncio.Queue(maxsize=12)
         self.epoch = 0
         self.tail = b''
@@ -33,7 +35,8 @@ class StreamingAudio(AudioStreamTrack):
         for offset in range(0, complete, 960):
             if epoch != self.epoch:
                 return
-            await self.frames.put((epoch, data[offset:offset+960]))
+            queued_at = now_ns() if self.probe.enabled else 0
+            await self.frames.put((epoch, data[offset:offset+960], queued_at))
             if epoch != self.epoch:
                 return
         if epoch == self.epoch:
@@ -42,7 +45,7 @@ class StreamingAudio(AudioStreamTrack):
     async def finish(self, epoch):
         if epoch == self.epoch and self.tail:
             tail, self.tail = self.tail, b''
-            await self.frames.put((epoch, tail.ljust(960, b'\0')))
+            await self.frames.put((epoch, tail.ljust(960, b'\0'), now_ns() if self.probe.enabled else 0))
         await self.frames.join()
 
     async def recv(self):
@@ -55,9 +58,12 @@ class StreamingAudio(AudioStreamTrack):
         self.next_at += .02
         pcm = b'\0' * 960
         while not self.frames.empty():
-            epoch, data = self.frames.get_nowait()
+            epoch, data, queued_at = self.frames.get_nowait()
             self.frames.task_done()
             if epoch == self.epoch:
+                if self.probe.enabled:
+                    self.probe.emit('output_frame', epoch=epoch, queue_wait_ns=now_ns()-queued_at,
+                                    queue_depth=self.frames.qsize(), schedule_lag_ns=max(0,int((time.perf_counter()-self.next_at+.02)*1e9)))
                 pcm = data
                 break
         frame = AudioFrame(format='s16', layout='mono', samples=480)
@@ -71,7 +77,7 @@ class WebRTCMedia:
     def __init__(self, session, ice_servers):
         self.session = session
         self.pc = RTCPeerConnection(RTCConfiguration(iceServers=[RTCIceServer(**s.model_dump(exclude_none=True)) for s in ice_servers]))
-        self.output = StreamingAudio()
+        self.output = StreamingAudio(session.probe.enabled if hasattr(session, 'probe') else False)
         self.pc.addTrack(self.output)
         self.tasks = set()
         self.input_count = 0

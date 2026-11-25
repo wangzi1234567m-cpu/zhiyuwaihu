@@ -7,6 +7,7 @@ from collections import deque
 from uuid import uuid4
 from websockets.asyncio.client import connect
 from ..realtime_contract.dto import UnderstandingCandidate
+from .diagnostics import RealtimeProbe, now_ns
 
 
 class ProviderFailure(Exception):
@@ -16,6 +17,7 @@ class ProviderFailure(Exception):
 class NativeInput:
     def __init__(self, config, reserve, connector=connect):
         self.config, self.reserve, self.connector = config, reserve, connector
+        self.probe = RealtimeProbe(config.realtime_diagnostics_enabled)
         self.ws = None
         self.send_lock = asyncio.Lock()
         self.active = set()
@@ -23,15 +25,25 @@ class NativeInput:
 
     def require(self):
         c = self.config
+        if c.realtime_vad_silence_ms not in (250, 300, 400) or not 0 < c.realtime_vad_threshold < 1:
+            raise ProviderFailure('NATIVE_VAD_CONFIG_INVALID')
         if not c.cloud_calls_enabled or not c.free_quota_confirmed or not c.dashscope_api_key:
             raise ProviderFailure('NATIVE_NOT_CONFIGURED')
         if c.dashscope_region not in ('cn-beijing', 'ap-southeast-1') or not re.fullmatch(r'ws-[A-Za-z0-9-]+', c.dashscope_workspace_id):
             raise ProviderFailure('NATIVE_REGION_INVALID')
 
     async def send(self, kind, **payload):
+        waiting = now_ns() if self.probe.enabled else 0
         async with self.send_lock:
-            async with asyncio.timeout(2):
-                await self.ws.send(json.dumps({'type': kind, 'event_id': str(uuid4()), **payload}, ensure_ascii=False))
+            started = now_ns() if self.probe.enabled else 0
+            try:
+                async with asyncio.timeout(2):
+                    await self.ws.send(json.dumps({'type': kind, 'event_id': str(uuid4()), **payload}, ensure_ascii=False))
+            finally:
+                if self.probe.enabled:
+                    self.probe.emit('websocket_send', kind=kind, lock_wait_ns=started-waiting,
+                                    send_ns=now_ns()-started)
+
 
     async def receive(self):
         value = json.loads(await self.ws.recv())
@@ -69,7 +81,7 @@ class NativeInput:
                         'ask_remedy,ask_guarantee,ask_source,ask_outcome,refuse_contact,request_callback,'
                         'acknowledge,unclear,complaint_risk。未知或歧义用unclear。当前业务状态：'+snapshot.state),
                     'audio': {'input': {'format': {'type': 'pcm', 'sample_rate': 16000}}},
-                    'turn_detection': {'type': 'server_vad', 'threshold': .5, 'silence_duration_ms': 400},
+                    'turn_detection': {'type': 'server_vad', 'threshold': c.realtime_vad_threshold, 'silence_duration_ms': c.realtime_vad_silence_ms},
                 })
                 while (await self.receive()).get('type') != 'session.updated':
                     pass

@@ -10,10 +10,12 @@ const base='http://127.0.0.1:18765',token=process.env.LATENCY_CONTROL_TOKEN,run=
 if(!process.argv.includes('--run-real-latency')||!token||!run)throw new Error('Explicit real evaluation and control configuration required');
 const output=path.join(root,'.cache',run+'.json');
 fs.mkdirSync(path.dirname(output),{recursive:true});
-const calls=Number(process.env.LATENCY_CALLS||15),target=30;
-const specs=[['identity','merchant-1.trimmed.wav'],['guarantee','merchant-2.trimmed.wav'],['source','merchant-source.trimmed.wav']];
-const audio=specs.map(([id,name])=>{
-  const bytes=fs.readFileSync(path.join(workspace,'.cache/round1-audio',name));
+const calls=Number(process.env.LATENCY_CALLS||15),target=Number(process.env.LATENCY_TARGET_VALID||30);
+const targetPerCase=Number(process.env.LATENCY_TARGET_PER_CASE||0);
+if(!Number.isInteger(calls)||calls<1||calls>15||!Number.isInteger(target)||target<1||target>36||!Number.isInteger(targetPerCase)||targetPerCase<0||targetPerCase>10)throw new Error('Bounded evaluation sizes required');
+const specs=process.env.LATENCY_AUDIO_PLAN?JSON.parse(fs.readFileSync(process.env.LATENCY_AUDIO_PLAN,'utf8')):[['identity','merchant-1.trimmed.wav'],['guarantee','merchant-2.trimmed.wav'],['source','merchant-source.trimmed.wav']];
+const audio=specs.map(([id,name,options={}])=>{
+  const bytes=fs.readFileSync(path.isAbsolute(name)?name:path.join(workspace,'.cache/round1-audio',name));
   let rate,channels,bits,data;
   for(let p=12;p+8<=bytes.length;){const kind=bytes.toString('ascii',p,p+4),size=bytes.readUInt32LE(p+4);
     if(kind==='fmt '){channels=bytes.readUInt16LE(p+10);rate=bytes.readUInt32LE(p+12);bits=bytes.readUInt16LE(p+22);}
@@ -23,7 +25,7 @@ const audio=specs.map(([id,name])=>{
   for(let i=0;i<data.length/2;i+=block){let sq=0,n=Math.min(block,data.length/2-i);
     for(let j=0;j<n;j++)sq+=(data.readInt16LE((i+j)*2)/32768)**2;
     if(Math.sqrt(sq/n)>.004)voicedEnd=(i+n)/rate*1000;}
-  return {id,name,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),
+  return {id,name,...options,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),
     duration_ms:data.length/2/rate*1000,speech_end_ms:voicedEnd,encoded:bytes.toString('base64')};
 });
 const hash=crypto.createHash('sha256').update(JSON.stringify(audio.map(({encoded,...rest})=>rest))).digest('hex');
@@ -34,18 +36,23 @@ const report=fs.existsSync(output)?JSON.parse(fs.readFileSync(output,'utf8')):{
     network_profile:'same Windows host/browser and aiortc loopback; real Beijing provider WAN; no TURN',
     client:'headless Chromium, shipped RealtimeVoice and AudioWorklet',measurement_method:'controlled_input_end_to_remote_pcm',
     input_end_definition:'last 10ms RMS>0.004 block in fixed synthetic WAV; AudioContext scheduled playback mapped to performance clock',
+    planned_target_valid:target,planned_target_per_case:targetPerCase,
+    cohort_rule:'first planned quota of successful samples per case; extra identity setup retained separately; all attempts retained',
     business_writes:false,physical_speaker_measurement:false,audio:audio.map(({encoded,...rest})=>rest)},
   calls:[],samples:[]};
 if(report.metadata.case_set_sha256!==hash||report.metadata.run_id!==run)throw new Error('Frozen input mismatch');
 for(const sample of report.samples){if(sample.status==='pending'){sample.status='failed';sample.failure='measurement_client_stopped_to_correct_reviewed_playback_wait';}}
 const save=()=>fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n');
 save();
+const validCount=()=>report.samples.filter(s=>s.status==='success'&&s.cohort!==false).length;
+const caseCount=id=>report.samples.filter(s=>s.status==='success'&&s.case===id&&s.cohort!==false).length;
+const done=()=>targetPerCase?audio.every(f=>caseCount(f.id)>=targetPerCase):validCount()>=target;
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 let browser;
 const watchdog=setTimeout(()=>{report.deadline=true;save();void browser?.close();},22*60*1000);
 async function evaluate(){
   browser=await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required','--disable-background-timer-throttling']});
-  for(let n=0;n<calls&&report.calls.length<15&&report.samples.filter(s=>s.status==='success').length<target;n++){
+  for(let n=0;n<calls&&report.calls.length<15&&!done();n++){
     const call={index:report.calls.length+1,started_at:new Date().toISOString(),samples:[],harness_revision:'continuous-silent-source-v3-long-reviewed-drain'};
     report.calls.push(call);save();
     const context=await browser.newContext(),page=await context.newPage();let sid;
@@ -55,7 +62,7 @@ async function evaluate(){
       await page.evaluate(()=>{
         window.evalState={metrics:[],notices:[],failures:[],lastRemote:0,activity:[],input:null};
         const Original=window.RTCPeerConnection;
-        window.RTCPeerConnection=class extends Original{constructor(...args){super(...args);this.addEventListener('track',e=>{
+        window.RTCPeerConnection=class extends Original{constructor(...args){super(...args);window.evalState.pc=this;this.addEventListener('track',e=>{
           const ctx=new AudioContext(),stream=new MediaStream([e.track]),source=ctx.createMediaStreamSource(stream);
           const node=ctx.createScriptProcessor(256,1,1),silent=ctx.createGain();silent.gain.value=0;
           source.connect(node);node.connect(silent);silent.connect(ctx.destination);void ctx.resume();
@@ -97,8 +104,9 @@ async function evaluate(){
       await page.waitForFunction(()=>performance.now()-evalState.lastRemote>500,{},{timeout:15000});
       call.connected=true;
       for(const fixture of audio){
-        if(report.samples.filter(s=>s.status==='success').length>=target)break;
-        const sample={call:call.index,case:fixture.id,status:'pending',session_id:sid,input_sha256:fixture.sha256};
+        if(done())break;
+        if(targetPerCase&&caseCount(fixture.id)>=targetPerCase&&fixture.id!=='identity')continue;
+        const sample={cohort:!targetPerCase||caseCount(fixture.id)<targetPerCase,call:call.index,case:fixture.id,status:'pending',session_id:sid,input_sha256:fixture.sha256};
         report.samples.push(sample);call.samples.push(report.samples.length-1);save();
         try{
           const sync=[];
@@ -111,9 +119,9 @@ async function evaluate(){
             const {ctx,dest}=evalState.input,bytes=Uint8Array.from(atob(fixture.encoded),c=>c.charCodeAt(0));
             const buffer=await ctx.decodeAudioData(bytes.buffer),source=ctx.createBufferSource();source.buffer=buffer;source.connect(dest);
             const scheduled=ctx.currentTime+.05,reference=performance.now(),ctxReference=ctx.currentTime;
-            const start=reference+(scheduled-ctxReference)*1000,speech_end=start+fixture.speech_end_ms;
+            const start=reference+(scheduled-ctxReference)*1000,speech_end=start+fixture.speech_end_ms,last_remote_at_start_ms=evalState.lastRemote;
             return new Promise(resolve=>{source.onended=()=>{window.dispatchEvent(new CustomEvent('zhiyu-realtime-input-ended'));
-              resolve({start_ms:start,speech_end_ms:speech_end,scheduled_file_end_ms:start+buffer.duration*1000,
+              resolve({start_ms:start,speech_end_ms:speech_end,last_remote_at_start_ms,scheduled_file_end_ms:start+buffer.duration*1000,
                 ended_handler_ms:performance.now(),duration_ms:buffer.duration*1000});};source.start(scheduled);});
           },fixture);save();
           await page.waitForFunction(before=>evalState.metrics.slice(before.metrics).some(m=>m.name==='first_answer_audio')||evalState.failures.length,{...before},{timeout:16000});
@@ -123,18 +131,30 @@ async function evaluate(){
           if(!answer)throw new Error('NO_EFFECTIVE_AUDIO');
           sample.generation_id=answer.generation_id;sample.effective_answer_ms=answer.at-sample.input.speech_end_ms;
           sample.file_end_to_answer_ms=answer.at-sample.input.scheduled_file_end_ms;
-          await page.waitForFunction(before=>evalState.notices.slice(before.notices).some(n=>n.type==='playback.drained')||evalState.failures.length,before,{timeout:60000});
-          await page.waitForFunction(()=>performance.now()-evalState.lastRemote>500,{},{timeout:12000});
+          if(!fixture.allow_barge_after){
+            await page.waitForFunction(before=>evalState.notices.slice(before.notices).some(n=>n.type==='playback.drained')||evalState.failures.length,before,{timeout:60000});
+            await page.waitForFunction(()=>performance.now()-evalState.lastRemote>500,{},{timeout:12000});
+          }
           const state=await request('/eval/state/'+sid,undefined,true);sample.server=state;
           const segment=state.traces.find(t=>t.kind==='reviewed_segment_received'&&t.generation_id===answer.generation_id);
           const after=state.traces.filter(t=>t.at_ms>=sample.input.speech_end_ms+sample.clock_sync.offset_ms-200);
           const final=after.find(t=>t.kind==='input_final');
           sample.recognized=final?{text:final.text,candidate:final.candidate}:null;
           sample.answer_text=segment?.text;
+          sample.browser_audio_stats=await page.evaluate(async()=>{
+            const rows=[];for(const stat of (await evalState.pc.getStats()).values())
+              if(stat.type==='inbound-rtp'&&stat.kind==='audio')rows.push({jitter:stat.jitter,jitterBufferDelay:stat.jitterBufferDelay,jitterBufferEmittedCount:stat.jitterBufferEmittedCount,jitterBufferTargetDelay:stat.jitterBufferTargetDelay,packetsLost:stat.packetsLost,packetsReceived:stat.packetsReceived});
+            return {clock_domain:'browser.performance',at_ms:performance.now(),inbound:rows,
+              base_latency_s:evalState.remoteContext?.baseLatency,output_latency_s:evalState.remoteContext?.outputLatency};
+          });
+          if(fixture.expect_barge_in)sample.barge_in_observed=sample.input.start_ms-sample.input.last_remote_at_start_ms<500&&observed.notices.some(n=>n.type==='playback.stop');
+
           const intents=final?.candidate?.intents||[];
           sample.business_valid=fixture.id==='identity'?state.verified&&intents.includes('confirm_identity'):
             fixture.id==='guarantee'?intents.includes('ask_guarantee')&&/不能保证|不能承诺|无法保证/.test(segment?.text||''):
             intents.includes('ask_source')&&/依据|来源/.test(segment?.text||'');
+          if(fixture.expect_transcript_regex&&!new RegExp(fixture.expect_transcript_regex).test(sample.recognized?.text||''))sample.business_valid=false;
+          if(fixture.expect_barge_in&&!sample.barge_in_observed)sample.business_valid=false;
           if(state.effects!==0)throw new Error('UNEXPECTED_BUSINESS_EFFECT');
           sample.status=sample.business_valid?'success':'invalid_business_answer';
         }catch(error){sample.status='failed';sample.failure=String(error.message).slice(0,150);
@@ -158,4 +178,4 @@ async function evaluate(){
   }
 }
 evaluate().catch(error=>{report.harness_failure=String(error.message).slice(0,150);save();process.exitCode=1;})
-  .finally(async()=>{clearTimeout(watchdog);await browser?.close();console.log(JSON.stringify({saved:output,valid:report.samples.filter(s=>s.status==='success').length,total:report.samples.length,calls:report.calls.length}));});
+  .finally(async()=>{clearTimeout(watchdog);await browser?.close();console.log(JSON.stringify({saved:output,valid:validCount(),total:report.samples.length,calls:report.calls.length}));});

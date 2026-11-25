@@ -52,7 +52,7 @@ def decompose(sample):
 
 def summarize(report):
     samples = report['samples']
-    valid = [s for s in samples if s.get('status')=='success']
+    valid = [s for s in samples if s.get('status')=='success' and s.get('cohort',True)]
     for sample in samples:
         decompose(sample)
     all_audio = [s for s in samples if s.get('effective_answer_ms') is not None]
@@ -83,8 +83,8 @@ def summarize(report):
                     for case in sorted({s['case'] for s in samples})},
         'stages':{name:distribution([s['stages_ms'].get(name) for s in valid]) for name in stage_names},
         'clock_sync_rtt':distribution([s.get('clock_sync',{}).get('rtt_ms') for s in samples]),
-        'server_clock': {'implementation':time.get_clock_info('monotonic').implementation,
-                         'resolution_ms':time.get_clock_info('monotonic').resolution*1000},
+        'server_clock': {'implementation':time.get_clock_info('perf_counter' if report.get('metadata',{}).get('provider',{}).get('server_clock')=='perf_counter_ns' else 'monotonic').implementation,
+                         'resolution_ms':time.get_clock_info('perf_counter' if report.get('metadata',{}).get('provider',{}).get('server_clock')=='perf_counter_ns' else 'monotonic').resolution*1000},
         'under_2000ms_valid_count':sum(s['effective_answer_ms']<2000 for s in valid),
         'under_2000ms_all_attempt_rate':sum(s['effective_answer_ms']<2000 for s in valid)/len(samples) if samples else None,
         'enough_samples':len(valid)>=30,

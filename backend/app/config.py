@@ -49,6 +49,9 @@ class Settings:
     max_daily_model_calls: int = int(os.getenv('MAX_DAILY_MODEL_CALLS', '30'))
     max_daily_voice_calls: int = int(os.getenv('MAX_DAILY_VOICE_CALLS', '3'))
     staging_password: str = os.getenv('STAGING_PASSWORD', '')
+    realtime_vad_silence_ms: int = int(os.getenv('REALTIME_VAD_SILENCE_MS', '400'))
+    realtime_vad_threshold: float = float(os.getenv('REALTIME_VAD_THRESHOLD', '0.5'))
+    realtime_diagnostics_enabled: bool = os.getenv('REALTIME_DIAGNOSTICS_ENABLED', 'false').lower() == 'true'
     realtime_enabled: bool = os.getenv('REALTIME_WEBRTC_ENABLED', 'false').lower() == 'true'
     realtime_application_ids: str = os.getenv('REALTIME_APPLICATION_IDS', '')
     realtime_stun_urls: str = os.getenv('REALTIME_STUN_URLS', '[]')
