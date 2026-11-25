@@ -57,3 +57,15 @@ async def test_tts_diagnostics_record_headers_before_pcm_without_secrets_or_text
     assert len(requests)==1 and b''.join(chunks)==b'\0\1'*32
     dump=str(tts.probe.snapshot())
     assert 'test-private-bailian-key' not in dump and '私有正文' not in dump
+
+
+def test_extra_identity_setup_successes_cannot_dilute_failure_gate():
+    from report_realtime_latency import compare
+    metadata={'case_set_sha256':'fixed','network_profile':'same','client':'same','measurement_method':'controlled_input_end_to_remote_pcm'}
+    success=lambda cohort=True:{'status':'success','effective_answer_ms':1500,'cohort':cohort}
+    baseline={'metadata':metadata,'samples':[success() for _ in range(30)]+[{'status':'failed'}]}
+    candidate={'metadata':metadata,'samples':[success() for _ in range(30)]+[success(False) for _ in range(30)]+[{'status':'failed'},{'status':'failed'}]}
+    result=compare(baseline,candidate)
+    assert result['candidate']['valid']==30 and result['candidate']['extra_setup_successes']==30
+    assert result['candidate']['failure_rate']<=result['baseline']['failure_rate']
+    assert not result['failure_rate_not_worse'] and not result['latency_gate_passed']

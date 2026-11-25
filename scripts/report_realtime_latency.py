@@ -17,8 +17,13 @@ def summarize(report):
     values.sort()
     def percentile(p):
         return values[max(0, math.ceil(len(values)*p)-1)] if values else None
+    cohort_attempts=sum(sample.get('cohort', True) for sample in samples)
+    all_failure_rate=(len(samples)-all_valid_count)/len(samples) if samples else 1
+    cohort_failure_rate=(cohort_attempts-len(values))/cohort_attempts if cohort_attempts else 1
     return {'total': len(samples), 'valid': len(values), 'failed_or_missing': len(samples)-all_valid_count,
             'extra_setup_successes':all_valid_count-len(values),
+            'cohort_attempts':cohort_attempts, 'cohort_failure_rate':cohort_failure_rate,
+            'acceptance_failure_rate':max(all_failure_rate,cohort_failure_rate),
             'failure_rate': (len(samples)-all_valid_count)/len(samples) if samples else 1,
             'p50_ms': percentile(.5), 'p95_ms': percentile(.95)}
 
@@ -32,7 +37,7 @@ def compare(baseline, candidate):
     enough = old['valid'] >= 30 and new['valid'] >= 30
     under_two = new['p50_ms'] is not None and new['p50_ms'] < 2000
     p95_ok = old['p95_ms'] is not None and new['p95_ms'] is not None and new['p95_ms'] <= old['p95_ms']*1.1
-    stable = new['failure_rate'] <= old['failure_rate']
+    stable = new['acceptance_failure_rate'] <= old['acceptance_failure_rate']
     return {'baseline': old, 'candidate': new, 'same_conditions': bool(compatible),
             'controlled_measurement': measured, 'enough_samples': enough,
             'effective_answer_p50_strictly_under_2000ms': under_two,

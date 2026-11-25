@@ -79,6 +79,7 @@ def summarize(report):
             'invalid_or_failed_turns':len(samples)-len(all_valid), 'extra_setup_successes':len(all_valid)-len(valid), 'calls_without_turn_samples':calls_without_samples,
             'statuses':dict(Counter(s['status'] for s in samples))},
         'valid_effective_answer':distribution([s['effective_answer_ms'] for s in valid]),
+        'all_successful_effective_answer':distribution([s['effective_answer_ms'] for s in all_valid]),
         'all_observed_answer_audio':distribution([s['effective_answer_ms'] for s in all_audio]),
         'per_case':{case:distribution([s['effective_answer_ms'] for s in valid if s['case']==case])
                     for case in sorted({s['case'] for s in samples})},
