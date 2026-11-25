@@ -42,6 +42,7 @@ const report=fs.existsSync(output)?JSON.parse(fs.readFileSync(output,'utf8')):{
   calls:[],samples:[]};
 if(report.metadata.case_set_sha256!==hash||report.metadata.run_id!==run)throw new Error('Frozen input mismatch');
 for(const sample of report.samples){if(sample.status==='pending'){sample.status='failed';sample.failure='measurement_client_stopped_to_correct_reviewed_playback_wait';}}
+if(report.stopped_reason){(report.stop_history??=[]).push({reason:report.stopped_reason,after_calls:report.calls.length,resumed_at:new Date().toISOString()});report.stopped_reason=null;}
 const save=()=>fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n');
 save();
 const validCount=()=>report.samples.filter(s=>s.status==='success'&&s.cohort!==false).length;
@@ -53,7 +54,7 @@ const watchdog=setTimeout(()=>{report.deadline=true;save();void browser?.close()
 async function evaluate(){
   browser=await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required','--disable-background-timer-throttling']});
   for(let n=0;n<calls&&report.calls.length<15&&!done();n++){
-    const call={index:report.calls.length+1,started_at:new Date().toISOString(),samples:[],harness_revision:'continuous-silent-source-v3-long-reviewed-drain'};
+    const call={code_commit:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),index:report.calls.length+1,started_at:new Date().toISOString(),samples:[],harness_revision:'continuous-silent-source-v3-long-reviewed-drain'};
     report.calls.push(call);save();
     const context=await browser.newContext(),page=await context.newPage();let sid;
     const faults=[];page.on('pageerror',e=>faults.push(e.name));
@@ -85,7 +86,14 @@ async function evaluate(){
         const data=await r.json();if(!r.ok)throw new Error('HTTP_'+r.status+'_'+(data.code||'ERROR'));return data;
       },{url,body,privateRoute,token});}
       await request('/api/v1/dev/login',{username:'demo',password:'local-latency-only'});
-      report.metadata.provider=await request('/eval/config',undefined,true);save();
+      const actualProvider=await request('/eval/config',undefined,true);
+      if(report.metadata.provider){
+        for(const key of ['vad_silence_ms','vad_threshold','tts_drain_enabled','model','voice','knowledge_version'])
+          if(report.metadata.provider[key]!==actualProvider[key])throw new Error('FROZEN_PROVIDER_CONFIG_MISMATCH_'+key);
+        if(JSON.stringify(report.metadata.provider.limits)!==JSON.stringify(actualProvider.limits))
+          (report.budget_revision_history??=[]).push({after_calls:report.calls.length-1,previous:report.metadata.provider.limits,current:actualProvider.limits});
+      }
+      report.metadata.provider=actualProvider;save();
       const view=await page.evaluate(async()=>{
         const r=await fetch('/api/v1/sessions',{method:'POST',headers:{'Content-Type':'application/json','X-Requested-With':'zhiyu','Idempotency-Key':crypto.randomUUID()},
           body:JSON.stringify({application_id:'00000000-0000-0000-0000-000000000001',mode:'voice',voice_transport:'native_webrtc'})});
