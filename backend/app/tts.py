@@ -115,8 +115,20 @@ class QwenTTS:
                         raise DomainError(code, '百炼语音服务不可用，请检查账号或额度', 503)
                     if not response.headers.get('content-type', '').startswith('text/event-stream'):
                         raise DomainError('TTS_BAD_STREAM', '百炼未返回SSE音频流', 503)
+                    async def finish_transport(lines):
+                        if not self.config.realtime_tts_drain_enabled:return
+                        before=now_ns()
+                        try:
+                            # Preserve exact audio/finish semantics; bounded tail read enables HTTP reuse.
+                            async with asyncio.timeout(.2):
+                                async for _ in lines:
+                                    if cancel.is_set():return
+                            self.probe.emit('tts_tail_drained',request_id=request_id,eof=True,duration_ns=now_ns()-before)
+                        except TimeoutError:
+                            self.probe.emit('tts_tail_drained',request_id=request_id,eof=False,duration_ns=now_ns()-before)
                     data = []
-                    async for line in response.aiter_lines():
+                    lines=response.aiter_lines()
+                    async for line in lines:
                         if line.startswith('data:'):
                             data.append(line[5:].lstrip())
                             if sum(map(len, data)) > 1024*1024:
@@ -127,6 +139,7 @@ class QwenTTS:
                         raw, data = '\n'.join(data), []
                         if raw == '[DONE]':
                             if received and not tail:
+                                await finish_transport(lines)
                                 return
                             raise DomainError('TTS_EMPTY', '音频输出为空或不完整', 503)
                         try:
@@ -158,6 +171,7 @@ class QwenTTS:
                         if output.get('finish_reason') == 'stop':
                             if not received or tail:
                                 raise DomainError('TTS_EMPTY', '音频输出为空或不完整', 503)
+                            await finish_transport(lines)
                             return
                     raise DomainError('TTS_TRUNCATED', '音频流提前结束', 503)
 

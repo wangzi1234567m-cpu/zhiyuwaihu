@@ -264,7 +264,7 @@ async def config(request: Request):
         'region': settings.dashscope_region, 'tts_model': settings.dashscope_tts_model,
         'voice': settings.dashscope_tts_voice, 'voice_writes': settings.voice_writes_enabled,
         'vad_silence_ms':settings.realtime_vad_silence_ms, 'vad_threshold':settings.realtime_vad_threshold,
-        'diagnostics':settings.realtime_diagnostics_enabled, 'budget_id':BUDGET_ID,
+        'diagnostics':settings.realtime_diagnostics_enabled, 'tts_drain_enabled':settings.realtime_tts_drain_enabled, 'budget_id':BUDGET_ID,
         'server_clock':'perf_counter_ns',
         'knowledge_version':os.getenv('ZHIYU_KNOWLEDGE_VERSION','demo-k1')}
 
