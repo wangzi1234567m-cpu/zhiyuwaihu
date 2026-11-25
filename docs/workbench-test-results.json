@@ -1,0 +1,14 @@
+{
+  "counts": {
+    "sessions": 7,
+    "operations": 3,
+    "business_effects": 3,
+    "call_records": 3
+  },
+  "closed_authorization_cases": 3,
+  "direct_jingmai": "backend route verified; execution blocked by missing API",
+  "unanswered": "three backend rule-preview outcomes verified; provider no-answer ingress unavailable",
+  "event_sequence_contiguous": true,
+  "runtime": "FakeModel + MockBusiness + isolated PostgreSQL",
+  "real_cloud_latency_measured": false
+}

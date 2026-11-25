@@ -33,9 +33,10 @@ export class RealtimeVoice {
   private interruptedAt=0;
   private controlledEnd=false;
   private markInputEnd=()=>{this.lastSpeechEnd=performance.now();this.controlledEnd=true;};
-  private callbacks:{status:(text:string)=>void;error:(text:string)=>void};
+  private callbacks:{status:(text:string)=>void;error:(text:string)=>void;inputLevel?:(level:number)=>void};
+  private lastLevelReport=0;
 
-  constructor(private sid:string, callbacks:{status:(text:string)=>void;error:(text:string)=>void}) {
+  constructor(private sid:string, callbacks:{status:(text:string)=>void;error:(text:string)=>void;inputLevel?:(level:number)=>void}) {
     this.callbacks=callbacks;
     window.addEventListener('zhiyu-realtime-input-ended',this.markInputEnd);
   }
@@ -79,6 +80,7 @@ export class RealtimeVoice {
           this.metric('first_answer_audio',now-this.lastSpeechEnd);
         }
       } else {
+        if(now-this.lastLevelReport>=100){this.lastLevelReport=now;this.callbacks.inputLevel?.(rms);}
         if(rms>0.025) {
           this.lastVoice=now;this.speechBlocks++;
           if(this.speechBlocks>=3&&!this.speaking) {
