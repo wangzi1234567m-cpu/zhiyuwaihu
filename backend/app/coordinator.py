@@ -91,7 +91,7 @@ def operation_view(operation):
     })
 
 
-def snapshot(db, row):
+def snapshot(db, row, *, staff=False):
     ops = [operation_view(o) for o in db.scalars(select(Operation).where(Operation.session_id == row.id))]
     linked = db.get(Operation,row.data['linked_operation_id']) if row.data.get('linked_operation_id') else None
     if linked and all(str(o.operation_id)!=linked.id for o in ops):
@@ -113,17 +113,8 @@ def snapshot(db, row):
         state=row.state, state_revision=row.revision, route=row.data['route'], last_event_seq=row.seq,
         source_refs=refs, metrics=metrics, operations=ops, verified=verified, busy=row.data.get('busy',False), ended=row.data.get('ended',False),
         generation_id=row.data.get('generation_id'), reason=row.data.get('reason') if verified else None,
-        remedy=row.data.get('remedy') if verified else None, messages=messages(db,row.id), record=record.data if record else None, mode=row.data.get('mode','text'),
+        remedy=row.data.get('remedy') if verified else None, messages=messages(db,row.id), record=(record.data if staff or verified else {**record.data, 'reason_codes':[], 'rectification_items':[], 'source_refs':[]}) if record else None, mode=row.data.get('mode','text'),
         voice_transport=row.data.get('voice_transport','agora'))
-
-def published_channel(entries):
-    """发布渠道来自已审核知识条目，不由模型或用户文本猜测。"""
-    channels = {e.channel for e in entries if e.status == 'approved' and not e.issue_codes}
-    if channels == {'jingmai'}:
-        return 'jingmai'
-    if 'phone' in channels:
-        return 'phone'
-    return None
 
 class Coordinator:
     def __init__(self, services: Services):
@@ -211,7 +202,8 @@ class Coordinator:
         case = self.services.cases.get_case(owner, str(request.application_id))
         knowledge_version = os.getenv('ZHIYU_KNOWLEDGE_VERSION', 'demo-k1')
         entries = self.services.knowledge.lookup(case.scenario_id, '', ['synthetic'], knowledge_version)
-        decision = self.decide(case, channel=published_channel(entries),
+        decision = self.decide(case, channel=case.default_route,
+                               contact_outcome=case.contact_outcome,outcome_source='domain_event' if case.contact_event_id else 'none',
                                entry_ids=tuple(e.entry_id for e in entries))
         with self.repo.transaction() as db:
             # Serialize creation receipts across requests/process restarts.
@@ -228,8 +220,8 @@ class Coordinator:
                       'rule_version':decision.rule_version,'route':decision.route,
                       'routing_decision':decision.model_dump(mode='json'),
                       'verified':False,'explained':False,'ended':False,'busy':False,'epoch':0,'message_count':0,
-                      'notifications':[],'contact_outcome':'unknown','contact_outcome_source':'none',
-                      'submission_attempt':case.submission_attempt,'call_attempt':case.call_attempt,
+                      'notifications':[],'contact_outcome':case.contact_outcome,'contact_outcome_source':'domain_event' if case.contact_event_id else 'none',
+                      'submission_attempt':case.submission_attempt,'call_attempt':case.call_attempt,'contact_event_id':str(case.contact_event_id) if case.contact_event_id else None,
                       'model_version':model['model_version'],'model_mode':model['mode'],
                       'mode':request.mode,'voice_transport':request.voice_transport})
             db.add(row)
@@ -357,7 +349,7 @@ class Coordinator:
         '''每轮用最新可信事实重算路由并持久化；证据随之留档。'''
         outcome = contact_outcome if contact_outcome is not None else row.data.get('contact_outcome', 'unknown')
         source = outcome_source if outcome_source is not None else row.data.get('contact_outcome_source', 'none')
-        decision = self.decide(case, channel=published_channel(entries),
+        decision = self.decide(case, channel=case.default_route,
                                entry_ids=tuple(e.entry_id for e in entries),
                                contact_outcome=outcome, outcome_source=source)
         row.data = {**row.data, 'route': decision.route,
@@ -455,7 +447,7 @@ class Coordinator:
                 context=self.build_context(db,row,turn,generation)
                 history=tuple(messages(db,sid))
             entries=self.services.knowledge.lookup(case.scenario_id,text,['synthetic'],context.knowledge_version)
-            entries=available_entries([e for e in entries if e.channel == row.data['route']], case)
+            entries=available_entries([e for e in entries if e.channel == 'phone' and e.kind in ('scenario','script','qa')], case)
             if not company:
                 decision=AgentDecision(reply_text='审核任务缺少核验主体，已转人工。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
             elif opening:
@@ -471,7 +463,7 @@ class Coordinator:
                     decision=await asyncio.wait_for(self.services.agent.handle_turn(turn_input,context,history,case,tuple(entries),verified,cancel),8)
             # Pre-identity and missing-source output cannot bypass the coordinator via a replacement Agent.
             if company and not verified and decision.next_state != 'CLOSING':
-                decision=AgentDecision(reply_text=f'这里是模拟商户服务AI。请确认身份：输入“我是{company}”。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
+                decision=AgentDecision(reply_text=f'您好，这里是模拟商户服务AI演示。请问您是{company}的联系人吗？',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='VERIFYING')
             if verified and not entries:
                 decision=AgentDecision(reply_text='缺少已审核依据，已转人工核实。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
             session_message_ids={m.message_id for m in messages_db_ids(self, sid)}
@@ -487,7 +479,7 @@ class Coordinator:
                 if decision.next_state not in ('CLOSING','MANUAL_REVIEW'):
                     decision=decision.model_copy(update={'next_state':'CLOSING'})
             if source in ('asr', 'realtime') and decision.proposed_action!='none' and (not settings.voice_writes_enabled or not row.data.get('voice_explanation_verified')):
-                decision=AgentDecision(reply_text='本次语音链路演示已完成，业务写入尚未通过语音告知验收。后续由人工核实处理。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
+                decision=AgentDecision(reply_text='当前尚不能确认已完成告知，本次暂不自动办理，后续由工作人员核实。感谢您的配合，再见。',proposed_action='none',evidence_message_ids=[],knowledge_entry_ids=[],next_state='MANUAL_REVIEW')
             violation=None
             with self.repo.transaction() as db:
                 row=owned(db,sid,owner,True)
@@ -570,11 +562,12 @@ class Coordinator:
                         return
                 case=self.services.cases.get_case(owner,row.application_id)
                 entries=self.services.knowledge.lookup(case.scenario_id,text,['synthetic'],row.data['knowledge_version'])
-                entries=available_entries([e for e in entries if e.channel == row.data['route']], case)
+                entries=available_entries([e for e in entries if e.channel == 'phone' and e.kind in ('scenario','script','qa')], case)
                 msg=db.get(Message,assistant_id)
                 msg.data={**msg.data,'view':{**msg.data['view'],'status':'completed'}}
                 row.data={**row.data,'busy':False}
-                used=[e for e in entries if e.approved_text and e.approved_text in decision.reply_text]
+                cited=[e for e in entries if e.approved_text and e.approved_text in decision.reply_text]
+                used=[e for e in entries if e.kind!='qa' and e.approved_text and e.approved_text in decision.reply_text]
                 if verified and used and source != 'realtime':
                     notifications=list(row.data.get('notifications') or [])
                     notifications.append(NotificationEvidence(kind='explanation',message_id=assistant_id,
@@ -584,8 +577,8 @@ class Coordinator:
                 # 每轮刷新路由证据（渠道来自已审知识，次数/联系结果来自服务器事实）。
                 self._refresh_route(db,row,case,entries)
                 transition(db,row,decision.next_state)
-                if used: emit(db,row,KnowledgeUsed(type='knowledge.used',entry_ids=[e.entry_id for e in used],
-                                                   source_refs=[ref for e in used for ref in e.source_refs]),turn=turn,generation=generation)
+                if cited: emit(db,row,KnowledgeUsed(type='knowledge.used',entry_ids=[e.entry_id for e in cited],
+                                                   source_refs=[ref for e in cited for ref in e.source_refs]),turn=turn,generation=generation)
                 if decision.proposed_action != 'none':
                     self.enqueue(db,row,case,decision,entries)
                 if decision.next_state in ['CLOSING','MANUAL_REVIEW']:
@@ -645,15 +638,38 @@ class Coordinator:
                 'operation_ids': list(row_data.get('operation_ids') or []),
                 'knowledge_version': row_data.get('knowledge_version')}
 
+    def has_trusted_followup(self,case):
+        # Counts alone do not prove a prior missed call and an actual followup.
+        with self.repo.read() as db:
+            return db.scalar(select(Operation.id).where(
+                Operation.data['command']['application_id'].as_string()==str(case.application_id),
+                Operation.data['command']['case_revision'].as_integer()==case.case_revision,
+                Operation.data['command']['kind'].as_string()=='create_followup',Operation.status=='succeeded',
+                Operation.data['case_snapshot']['submission_attempt'].as_integer()==2,
+                Operation.data['case_snapshot']['call_attempt'].as_integer()==1,
+                Operation.data['case_snapshot']['contact_outcome'].as_string()=='no_answer',
+                Operation.data['case_snapshot']['contact_event_id'].as_string().is_not(None)).limit(1)) is not None
+
     def _guard_view(self, row, command, entries):
-        return self.guard_view(row.data, entries)
+        data=self.guard_view(row.data,entries)
+        if 'no_answer_after_followup' in data.get('routing_decision',{}).get('reason_codes',[]):
+            data['trusted_followup']=self.has_trusted_followup(self.services.cases.get_case(row.owner,row.application_id))
+        return data
 
     def enqueue(self,db,row,case,decision,entries):
         kind=decision.proposed_action
+        if kind=='reject_application':
+            entries=self.written_entries(case,row.data)
         key=business_key(case,kind)
         # Lock application so sessions sharing an application cannot race the unique business key.
-        db.scalar(select(Application).where(Application.id==row.application_id).with_for_update())
-        fresh=self.services.cases.get_case(row.owner,row.application_id)
+        application=db.scalar(select(Application).where(Application.id==row.application_id).with_for_update())
+        if application is None or application.owner!=row.owner:
+            raise DomainError('NOT_FOUND','申请单不存在',404)
+        from .adapters import DatabaseCases
+        # Contact ingestion may have changed this ORM row in the current transaction.
+        # A second connection would read the old attempt count and omit the event ID.
+        fresh=(ReviewCase.model_validate(application.data) if type(self.services.cases) is DatabaseCases
+               else self.services.cases.get_case(row.owner,row.application_id))
         command=self.build_command(db,row,fresh,decision,entries,key)
         confirmations={c.id:c.data for c in db.scalars(select(Confirmation).where(Confirmation.session_id==row.id))}
         operation_ids=tuple(db.scalars(select(Operation.id).where(Operation.session_id==row.id)))
@@ -679,6 +695,11 @@ class Coordinator:
         transition(db,row,'EXECUTING')
         emit(db,row,OperationUpdated(type='operation.updated',result=result),operation=command.operation_id)
 
+    def written_entries(self,case,data):
+        from .written import WrittenResponseRenderer
+        entries=self.services.knowledge.lookup(case.scenario_id,'',['synthetic'],data['knowledge_version'])
+        return [WrittenResponseRenderer().render(case,entries,data['knowledge_version'])]
+
     def build_command(self,db,row,case,decision,entries,key=None):
         """服务器构造 ActionCommand（客户端不能提交）。协调器与预检共用同一份构造。"""
         kind=decision.proposed_action
@@ -689,6 +710,9 @@ class Coordinator:
         if str(stored.application_id) != str(case.application_id):
             raise DomainError('ACTION_FORBIDDEN', '路由决策与申请单不一致', 403)
         payload=decision.action_payload
+        if kind=='reject_application':
+            from .written import WrittenResponseRenderer
+            payload=WrittenResponseRenderer().payload(case,self.written_entries(case,row.data),row.data['knowledge_version'])
         confirmation_ref=payload.confirmation_id if isinstance(payload,CallbackPayload) else None
         evidence_refs=[UUID(str(v)) for v in (row.data.get('identity_evidence'),row.data.get('explanation_message_id')) if v]
         return ActionCommand(session_id=row.id,application_id=case.application_id,case_revision=case.case_revision,
@@ -704,10 +728,14 @@ class Coordinator:
         if decision.proposed_action == 'none':
             return None
         try:
+            if decision.proposed_action=='reject_application':
+                entries=self.written_entries(case,row.data)
             command=self.build_command(db,row,case,decision,entries)
             confirmations={c.id:c.data for c in db.scalars(select(Confirmation).where(Confirmation.session_id==row.id))}
             operation_ids=tuple(db.scalars(select(Operation.id).where(Operation.session_id==row.id)))
             data=guard_data if guard_data is not None else self._guard_view(row,command,entries)
+            if 'no_answer_after_followup' in data.get('routing_decision',{}).get('reason_codes',[]):
+                data={**data,'trusted_followup':self.has_trusted_followup(case)}
             self._guard().authorize(case,data,command,entries,
                 GuardContext(confirmations=confirmations,operation_ids=operation_ids,now=now()))
             return None
@@ -721,7 +749,7 @@ class Coordinator:
         这样派发前预检与真正派发不会口径漂移。
         """
         data=dict(row.data)
-        used=[e for e in entries if e.approved_text and e.approved_text in decision.reply_text]
+        used=[e for e in entries if e.kind!='qa' and e.approved_text and e.approved_text in decision.reply_text]
         if used and row.data.get('verified'):
             notifications=list(row.data.get('notifications') or [])
             notifications.append({'kind':'explanation','message_id':str(assistant_id),
@@ -779,10 +807,13 @@ class Coordinator:
 
     def make_record(self,row,case,operation_ids,contact='verified'):
         entries=self.services.knowledge.lookup(case.scenario_id,'',['synthetic'],row.data['knowledge_version']) if row.data.get('explained') else []
-        return CallRecord(record_id=UUID(new_id()),record_revision=1,session_id=row.id,application_id=row.application_id,
+        with self.repo.read() as db:
+            prior=db.scalar(select(Record).where(Record.session_id==row.id))
+            prior_data=prior.data if prior else None
+        return CallRecord(record_id=prior_data['record_id'] if prior_data else UUID(new_id()),record_revision=prior_data['record_revision']+1 if prior_data else 1,session_id=row.id,application_id=row.application_id,
             case_revision=row.data['case_revision'],contact_status=contact,
-            explanation_status='completed' if row.data.get('explained') else 'not_started',reason_codes=[case.scenario_id] if row.data.get('verified') else [],
-            rectification_items=[case.slots['remedy']] if row.data.get('explained') else [],source_refs=[ref for e in entries for ref in e.source_refs],operation_refs=operation_ids,
+            explanation_status='completed' if row.data.get('explained') else 'not_required' if row.data['route']=='jingmai' else 'not_started',reason_codes=[case.scenario_id] if row.data.get('verified') else [],
+            rectification_items=[case.slots['remedy']] if row.data.get('explained') else [],source_refs=list({json.dumps(ref.model_dump(),sort_keys=True):ref for e in entries for ref in e.source_refs}.values()),operation_refs=operation_ids,
             strategy_version=row.data['strategy_version'],rule_version=row.data['rule_version'],knowledge_version=row.data['knowledge_version'])
 
     def save_non_action_record(self,db,row,case,contact):
@@ -842,7 +873,7 @@ class Coordinator:
                 record=CallRecord.model_validate(op.data['writeback_record'])
             elif 'case_snapshot' in op.data:
                 case=ReviewCase.model_validate(op.data['case_snapshot'])
-                record=self.make_record(row,case,[UUID(oid)])
+                record=self.make_record(row,case,[UUID(oid)],contact=row.data.get('contact_outcome','unknown'))
                 op.data={**op.data,'writeback_record':record.model_dump(mode='json')}
             else:
                 case=self.services.cases.get_case(row.owner,row.application_id)
@@ -854,7 +885,7 @@ class Coordinator:
                     transition(db,row,'MANUAL_REVIEW')
                     emit(db,row,SessionEnded(type='session.ended',reason='stale_revision'))
                     return
-                record=self.make_record(row,case,[UUID(oid)])
+                record=self.make_record(row,case,[UUID(oid)],contact=row.data.get('contact_outcome','unknown'))
                 op.data={**op.data,'writeback_record':record.model_dump(mode='json')}
             transition(db,row,'WRITEBACK_PENDING')
             writeback_attempts=op.data.get('writeback_attempts',0)

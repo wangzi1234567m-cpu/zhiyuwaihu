@@ -51,7 +51,7 @@ def create_app(services=None, *, tts=None, realtime_business=None,
             else:
                 await coordinator.shutdown()
 
-    app=FastAPI(title='智语外呼文本联调骨架',version='0.3.0',lifespan=lifespan)
+    app=FastAPI(title='智语外呼资审工作台',version='0.4.1',lifespan=lifespan)
     app.state.services,app.state.coordinator=services,coordinator
     app.state.realtime=realtime
 
@@ -87,7 +87,7 @@ def create_app(services=None, *, tts=None, realtime_business=None,
 
     def owner(request: Request):
         try:
-            value=signer.loads(request.cookies.get('zhiyu_session',''),max_age=8*3600)
+            value=signer.loads(request.cookies.get(settings.session_cookie_name,''),max_age=8*3600)
             if value.get('owner') not in ['demo','other']: raise BadSignature('owner')
             return value['owner']
         except (BadSignature,SignatureExpired):
@@ -96,6 +96,32 @@ def create_app(services=None, *, tts=None, realtime_business=None,
     def key(value: str | None):
         if not value or len(value)>100: raise DomainError('INVALID_IDEMPOTENCY_KEY','需要长度不超过100的Idempotency-Key',422)
         return value
+
+    def staff_owner(request: Request):
+        try:
+            value=signer.loads(request.cookies.get(settings.staff_cookie_name,''),max_age=8*3600,salt='staff-v1')
+            if value.get('role')!='staff' or value.get('owner') not in ('demo','other'):
+                raise BadSignature('staff')
+            return value['owner']
+        except (BadSignature,SignatureExpired):
+            raise DomainError('STAFF_REQUIRED','需要工作人员身份登录',403)
+
+    @app.post('/api/v1/auth/staff/login',response_model=LoginResult)
+    def staff_login(body:LoginRequest):
+        import secrets
+        if (settings.environment not in ('development','test','staging') or not settings.staff_password
+                or (settings.environment=='staging' and (not settings.public_origin.startswith('https://') or len(settings.staff_password)<16 or len(settings.cookie_secret)<32 or settings.cookie_secret.startswith('local-')))):
+            raise DomainError('STAFF_LOGIN_DISABLED','工作人员登录尚未安全配置',503)
+        if not secrets.compare_digest(body.password,settings.staff_password):
+            raise DomainError('BAD_CREDENTIALS','工作人员登录失败',401)
+        response=JSONResponse({'owner':body.username})
+        options=dict(httponly=True,samesite='strict',secure=settings.public_origin.startswith('https://'),max_age=8*3600)
+        response.set_cookie(settings.staff_cookie_name,signer.dumps({'owner':body.username,'role':'staff'},salt='staff-v1'),**options)
+        response.set_cookie(settings.session_cookie_name,signer.dumps({'owner':body.username}),**options)
+        return response
+
+    from .staff_routes import mount_staff
+    mount_staff(app,coordinator,staff_owner,key)
 
     async def authorize_realtime(user, sid):
         # Entire short transaction stays in one worker thread, never blocks audio tasks.
@@ -128,7 +154,8 @@ def create_app(services=None, *, tts=None, realtime_business=None,
         if not secrets.compare_digest(body.password,settings.demo_password):
             raise DomainError('BAD_CREDENTIALS','登录失败',401)
         response=JSONResponse({'owner':body.username})
-        response.set_cookie('zhiyu_session',signer.dumps({'owner':body.username}),httponly=True,samesite='strict',
+        response.delete_cookie(settings.staff_cookie_name)
+        response.set_cookie(settings.session_cookie_name,signer.dumps({'owner':body.username}),httponly=True,samesite='strict',
             secure=settings.public_origin.startswith('https://'),max_age=8*3600)
         return response
 
@@ -141,7 +168,8 @@ def create_app(services=None, *, tts=None, realtime_business=None,
         if body.username!='demo' or not secrets.compare_digest(body.password,settings.staging_password):
             raise DomainError('BAD_CREDENTIALS','登录失败',401)
         response=JSONResponse({'owner':'demo'})
-        response.set_cookie('zhiyu_session',signer.dumps({'owner':'demo'}),httponly=True,samesite='strict',secure=True,max_age=3600)
+        response.delete_cookie(settings.staff_cookie_name)
+        response.set_cookie(settings.session_cookie_name,signer.dumps({'owner':'demo'}),httponly=True,samesite='strict',secure=True,max_age=3600)
         return response
 
     @app.get('/api/v1/capabilities',response_model=Capabilities)

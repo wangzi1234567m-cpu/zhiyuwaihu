@@ -263,9 +263,7 @@ class SimulatedAgent:
                 action_payload=payload, evidence_message_ids=[input.message_id],
                 knowledge_entry_ids=[entry.entry_id], next_state='ACTION_READY',
                 understanding=understanding)
-        payload = RejectPayload(type='reject_application', reason_codes=[case.scenario_id],
-                                written_text=entry.approved_text,
-                                knowledge_entry_ids=[entry.entry_id])
+        payload = None  # Written payload is constructed only by Coordinator.
         return AgentDecision(
             reply_text=text_out(self.spec.action_notice), proposed_action='reject_application',
             action_payload=payload, evidence_message_ids=[input.message_id],
@@ -310,9 +308,7 @@ class SimulatedAgent:
                                  evidence_message_ids=[message_id],
                                  knowledge_entry_ids=[entry.entry_id],
                                  next_state='ACTION_READY')
-        payload = RejectPayload(type='reject_application', reason_codes=[case.scenario_id],
-                                written_text=entry.approved_text,
-                                knowledge_entry_ids=[entry.entry_id])
+        payload = None  # Written payload is constructed only by Coordinator.
         return AgentDecision(reply_text=self.spec.action_notice, proposed_action='reject_application',
                              action_payload=payload, evidence_message_ids=[message_id],
                              knowledge_entry_ids=[entry.entry_id], next_state='ACTION_READY')
@@ -412,7 +408,7 @@ class Simulator:
 
         case = scenario.case
         entries = scenario.knowledge
-        channel = published_channel(entries) or scenario.channel
+        channel = scenario.channel
         outcome = 'no_answer' if scenario.last_contact_outcome == 'no_answer' else 'unknown'
         outcome_source = 'domain_event' if outcome != 'unknown' else 'none'
 
@@ -634,6 +630,9 @@ class Simulator:
                                          for _ in [0]] if explained else [],
             'knowledge_version': KNOWLEDGE_VERSION, 'contact_outcome': contact_outcome,
             'rule_version': production_guard.RULE_VERSION,
+            'contact_outcome_source':contact_source,
+            # This offline corpus explicitly supplies trusted historical followup fixtures.
+            'trusted_followup':scenario.last_contact_outcome=='no_answer' and case.submission_attempt==2 and case.call_attempt>=2,
             'operation_ids': list(operation_ids),
         }
         try:
@@ -702,6 +701,9 @@ class Simulator:
         case = scenario.case
         kind = decision.proposed_action
         payload = decision.action_payload
+        if kind=='reject_application':
+            from ..written import WrittenResponseRenderer
+            payload=WrittenResponseRenderer().payload(case,entries,KNOWLEDGE_VERSION)
         evidence = [_det_id('notif', scenario.scenario_id, str(session_id)),
                     _det_id('identity', scenario.scenario_id, str(session_id))]
         return ActionCommand(
@@ -782,7 +784,7 @@ def compare_with_production(dev_scenarios) -> dict:
     checked = 0
     for scenario in dev_scenarios:
         case = scenario.case
-        channel = published_channel(scenario.knowledge) or scenario.channel
+        channel = scenario.channel
         outcome = 'no_answer' if scenario.last_contact_outcome == 'no_answer' else 'unknown'
         prod = policy.decide(case, knowledge_channel=channel, authorized=scenario.authorized,
                              rule_valid=scenario.rule_valid, contact_outcome=outcome,

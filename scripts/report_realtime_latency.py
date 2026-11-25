@@ -8,15 +8,25 @@ from pathlib import Path
 def summarize(report):
     samples = report['samples']
     values = []
+    all_valid_count = 0
     for sample in samples:
         value = sample.get('effective_answer_ms')
         if sample.get('status') == 'success' and isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
-            values.append(value)
+            all_valid_count += 1
+            if sample.get('cohort', True):values.append(value)
     values.sort()
     def percentile(p):
         return values[max(0, math.ceil(len(values)*p)-1)] if values else None
-    return {'total': len(samples), 'valid': len(values), 'failed_or_missing': len(samples)-len(values),
-            'failure_rate': (len(samples)-len(values))/len(samples) if samples else 1,
+    failed_connections=sum(bool(call.get('failure')) and not call.get('samples') for call in report.get('calls',[]))
+    total_attempts=len(samples)+failed_connections
+    cohort_attempts=sum(sample.get('cohort', True) for sample in samples)+failed_connections
+    all_failure_rate=(total_attempts-all_valid_count)/total_attempts if total_attempts else 1
+    cohort_failure_rate=(cohort_attempts-len(values))/cohort_attempts if cohort_attempts else 1
+    return {'total': total_attempts, 'turn_attempts':len(samples), 'failed_connections_without_turns':failed_connections, 'valid': len(values), 'failed_or_missing': total_attempts-all_valid_count,
+            'extra_setup_successes':all_valid_count-len(values),
+            'cohort_attempts':cohort_attempts, 'cohort_failure_rate':cohort_failure_rate,
+            'acceptance_failure_rate':max(all_failure_rate,cohort_failure_rate),
+            'failure_rate': all_failure_rate,
             'p50_ms': percentile(.5), 'p95_ms': percentile(.95)}
 
 
@@ -29,7 +39,7 @@ def compare(baseline, candidate):
     enough = old['valid'] >= 30 and new['valid'] >= 30
     under_two = new['p50_ms'] is not None and new['p50_ms'] < 2000
     p95_ok = old['p95_ms'] is not None and new['p95_ms'] is not None and new['p95_ms'] <= old['p95_ms']*1.1
-    stable = new['failure_rate'] <= old['failure_rate']
+    stable = new['acceptance_failure_rate'] <= old['acceptance_failure_rate']
     return {'baseline': old, 'candidate': new, 'same_conditions': bool(compatible),
             'controlled_measurement': measured, 'enough_samples': enough,
             'effective_answer_p50_strictly_under_2000ms': under_two,

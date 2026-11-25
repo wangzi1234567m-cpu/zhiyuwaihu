@@ -43,7 +43,7 @@ class DemoAgent:
     async def handle_turn(self, input, context, history, case, knowledge, verified, cancel):
         text = input.text
         state = 'VERIFYING'
-        reply = f'请确认您是否是{case.slots["company_name"]}的联系人。演示中请输入“我是{case.slots["company_name"]}”。'
+        reply = f'请确认您是否是{case.slots["company_name"]}的联系人。请说明您与该公司或店铺的关系。'
         action = 'none'
         payload = None
         if any(w in text for w in ['拒绝','不需要','不要联系','不是','打错']):
@@ -57,8 +57,7 @@ class DemoAgent:
                 state, reply = 'MANUAL_REVIEW', '本骨架暂不自动预约，已标记需要人工协调回电。'
             elif any(w in text for w in ['明白了','了解了','处理吧']):
                 state, reply, action = 'ACTION_READY', '已记录您的反馈，正在提交模拟处理；请以页面业务结果为准。', 'reject_application'
-                payload = RejectPayload(type=action, reason_codes=[case.scenario_id], written_text=knowledge[0].approved_text,
-                    knowledge_entry_ids=[knowledge[0].entry_id])
+                payload = None
             else:
                 state, reply = 'QA', f'{knowledge[0].approved_text}这些均为合成演示规则。您还有什么问题？'
         return AgentDecision(reply_text=reply, proposed_action=action, action_payload=payload,
@@ -148,17 +147,15 @@ class MockBusiness:
             error = ('MOCK_WRITE_FAILED', '模拟业务写入失败')
         elif isinstance(command.payload, RejectPayload):
             payload = command.payload
-            entries = [db.get(Knowledge, str(key)) for key in payload.knowledge_entry_ids]
+            from .written import WrittenResponseRenderer
+            rows=list(db.scalars(select(Knowledge).where(Knowledge.version==session.data['knowledge_version'],
+                Knowledge.data['scenario_id'].as_string()==case.scenario_id).with_for_update()))
             try:
-                reviewed = [render(KnowledgeEntry.model_validate(row.data), case).approved_text
-                            for row in entries if row and row.version == session.data['knowledge_version']
-                            and row.data['channel'] == session.data['route']
-                            and row.data['status'] == 'approved' and not row.data['issue_codes']
-                            and 'synthetic' in row.data['scope']]
-            except ValueError:
-                reviewed = []
-            if (not entries or len(reviewed) != len(entries) or payload.written_text not in reviewed
-                    or payload.reason_codes != [case.scenario_id]):
+                authoritative=WrittenResponseRenderer().render(case,[KnowledgeEntry.model_validate(row.data) for row in rows],session.data['knowledge_version'])
+            except DomainError:
+                authoritative=None
+            if (authoritative is None or payload.knowledge_entry_ids!=[authoritative.entry_id]
+                    or payload.written_text!=authoritative.approved_text or payload.reason_codes != [case.scenario_id]):
                 error = ('ACTION_FORBIDDEN', '缺少可渲染的已审核依据或书面意见与审核任务不一致')
             else:
                 details = payload.model_dump(mode='json', exclude={'type'})
@@ -237,6 +234,9 @@ class MockBusiness:
             existing = db.scalar(select(Record).where(Record.session_id == str(record.session_id)))
             if existing is None:
                 db.add(Record(id=str(record.record_id), session_id=str(record.session_id), data=record.model_dump(mode='json')))
+            elif (existing.id==str(record.record_id) and record.record_revision>existing.data['record_revision']
+                  and existing.data['application_id']==str(record.application_id) and existing.data['case_revision']==record.case_revision):
+                existing.data=record.model_dump(mode='json')
 
 class DisabledVoice:
     def available(self): return False

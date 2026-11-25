@@ -2,8 +2,10 @@
 import asyncio
 import time
 from collections import deque
-from contextlib import suppress
+from contextlib import suppress, aclosing
 from uuid import uuid4
+
+from .diagnostics import RealtimeProbe, now_ns
 
 from ..realtime_contract.dto import (
     BusinessTurnInput, EventSubscription, GenerationInterrupt, PlaybackReport,
@@ -19,6 +21,9 @@ class RealtimeSession:
         self.connected, self.browser_ready = asyncio.Event(), asyncio.Event()
         self.closed = self.input_ready = self.attached = False
         self.tasks = set()
+        self.probe = RealtimeProbe(manager.config.realtime_diagnostics_enabled)
+        self.last_input_at = self.last_send_at = None
+        self.input_sequence = 0
         self.audio = asyncio.Queue(25)  # 25 x 20ms = 500ms input maximum.
         self.events = asyncio.Queue(128)
         self.notices = asyncio.Queue(128)
@@ -57,7 +62,7 @@ class RealtimeSession:
                 raise
             except Exception as error:
                 # Exception messages can contain provider credentials. Publish stable codes only.
-                await self.fail(getattr(getattr(error, 'error', None), 'code', 'REALTIME_TASK_FAILED'))
+                await self.fail('NATIVE_INPUT_ASSOCIATION_UNCERTAIN' if str(error)=='NATIVE_INPUT_ASSOCIATION_UNCERTAIN' else getattr(getattr(error, 'error', None), 'code', 'REALTIME_TASK_FAILED'))
         task = asyncio.create_task(guarded())
         self.tasks.add(task)
         def finished(completed):
@@ -86,7 +91,7 @@ class RealtimeSession:
             self.spawn(self.fail('WEBRTC_BAD_INPUT_FRAME'))
             return
         try:
-            self.audio.put_nowait(pcm)
+            self.audio.put_nowait((pcm, now_ns() if self.probe.enabled else 0))
         except asyncio.QueueFull:
             self.input_ready = False
             self.spawn(self.fail('WEBRTC_INPUT_BACKPRESSURE'))
@@ -137,10 +142,23 @@ class RealtimeSession:
 
     async def send_audio(self):
         while not self.closed:
-            pcm = await self.audio.get()
+            pcm, queued_at = await self.audio.get()
+            started = now_ns() if self.probe.enabled else 0
+            self.input_sequence += 1
             try:
                 await self.provider.send_audio(pcm)
             finally:
+                if self.probe.enabled:
+                    from array import array
+                    values=array('h',pcm)
+                    self.probe.emit('input_frame', sequence=self.input_sequence,
+                        rms=(sum(v*v for v in values)/len(values))**.5/32768,
+                        queued_at_ns=queued_at, queue_wait_ns=started-queued_at,
+                        received_gap_ns=queued_at-self.last_input_at if self.last_input_at else None,
+                        send_gap_ns=started-self.last_send_at if self.last_send_at else None,
+                        send_total_ns=now_ns()-started, queue_depth=self.audio.qsize(),
+                        frame_duration_ms=20)
+                    self.last_input_at, self.last_send_at = queued_at, started
                 self.audio.task_done()
 
     async def read_provider(self):
@@ -310,16 +328,18 @@ class RealtimeSession:
         first = True
         playback_id = self.playback_id
         started = time.monotonic()
-        async for pcm in self.speech.stream(segment.text if segment else '正在核实，请稍等。', self.cancel_audio):
-            if epoch != self.epoch or self.closed or self.cancel_audio.is_set():
-                return
-            if first:
-                self.metric('tts_first_pcm', (time.monotonic()-started)*1000)
-                if needs_ready:
-                    async with asyncio.timeout(3):
-                        await self.playback_gate.wait()
-                first = False
-            await self.media.output.write(pcm, epoch)
+        chunks=self.speech.stream(segment.text if segment else '正在核实，请稍等。',self.cancel_audio)
+        async with aclosing(chunks):
+            async for pcm in chunks:
+                if epoch != self.epoch or self.closed or self.cancel_audio.is_set():
+                    return
+                if first:
+                    self.metric('tts_first_pcm', (time.monotonic()-started)*1000)
+                    if needs_ready:
+                        async with asyncio.timeout(3):
+                            await self.playback_gate.wait()
+                    first = False
+                await self.media.output.write(pcm, epoch)
         if epoch != self.epoch or self.cancel_audio.is_set():
             return
         if first:
@@ -384,6 +404,8 @@ class RealtimeSession:
         elif command.type == 'playback_ready' and command.playback_instance_id == self.playback_id:
             self.playback_gate.set()
         elif command.type == 'interrupt':
+            if command.playback_instance_id is not None and command.playback_instance_id != self.playback_id:
+                return  # Late acoustic interruption for an old playback must not cancel new input.
             self.input_epoch = -1  # Suppress unfinished input until a new provider speech_started.
             self.stop_output()
             self.spawn(self.interrupt_business())

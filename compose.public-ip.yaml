@@ -1,4 +1,4 @@
-# Alternative to compose.public.yaml. Requires a trusted IP certificate first.
+# HTTPS gateway overlay. Requires a trusted IP certificate first.
 services:
   db:
     ports: !reset []

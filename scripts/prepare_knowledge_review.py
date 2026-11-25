@@ -45,8 +45,16 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('staging', type=Path)
     parser.add_argument('--source-opinion', type=Path, help='Private delegated mapping review dated 2026-11-21')
+    parser.add_argument('--all-scenes', action='store_true')
+    parser.add_argument('--delegated-review', action='store_true',help='Only explicitly delegated, inspected source cells; records the real single reviewer')
     parser.add_argument('--release', required=True)
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    save_private_json(args.output, draft(args.staging.read_bytes(), args.release,
-                                        args.source_opinion.read_bytes() if args.source_opinion else None))
+    if args.all_scenes:
+        from workbench_knowledge import candidates
+        raw=args.staging.read_bytes()
+        result=candidates(clean(json.loads(raw)),args.release,delegated_review=args.delegated_review,staging_sha256=sha256(raw).hexdigest())
+    else:
+        if args.delegated_review:parser.error('--delegated-review requires --all-scenes')
+        result=draft(args.staging.read_bytes(),args.release,args.source_opinion.read_bytes() if args.source_opinion else None)
+    save_private_json(args.output,result)

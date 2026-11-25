@@ -5,6 +5,9 @@ import type {AgoraVoiceAI, TranscriptHelperItem, UserTranscription, AgentTranscr
 import type {RTMClient} from 'agora-rtm';
 import type {components} from './api.generated';
 
+import SubtitlePanel from './SubtitlePanel';
+import CallStatus from './CallStatus';
+
 type View=components['schemas']['SessionView'];
 type Credentials=components['schemas']['MediaCredentials'];
 type Transcript=TranscriptHelperItem<Partial<UserTranscription|AgentTranscription>>[];
@@ -16,8 +19,9 @@ async function command<T>(sid:string,suffix:string,body:unknown={}):Promise<T>{
   return data;
 }
 
-export default function VoicePanel({view,onError}:{view:View;onError:(message:string)=>void}){
+export default function VoicePanel({view,onError,onStatus}:{view:View;onError:(message:string)=>void;onStatus?:(text:string)=>void}){
   const [status,setStatus]=useState('尚未接入麦克风');
+  useEffect(()=>{onStatus?.(status);},[status,onStatus]);
   const [active,setActive]=useState(false);
   const [working,setWorking]=useState(false);
   const [transcript,setTranscript]=useState<Transcript>([]);
@@ -25,11 +29,16 @@ export default function VoicePanel({view,onError}:{view:View;onError:(message:st
   const alive=useRef(true);
   const blockedAudio=useRef(false);
   const engaged=useRef(false);
+  const accepting=useRef(false);
+  const invalidTurns=useRef(new Set<number>());
+  const bottom=useRef<HTMLDivElement>(null);
+  useEffect(()=>{bottom.current?.scrollIntoView({block:'nearest'});},[transcript]);
   const turn=useRef<number|undefined>(undefined);
   const sid=view.session_id;
   const uid=useRef<number>(102);
 
   async function release(){
+    accepting.current=false;
     const r=resources.current;resources.current={};
     r.remote?.stop();r.mic?.stop();r.mic?.close();
     r.ai?.destroy();
@@ -58,7 +67,7 @@ export default function VoicePanel({view,onError}:{view:View;onError:(message:st
   useEffect(()=>{
     if(!active)return;
     const heartbeat=setInterval(()=>{command(sid,'voice/heartbeat',{client_event_id:crypto.randomUUID()}).catch(()=>{
-      setStatus('后端连接中断，请结束并重建通话');
+      setStatus('连接失败');setActive(false);void release();
       resources.current.remote?.stop();
     });},10000);
     const deadline=setTimeout(()=>void stop(),180000);
@@ -68,7 +77,7 @@ export default function VoicePanel({view,onError}:{view:View;onError:(message:st
   useEffect(()=>{if(view.ended&&active){void release();setActive(false);setStatus('业务会话已结束');}},[view.ended,active]);
 
   async function start(){
-    setWorking(true);setStatus('正在准备麦克风与媒体连接');
+    setWorking(true);setStatus('正在连接');accepting.current=true;
     try{
       if(!navigator.mediaDevices?.getUserMedia)throw new Error('麦克风需要HTTPS或localhost安全页面');
       const [{default:AgoraRTC},{RTMClient:RTM},{AgoraVoiceAI,AgoraVoiceAIEvents,TranscriptHelperMode}]=await Promise.all([
@@ -102,16 +111,22 @@ export default function VoicePanel({view,onError}:{view:View;onError:(message:st
       const ai=await AgoraVoiceAI.init({rtcEngine:rtc,rtmEngine:rtm,renderMode:TranscriptHelperMode.TEXT,enableLog:false,enableAgoraMetrics:false});
       resources.current.ai=ai;
       ai.on(AgoraVoiceAIEvents.TRANSCRIPT_UPDATED,items=>{
-        if(!alive.current)return;
-        setTranscript(items); // Toolkit delivers the entire history; never append it.
+        if(!alive.current||!accepting.current)return;
+        setTranscript(items.filter(item=>!invalidTurns.current.has(item.turn_id)||Number(item.uid)!==uid.current)); // Toolkit delivers the entire history; never append it.
         const latest=items.at(-1);
         if(latest)turn.current=latest.turn_id;
       });
       ai.on(AgoraVoiceAIEvents.AGENT_THINKING_CHANGED,(_,thinking)=>{
+        if(!accepting.current)return;
+        setStatus(thinking?'AI 正在思考':'正在聆听');
         if(thinking){blockedAudio.current=false;resources.current.remote?.play();}
       });
+      ai.on(AgoraVoiceAIEvents.AGENT_SPEAKING_CHANGED,(_,speaking)=>{if(accepting.current)setStatus(speaking?'AI 正在播报':'正在聆听');});
       ai.on(AgoraVoiceAIEvents.AGENT_INTERRUPTED,(_,event)=>{
         resources.current.remote?.stop();blockedAudio.current=true;
+        if(turn.current!==undefined)invalidTurns.current.add(turn.current);
+        setTranscript(items=>items.filter(i=>Number(i.uid)!==uid.current||i.status!==0));
+        setStatus('已打断');
         void command(sid,'voice/telemetry',{client_event_id:crypto.randomUUID(),provider_turn_id:event.turnID,kind:'interrupted',
           clock_domain:'browser.performance',monotonic_ms:performance.now(),measurement_method:'agora_toolkit_interrupted_event'}).catch(()=>{});
       });
@@ -130,7 +145,7 @@ export default function VoicePanel({view,onError}:{view:View;onError:(message:st
       if(!alive.current){await release();return;}
       await command(sid,'voice/start',{expected_revision:view.state_revision});
       if(!alive.current){await command(sid,'end',{reason:'page_closed'}).catch(()=>{});await release();return;}
-      setActive(true);setStatus('语音已连接，AI将主动开场');
+      setActive(true);setStatus('正在聆听');
     }catch(e){
       await command(sid,'end',{reason:'voice_start_failed'}).catch(()=>{});
       await release();
@@ -140,15 +155,16 @@ export default function VoicePanel({view,onError}:{view:View;onError:(message:st
 
   async function interrupt(){
     resources.current.remote?.stop();blockedAudio.current=true;
+        if(turn.current!==undefined)invalidTurns.current.add(turn.current);
+        setTranscript(items=>items.filter(i=>Number(i.uid)!==uid.current||i.status!==0));
+        setStatus('已打断');
     try{await command(sid,'voice/interrupt',{client_event_id:crypto.randomUUID(),provider_turn_id:turn.current});setStatus('已请求打断，您可以继续说话');}
     catch(e){onError(e instanceof Error?e.message:String(e));}
   }
 
-  return <section className="voice-panel"><h2>实时语音联调</h2><p>{status}</p><p className="hint">使用麦克风和耳机。单次最多三分钟；本轮默认关闭语音业务写入。</p>
-    <div className="actions"><button disabled={active||working||view.ended||view.state!=='CASE_READY'} onClick={()=>void start()}>开始语音</button>
-    <button disabled={!active||working} onClick={()=>void interrupt()}>语音打断</button><button disabled={!active||working} onClick={()=>void stop()}>结束语音</button></div>
-    <div className="messages" aria-live="polite">{transcript.map((item,index)=><article key={`${item.turn_id}:${item.stream_id}:${index}`} className={Number(item.uid)===uid.current?'assistant':'user'}>
-      <strong>{Number(item.uid)===uid.current?'AI':'商户'}</strong><p>{item.text}</p></article>)}</div>
-    <p className="hint">字幕来自声网消息；播放状态与SDK事件不等于端到端音频时延测量。</p>
+  return <section className="voice-panel">
+    {!transcript.length&&view.messages?.length?<SubtitlePanel view={view} live="" generation={null}/>:<div className="messages" role="log" aria-label="对话字幕" aria-live="polite">{!transcript.length&&<div className="empty"><span className="empty-mark"><img src="/zhiyu-logo.jpg" alt="" width="80" height="80"/></span><h2>让沟通，从一句你好开始</h2><p>开始通话后，对话字幕将在这里实时显示。</p></div>}{transcript.map((item,index)=><article key={`${item.turn_id}:${item.stream_id}:${index}`} className={Number(item.uid)===uid.current?'assistant':'user'}><strong>{Number(item.uid)===uid.current?'AI 助手':'商户'}{item.status===0?' · 正在转写':''}</strong><p>{item.text}</p>{item.status===2&&<small>已打断</small>}</article>)}<div ref={bottom}/></div>}
+    <CallStatus active={active} working={working} status={view.ended?'通话已结束':status}/>
+    <div className="actions"><button disabled={active||working||view.ended||view.state!=='CASE_READY'} onClick={()=>void start()}>开始通话</button><button className="secondary" disabled={!active||working} onClick={()=>void interrupt()}>打断播报</button><button className="secondary" disabled={!active||working} onClick={()=>void stop()}>结束通话</button></div>
   </section>;
 }

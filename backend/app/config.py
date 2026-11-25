@@ -11,8 +11,11 @@ class Settings:
     database_url: str = os.getenv('DATABASE_URL', 'postgresql+psycopg://zhiyu:local-dev-only@localhost:5432/zhiyu')
     environment: str = os.getenv('APP_ENV', 'development')
     cookie_secret: str = os.getenv('COOKIE_SECRET', 'local-development-secret-change-before-exposure')
+    session_cookie_name: str = os.getenv('SESSION_COOKIE_NAME', 'zhiyu_session')
+    staff_cookie_name: str = os.getenv('STAFF_COOKIE_NAME', 'zhiyu_staff')
     public_origin: str = os.getenv('PUBLIC_ORIGIN', 'http://localhost:3000')
     demo_password: str = os.getenv('DEMO_PASSWORD', 'demo-local-only')
+    staff_password: str = os.getenv('STAFF_PASSWORD', 'staff-local-only' if os.getenv('APP_ENV','development') in ('development','test') else '')
     token_delay: float = float(os.getenv('FAKE_TOKEN_DELAY', '0.015'))
     faults_enabled: bool = os.getenv('ENABLE_FAULTS', 'false').lower() == 'true'
     model_provider: str = os.getenv('MODEL_PROVIDER', 'fake')
@@ -46,6 +49,12 @@ class Settings:
     max_daily_model_calls: int = int(os.getenv('MAX_DAILY_MODEL_CALLS', '30'))
     max_daily_voice_calls: int = int(os.getenv('MAX_DAILY_VOICE_CALLS', '3'))
     staging_password: str = os.getenv('STAGING_PASSWORD', '')
+    realtime_speech_backend: str = os.getenv('REALTIME_SPEECH_BACKEND', 'qwen_http')
+    realtime_vad_mode: str = os.getenv('REALTIME_VAD_MODE', 'server_vad')
+    realtime_tts_drain_enabled: bool = os.getenv('REALTIME_TTS_DRAIN_ENABLED', 'false').lower() == 'true'
+    realtime_vad_silence_ms: int = int(os.getenv('REALTIME_VAD_SILENCE_MS', '400'))
+    realtime_vad_threshold: float = float(os.getenv('REALTIME_VAD_THRESHOLD', '0.5'))
+    realtime_diagnostics_enabled: bool = os.getenv('REALTIME_DIAGNOSTICS_ENABLED', 'false').lower() == 'true'
     realtime_enabled: bool = os.getenv('REALTIME_WEBRTC_ENABLED', 'false').lower() == 'true'
     realtime_application_ids: str = os.getenv('REALTIME_APPLICATION_IDS', '')
     realtime_stun_urls: str = os.getenv('REALTIME_STUN_URLS', '[]')

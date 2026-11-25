@@ -30,8 +30,14 @@ def validate(staging_bytes, review):
     if not approved:
         raise ValueError('Release requires manually approved entries')
     reviewers = review['reviewers']
-    if (not isinstance(reviewers, list) or
-            len({name.strip() for name in reviewers if isinstance(name, str) and name.strip()}) < 2):
+    unique={name.strip() for name in reviewers if isinstance(name,str) and name.strip()} if isinstance(reviewers,list) else set()
+    delegated=review.get('review_policy')=='delegated_source_review'
+    source_review=review.get('source_review',{})
+    if delegated:
+        if (len(unique)!=1 or source_review.get('reviewer') not in unique
+                or not source_review.get('authorization') or not source_review.get('scope')):
+            raise ValueError('Delegated review requires the actual reviewer, explicit authorization and inspected source scope')
+    elif len(unique)<2:
         raise ValueError('Release requires two distinct reviewers')
     for entry in entries:
         if entry.knowledge_version != version or entry.status == 'draft':

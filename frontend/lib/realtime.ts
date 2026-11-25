@@ -18,6 +18,8 @@ export class RealtimeVoice {
   private closed=false;
   private lastRemote=0;
   private remoteObserved=false;
+  private ready=false;
+  private reportConnection() {if(this.ready&&this.pc?.connectionState==='connected')this.callbacks.status('实时语音已连接，正在聆听');}
   private stoppedEpoch=0;
   private awaitingStop=false;
   private pendingPermit?:Notice;
@@ -31,9 +33,10 @@ export class RealtimeVoice {
   private interruptedAt=0;
   private controlledEnd=false;
   private markInputEnd=()=>{this.lastSpeechEnd=performance.now();this.controlledEnd=true;};
-  private callbacks:{status:(text:string)=>void;error:(text:string)=>void};
+  private callbacks:{status:(text:string)=>void;error:(text:string)=>void;inputLevel?:(level:number)=>void};
+  private lastLevelReport=0;
 
-  constructor(private sid:string, callbacks:{status:(text:string)=>void;error:(text:string)=>void}) {
+  constructor(private sid:string, callbacks:{status:(text:string)=>void;error:(text:string)=>void;inputLevel?:(level:number)=>void}) {
     this.callbacks=callbacks;
     window.addEventListener('zhiyu-realtime-input-ended',this.markInputEnd);
   }
@@ -42,8 +45,8 @@ export class RealtimeVoice {
       method:body===undefined?'GET':'POST',signal:this.abort.signal,
       headers:{'Content-Type':'application/json','X-Requested-With':'zhiyu'},
       body:body===undefined?undefined:JSON.stringify(body)});
-    const data=await response.json();
-    if(!response.ok)throw new Error(data.message??'实时连接请求失败');
+    const data=await response.json().catch(()=>{throw new Error(`${suffix==='ice'?'ICE凭据':'媒体协商'}：后端或代理未就绪`);});
+    if(!response.ok)throw new Error(`${suffix==='ice'?'ICE凭据':'媒体协商'}：${data.message??'请求失败'}`);
     return data as T;
   }
   private send(value:Pick<Control,'type'> & Partial<Omit<Control,'type'|'request_id'>>) {
@@ -77,6 +80,7 @@ export class RealtimeVoice {
           this.metric('first_answer_audio',now-this.lastSpeechEnd);
         }
       } else {
+        if(now-this.lastLevelReport>=100){this.lastLevelReport=now;this.callbacks.inputLevel?.(rms);}
         if(rms>0.025) {
           this.lastVoice=now;this.speechBlocks++;
           if(this.speechBlocks>=3&&!this.speaking) {
@@ -96,16 +100,17 @@ export class RealtimeVoice {
   }
   private async notice(data:Notice) {
     if(this.closed)return;
-    if(data.type==='error')throw new Error(`实时通话停止：${data.code??'UNKNOWN'}`);
-    if(data.type==='ready')this.callbacks.status('实时语音已连接，可以讲话');
+    if(data.type==='error')throw new Error(data.code==='NATIVE_INPUT_ASSOCIATION_UNCERTAIN'?'本次语音分段无法可靠关联，请重新连接后完整表达。':`实时通话停止：${data.code??'UNKNOWN'}`);
+    if(data.type==='ready'){this.ready=true;this.reportConnection();}
     if(data.type==='waiting')this.callbacks.status(data.text??'正在核实，请稍等');
     if(data.type==='playback.stop') {
+      this.callbacks.status('已打断');
       this.stoppedEpoch=Math.max(this.stoppedEpoch,data.epoch??0);
       this.awaitingStop=false;this.mute();
     }
     if(data.type==='playback.permit') {
       if(this.awaitingStop||(data.epoch??0)<this.stoppedEpoch)return;
-      this.pendingPermit=data;this.currentGeneration=data.generation_id;
+      this.pendingPermit=data;this.currentGeneration=data.generation_id;this.callbacks.status('AI 正在播报');
       if(data.requires_ready) {
         if(this.drain)clearInterval(this.drain);
         const requested=performance.now();
@@ -130,19 +135,24 @@ export class RealtimeVoice {
   }
   interrupt() {
     if(this.closed)return;
+    const playback=this.pendingPermit?.playback_instance_id;
     this.interruptedAt=performance.now();this.awaitingStop=true;this.mute();
-    this.send({type:'interrupt'});
+    this.send({type:'interrupt',...(playback?{playback_instance_id:playback}:{})});
     this.callbacks.status('已打断，可以继续讲话');
   }
   async start(revision:number) {
+    let stage='麦克风授权';
     try {
+      this.callbacks.status(stage);
       if(!navigator.mediaDevices?.getUserMedia)throw new Error('麦克风需要HTTPS或localhost');
       this.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
       if(this.closed){this.stream.getTracks().forEach(t=>t.stop());return;}
       this.timer=setTimeout(()=>void this.fail('实时媒体连接超时'),20000);
+      stage='音频采样初始化';this.callbacks.status(stage);
       this.context=new AudioContext();await this.context.resume();
       await this.context.audioWorklet.addModule('/realtime-meter.js');
       await this.meter(this.stream,false);
+      stage='ICE凭据获取';this.callbacks.status(stage);
       const ice=await this.request<components['schemas']['RealtimeIce']>('ice');
       const pc=new RTCPeerConnection({iceServers:ice.ice_servers.map(s=>({urls:s.urls,
         username:s.username??undefined,credential:s.credential??undefined}))});
@@ -155,6 +165,7 @@ export class RealtimeVoice {
         void this.meter(remote,true).catch(()=>void this.fail('无法监测远端音频'));
       };
       pc.onconnectionstatechange=()=>{
+        this.reportConnection();
         if(pc.connectionState==='failed'||pc.connectionState==='disconnected')void this.fail('媒体连接断开，请重新连接');
       };
       this.stream.getTracks().forEach(track=>pc.addTrack(track,this.stream!));
@@ -165,9 +176,11 @@ export class RealtimeVoice {
         this.abort.signal.addEventListener('abort',()=>{pc.removeEventListener('icegatheringstatechange',changed);reject(new Error('连接已取消'));},{once:true});
         changed();
       });
+      stage='WebRTC媒体协商';this.callbacks.status(stage);
       const answer=await this.request<components['schemas']['RealtimeAnswer']>('offer',{
         type:'offer',sdp:pc.localDescription!.sdp,expected_state_revision:revision});
       await pc.setRemoteDescription({type:'answer',sdp:answer.sdp});
+      stage='控制通道连接';this.callbacks.status(stage);
       const ws=new WebSocket(`${location.protocol==='https:'?'wss:':'ws:'}//${location.host}/api/v1/sessions/${this.sid}/realtime/control?binding=${encodeURIComponent(answer.connection_binding)}`);
       this.ws=ws;
       await new Promise<void>((resolve,reject)=>{
@@ -183,7 +196,7 @@ export class RealtimeVoice {
       if(this.timer)clearTimeout(this.timer);
       this.timer=setTimeout(()=>void this.close(true),180000);
     } catch(error) {
-      await this.close();throw error;
+      await this.close();throw new Error(`${stage}失败：${error instanceof Error?error.message:String(error)}`);
     }
   }
   private async fail(message:string) {

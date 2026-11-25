@@ -39,6 +39,12 @@ class ReviewCase(DTO):
     callback_requested: bool
     complaint_risk: bool
     synthetic: Literal[True] = True
+    default_route: Literal['phone', 'jingmai', 'manual'] = 'phone'
+    scene_name: str = ''
+    business_category: str = ''
+    source_refs: list[SourceRef] = Field(default_factory=list)
+    contact_outcome: Literal['connected','verified','wrong_person','refused','no_answer','disconnected','not_required','unknown'] = 'unknown'
+    contact_event_id: UUID | None = None
 
 class RoutingEvidence(DTO):
     """规则命中证据：为什么得到这个 route，可追溯、不含个人信息。"""
@@ -64,7 +70,7 @@ class RoutingDecision(DTO):
 State = Literal["CASE_READY", "ROUTING", "OPENING", "VERIFYING", "EXPLAINING", "QA", "CALLBACK_PENDING", "CLOSING", "ACTION_READY", "EXECUTING", "RECONCILING", "WRITEBACK_PENDING", "CLOSED", "MANUAL_REVIEW"]
 
 #: 真实联系结果。unknown 表示没有可信联系事件，不能当成未接通或已核验。
-ContactOutcome = Literal["verified", "wrong_person", "refused", "no_answer", "disconnected", "not_required", "unknown"]
+ContactOutcome = Literal["connected", "verified", "wrong_person", "refused", "no_answer", "disconnected", "not_required", "unknown"]
 
 class NotificationEvidence(DTO):
     """已发出的告知证据；由服务端在消息落库后写入，Agent 只读。"""
@@ -214,7 +220,7 @@ class CallRecord(DTO):
     # 兼容增量：新增 "unknown"。没有可信联系事件时必须如实记录 unknown，
     # 不能用 not_required（代表无需核验）或 disconnected（代表断线）冒充。
     # 既有取值与消费者语义不变。
-    contact_status: Literal["verified", "wrong_person", "refused", "no_answer", "disconnected", "not_required", "unknown"]
+    contact_status: ContactOutcome
     explanation_status: Literal["not_started", "partial", "completed", "unknown", "not_required"]
     reason_codes: list[str]
     rectification_items: list[str]
@@ -294,7 +300,15 @@ class GenerationFinished(DTO):
     status: Literal['completed', 'interrupted', 'failed']
     message_id: UUID
 
-Payload = Annotated[StateChanged | TurnStarted | OperationUpdated | KnowledgeUsed | TextDelta | TurnInterrupted | MetricRecorded | SessionEnded | GenerationFinished, Field(discriminator="type")]
+class ContactRecorded(DTO):
+    type: Literal['contact.recorded'] = 'contact.recorded'
+    event_id: UUID
+    outcome: ContactOutcome
+    call_attempt: int
+    source: Literal['synthetic_adapter'] = 'synthetic_adapter'
+
+
+Payload = Annotated[StateChanged | TurnStarted | OperationUpdated | KnowledgeUsed | TextDelta | TurnInterrupted | MetricRecorded | SessionEnded | GenerationFinished | ContactRecorded, Field(discriminator="type")]
 
 class Event(DTO):
     schema_version: Literal["0.3.0"] = "0.3.0"
@@ -391,7 +405,7 @@ SessionView.model_rebuild()
 
 PUBLIC_MODELS = [SourceRef, KnowledgeEntry, ReviewCase, RoutingDecision, RoutingEvidence, NotificationEvidence, CreateSession, TextTurn, StartSession, InterruptRequest, SessionContext, TurnInput, CallbackConfirmation, ActionCommand, ApiError, OperationResult, CallRecord, AgentDecision, Understanding, Event, SessionView]
 PUBLIC_MODELS += [MessageView, AcceptedTurn, Interrupted, EndRequest, LoginRequest, LoginResult, ApplicationView, Capabilities]
-PUBLIC_MODELS += [ModelRequest, ModelMessage]
+PUBLIC_MODELS += [ModelRequest, ModelMessage, ContactRecorded]
 
 class MediaCredentials(DTO):
     app_id: str

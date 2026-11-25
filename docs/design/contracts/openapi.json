@@ -1,10 +1,324 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "智语外呼文本联调骨架",
-    "version": "0.3.0"
+    "title": "智语外呼资审工作台",
+    "version": "0.4.1"
   },
   "paths": {
+    "/api/v1/auth/staff/login": {
+      "post": {
+        "summary": "Staff Login",
+        "operationId": "staff_login_api_v1_auth_staff_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/sessions/{sid}": {
+      "get": {
+        "summary": "Session",
+        "operationId": "session_api_v1_staff_sessions__sid__get",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/applications": {
+      "get": {
+        "summary": "Applications",
+        "operationId": "applications_api_v1_staff_applications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/StaffApplication"
+                  },
+                  "type": "array",
+                  "title": "Response Applications Api V1 Staff Applications Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/applications/{aid}": {
+      "get": {
+        "summary": "Detail",
+        "operationId": "detail_api_v1_staff_applications__aid__get",
+        "parameters": [
+          {
+            "name": "aid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Aid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffApplication"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/support-catalog": {
+      "get": {
+        "summary": "Catalog",
+        "operationId": "catalog_api_v1_staff_support_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportCatalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/sessions/{sid}/written-preview": {
+      "get": {
+        "summary": "Preview",
+        "operationId": "preview_api_v1_staff_sessions__sid__written_preview_get",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WrittenPreview"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/sessions/{sid}/reject": {
+      "post": {
+        "summary": "Reject",
+        "operationId": "reject_api_v1_staff_sessions__sid__reject_post",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sid"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteWritten"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/staff/sessions/{sid}/contact-events": {
+      "post": {
+        "summary": "Contact",
+        "operationId": "contact_api_v1_staff_sessions__sid__contact_events_post",
+        "parameters": [
+          {
+            "name": "sid",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Sid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyntheticContact"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/sessions/{sid}/realtime/ice": {
       "get": {
         "summary": "Ice",
@@ -1285,6 +1599,7 @@
           "contact_status": {
             "type": "string",
             "enum": [
+              "connected",
               "verified",
               "wrong_person",
               "refused",
@@ -1538,6 +1853,49 @@
         "additionalProperties": false,
         "type": "object",
         "title": "EndRequest"
+      },
+      "ExecuteWritten": {
+        "properties": {
+          "case_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Case Revision"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Revision"
+          },
+          "knowledge_version": {
+            "type": "string",
+            "title": "Knowledge Version"
+          },
+          "rule_version": {
+            "type": "string",
+            "title": "Rule Version"
+          },
+          "body_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Body Sha256"
+          },
+          "preview_id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Preview Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "case_revision",
+          "expected_revision",
+          "knowledge_version",
+          "rule_version",
+          "body_sha256",
+          "preview_id"
+        ],
+        "title": "ExecuteWritten"
       },
       "HTTPValidationError": {
         "properties": {
@@ -2014,6 +2372,139 @@
         ],
         "title": "RealtimeOffer"
       },
+      "RoutingDecision": {
+        "properties": {
+          "decision_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Decision Id"
+          },
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "case_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Case Revision"
+          },
+          "route": {
+            "type": "string",
+            "enum": [
+              "phone",
+              "jingmai",
+              "manual"
+            ],
+            "title": "Route"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          },
+          "rule_version": {
+            "type": "string",
+            "title": "Rule Version"
+          },
+          "required_evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Required Evidence"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/RoutingEvidence"
+            },
+            "type": "array",
+            "title": "Evidence"
+          },
+          "submission_attempt": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Submission Attempt",
+            "default": 1
+          },
+          "call_attempt": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Call Attempt",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision_id",
+          "application_id",
+          "case_revision",
+          "route",
+          "reason_codes",
+          "rule_version",
+          "required_evidence"
+        ],
+        "title": "RoutingDecision"
+      },
+      "RoutingEvidence": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Code"
+          },
+          "detail": {
+            "type": "string",
+            "maxLength": 400,
+            "title": "Detail",
+            "default": ""
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "case",
+              "rule",
+              "knowledge",
+              "contact_history",
+              "authorization",
+              "attempts"
+            ],
+            "title": "Source",
+            "default": "rule"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "knowledge_entry_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "title": "Knowledge Entry Ids"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code"
+        ],
+        "title": "RoutingEvidence",
+        "description": "规则命中证据：为什么得到这个 route，可追溯、不含个人信息。"
+      },
       "Scenario": {
         "properties": {
           "row": {
@@ -2045,6 +2536,43 @@
           "channel"
         ],
         "title": "Scenario"
+      },
+      "SceneSupport": {
+        "properties": {
+          "scenario_id": {
+            "type": "string",
+            "title": "Scenario Id"
+          },
+          "published": {
+            "type": "boolean",
+            "title": "Published",
+            "default": false
+          },
+          "phone": {
+            "type": "boolean",
+            "title": "Phone"
+          },
+          "written": {
+            "type": "boolean",
+            "title": "Written"
+          },
+          "unavailable_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unavailable Reasons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scenario_id",
+          "phone",
+          "written",
+          "unavailable_reasons"
+        ],
+        "title": "SceneSupport"
       },
       "SessionView": {
         "properties": {
@@ -2256,6 +2784,207 @@
         ],
         "title": "SourceRef"
       },
+      "StaffApplication": {
+        "properties": {
+          "application_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Application Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "company_hint": {
+            "type": "string",
+            "title": "Company Hint"
+          },
+          "brand_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Name"
+          },
+          "scene_name": {
+            "type": "string",
+            "title": "Scene Name"
+          },
+          "business_category": {
+            "type": "string",
+            "title": "Business Category"
+          },
+          "scenario_id": {
+            "type": "string",
+            "title": "Scenario Id"
+          },
+          "default_route": {
+            "type": "string",
+            "enum": [
+              "phone",
+              "jingmai",
+              "manual"
+            ],
+            "title": "Default Route"
+          },
+          "effective_route": {
+            "type": "string",
+            "enum": [
+              "phone",
+              "jingmai",
+              "manual"
+            ],
+            "title": "Effective Route"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "CASE_READY",
+              "ROUTING",
+              "OPENING",
+              "VERIFYING",
+              "EXPLAINING",
+              "QA",
+              "CALLBACK_PENDING",
+              "CLOSING",
+              "ACTION_READY",
+              "EXECUTING",
+              "RECONCILING",
+              "WRITEBACK_PENDING",
+              "CLOSED",
+              "MANUAL_REVIEW"
+            ],
+            "title": "State"
+          },
+          "case_revision": {
+            "type": "integer",
+            "title": "Case Revision"
+          },
+          "submission_attempt": {
+            "type": "integer",
+            "title": "Submission Attempt"
+          },
+          "call_attempt": {
+            "type": "integer",
+            "title": "Call Attempt"
+          },
+          "contact_outcome": {
+            "type": "string",
+            "enum": [
+              "connected",
+              "verified",
+              "wrong_person",
+              "refused",
+              "no_answer",
+              "disconnected",
+              "not_required",
+              "unknown"
+            ],
+            "title": "Contact Outcome"
+          },
+          "contact_event_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Event Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "remedy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remedy"
+          },
+          "routing_decision": {
+            "$ref": "#/components/schemas/RoutingDecision"
+          },
+          "knowledge_version": {
+            "type": "string",
+            "title": "Knowledge Version"
+          },
+          "rule_version": {
+            "type": "string",
+            "title": "Rule Version"
+          },
+          "source_refs": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "type": "array",
+            "title": "Source Refs"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SessionView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "available_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Actions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "application_id",
+          "label",
+          "company_hint",
+          "brand_name",
+          "scene_name",
+          "business_category",
+          "scenario_id",
+          "default_route",
+          "effective_route",
+          "state",
+          "case_revision",
+          "submission_attempt",
+          "call_attempt",
+          "contact_outcome",
+          "contact_event_id",
+          "reason",
+          "remedy",
+          "routing_decision",
+          "knowledge_version",
+          "rule_version",
+          "source_refs",
+          "snapshot",
+          "available_actions"
+        ],
+        "title": "StaffApplication"
+      },
       "StartSession": {
         "properties": {
           "expected_revision": {
@@ -2270,6 +2999,119 @@
           "expected_revision"
         ],
         "title": "StartSession"
+      },
+      "SupportCatalog": {
+        "properties": {
+          "original_total": {
+            "type": "integer",
+            "title": "Original Total",
+            "default": 68
+          },
+          "original_phone": {
+            "type": "integer",
+            "title": "Original Phone",
+            "default": 54
+          },
+          "original_jingmai": {
+            "type": "integer",
+            "title": "Original Jingmai",
+            "default": 14
+          },
+          "knowledge_version": {
+            "type": "string",
+            "title": "Knowledge Version"
+          },
+          "published_scenarios": {
+            "type": "integer",
+            "title": "Published Scenarios"
+          },
+          "approved_entry_count": {
+            "type": "integer",
+            "title": "Approved Entry Count",
+            "default": 0
+          },
+          "quarantined_entry_count": {
+            "type": "integer",
+            "title": "Quarantined Entry Count",
+            "default": 0
+          },
+          "renderable_tasks": {
+            "type": "integer",
+            "title": "Renderable Tasks",
+            "default": 0
+          },
+          "phone_supported": {
+            "type": "integer",
+            "title": "Phone Supported"
+          },
+          "written_supported": {
+            "type": "integer",
+            "title": "Written Supported"
+          },
+          "scenes": {
+            "items": {
+              "$ref": "#/components/schemas/SceneSupport"
+            },
+            "type": "array",
+            "title": "Scenes"
+          },
+          "scope": {
+            "type": "string",
+            "const": "synthetic_tasks_only",
+            "title": "Scope",
+            "default": "synthetic_tasks_only"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "knowledge_version",
+          "published_scenarios",
+          "phone_supported",
+          "written_supported",
+          "scenes"
+        ],
+        "title": "SupportCatalog"
+      },
+      "SyntheticContact": {
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Event Id"
+          },
+          "case_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Case Revision"
+          },
+          "expected_call_attempt": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Expected Call Attempt"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "connected",
+              "no_answer",
+              "wrong_person",
+              "refused",
+              "disconnected",
+              "unknown"
+            ],
+            "title": "Outcome"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_id",
+          "case_revision",
+          "expected_call_attempt",
+          "outcome"
+        ],
+        "title": "SyntheticContact"
       },
       "TextTurn": {
         "properties": {
@@ -2497,6 +3339,128 @@
         ],
         "title": "VoiceTelemetry"
       },
+      "WrittenPreview": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Session Id"
+          },
+          "case_revision": {
+            "type": "integer",
+            "title": "Case Revision"
+          },
+          "state_revision": {
+            "type": "integer",
+            "title": "State Revision"
+          },
+          "knowledge_version": {
+            "type": "string",
+            "title": "Knowledge Version"
+          },
+          "rule_version": {
+            "type": "string",
+            "title": "Rule Version"
+          },
+          "written_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Written Text"
+          },
+          "knowledge_entry_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Knowledge Entry Id"
+          },
+          "source_refs": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "type": "array",
+            "title": "Source Refs"
+          },
+          "template_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Version"
+          },
+          "missing_slots": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Slots"
+          },
+          "body_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body Sha256"
+          },
+          "preview_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Id"
+          },
+          "previewable": {
+            "type": "boolean",
+            "title": "Previewable",
+            "default": false
+          },
+          "executable": {
+            "type": "boolean",
+            "title": "Executable",
+            "default": false
+          },
+          "unavailable_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unavailable Reasons"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "session_id",
+          "case_revision",
+          "state_revision",
+          "knowledge_version",
+          "rule_version"
+        ],
+        "title": "WrittenPreview"
+      },
       "ActionCommand": {
         "additionalProperties": false,
         "description": "仅服务端构造；工具守门查库验证decision、confirmation、权限和revision。",
@@ -2707,6 +3671,7 @@
             "anyOf": [
               {
                 "enum": [
+                  "connected",
                   "verified",
                   "wrong_person",
                   "refused",
@@ -2833,6 +3798,53 @@
         "title": "CallbackPayload",
         "type": "object"
       },
+      "ContactRecorded": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "contact.recorded",
+            "default": "contact.recorded",
+            "title": "Type",
+            "type": "string"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "connected",
+              "verified",
+              "wrong_person",
+              "refused",
+              "no_answer",
+              "disconnected",
+              "not_required",
+              "unknown"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "call_attempt": {
+            "title": "Call Attempt",
+            "type": "integer"
+          },
+          "source": {
+            "const": "synthetic_adapter",
+            "default": "synthetic_adapter",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "event_id",
+          "outcome",
+          "call_attempt"
+        ],
+        "title": "ContactRecorded",
+        "type": "object"
+      },
       "Event": {
         "additionalProperties": false,
         "properties": {
@@ -2917,6 +3929,7 @@
           "payload": {
             "discriminator": {
               "mapping": {
+                "contact.recorded": "#/components/schemas/ContactRecorded",
                 "generation.finished": "#/components/schemas/GenerationFinished",
                 "knowledge.used": "#/components/schemas/KnowledgeUsed",
                 "metric.recorded": "#/components/schemas/MetricRecorded",
@@ -2956,6 +3969,9 @@
               },
               {
                 "$ref": "#/components/schemas/GenerationFinished"
+              },
+              {
+                "$ref": "#/components/schemas/ContactRecorded"
               }
             ],
             "title": "Payload"
@@ -3525,6 +4541,61 @@
             "default": true,
             "title": "Synthetic",
             "type": "boolean"
+          },
+          "default_route": {
+            "default": "phone",
+            "enum": [
+              "phone",
+              "jingmai",
+              "manual"
+            ],
+            "title": "Default Route",
+            "type": "string"
+          },
+          "scene_name": {
+            "default": "",
+            "title": "Scene Name",
+            "type": "string"
+          },
+          "business_category": {
+            "default": "",
+            "title": "Business Category",
+            "type": "string"
+          },
+          "source_refs": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Source Refs",
+            "type": "array"
+          },
+          "contact_outcome": {
+            "default": "unknown",
+            "enum": [
+              "connected",
+              "verified",
+              "wrong_person",
+              "refused",
+              "no_answer",
+              "disconnected",
+              "not_required",
+              "unknown"
+            ],
+            "title": "Contact Outcome",
+            "type": "string"
+          },
+          "contact_event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Contact Event Id"
           }
         },
         "required": [
@@ -3540,140 +4611,6 @@
           "complaint_risk"
         ],
         "title": "ReviewCase",
-        "type": "object"
-      },
-      "RoutingDecision": {
-        "additionalProperties": false,
-        "properties": {
-          "decision_id": {
-            "format": "uuid",
-            "title": "Decision Id",
-            "type": "string"
-          },
-          "application_id": {
-            "format": "uuid",
-            "title": "Application Id",
-            "type": "string"
-          },
-          "case_revision": {
-            "minimum": 1,
-            "title": "Case Revision",
-            "type": "integer"
-          },
-          "route": {
-            "enum": [
-              "phone",
-              "jingmai",
-              "manual"
-            ],
-            "title": "Route",
-            "type": "string"
-          },
-          "reason_codes": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Reason Codes",
-            "type": "array"
-          },
-          "rule_version": {
-            "title": "Rule Version",
-            "type": "string"
-          },
-          "required_evidence": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Required Evidence",
-            "type": "array"
-          },
-          "evidence": {
-            "items": {
-              "$ref": "#/components/schemas/RoutingEvidence"
-            },
-            "title": "Evidence",
-            "type": "array"
-          },
-          "submission_attempt": {
-            "default": 1,
-            "minimum": 0,
-            "title": "Submission Attempt",
-            "type": "integer"
-          },
-          "call_attempt": {
-            "default": 0,
-            "minimum": 0,
-            "title": "Call Attempt",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "decision_id",
-          "application_id",
-          "case_revision",
-          "route",
-          "reason_codes",
-          "rule_version",
-          "required_evidence"
-        ],
-        "title": "RoutingDecision",
-        "type": "object"
-      },
-      "RoutingEvidence": {
-        "additionalProperties": false,
-        "description": "规则命中证据：为什么得到这个 route，可追溯、不含个人信息。",
-        "properties": {
-          "code": {
-            "maxLength": 80,
-            "minLength": 1,
-            "title": "Code",
-            "type": "string"
-          },
-          "detail": {
-            "default": "",
-            "maxLength": 400,
-            "title": "Detail",
-            "type": "string"
-          },
-          "source": {
-            "default": "rule",
-            "enum": [
-              "case",
-              "rule",
-              "knowledge",
-              "contact_history",
-              "authorization",
-              "attempts"
-            ],
-            "title": "Source",
-            "type": "string"
-          },
-          "ref": {
-            "anyOf": [
-              {
-                "maxLength": 200,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "default": null,
-            "title": "Ref"
-          },
-          "knowledge_entry_ids": {
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "title": "Knowledge Entry Ids",
-            "type": "array"
-          }
-        },
-        "required": [
-          "code"
-        ],
-        "title": "RoutingEvidence",
         "type": "object"
       },
       "SessionContext": {
@@ -3773,6 +4710,7 @@
           "contact_outcome": {
             "default": "unknown",
             "enum": [
+              "connected",
               "verified",
               "wrong_person",
               "refused",
@@ -4098,6 +5036,7 @@
             "anyOf": [
               {
                 "enum": [
+                  "connected",
                   "verified",
                   "wrong_person",
                   "refused",

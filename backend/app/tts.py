@@ -3,6 +3,8 @@ import asyncio
 import base64
 import binascii
 import json
+import hashlib
+from uuid import uuid4
 import re
 from contextlib import asynccontextmanager
 from contextlib import suppress
@@ -10,6 +12,7 @@ import httpx
 from pydantic import BaseModel, ConfigDict, Field
 from .config import settings
 from .adapters import DomainError
+from .realtime.diagnostics import RealtimeProbe, now_ns
 
 
 class SpeechRequest(BaseModel):
@@ -27,6 +30,8 @@ class QwenTTS:
         self.config, self.transport, self.reserve = config, transport, reserve
         self.active = {}
         self.client = client
+        self.probe = RealtimeProbe(config.realtime_diagnostics_enabled)
+        self.observed_streams = []
 
     @asynccontextmanager
     async def connection(self):
@@ -79,9 +84,17 @@ class QwenTTS:
         if self.reserve:
             self.reserve('tts', self.config.max_daily_tts_calls)
         received = False
+        first_block = False
+        request_id = str(uuid4())
+        request_start = now_ns() if self.probe.enabled else 0
+        self.probe.emit('tts_request_start', request_id=request_id, text_chars=len(body.input),
+                        text_sha256=hashlib.sha256(body.input.encode()).hexdigest())
+        async def http_trace(name, info):
+            # httpcore info can contain credentials: only retain the stable event name.
+            self.probe.emit('tts_http_trace', request_id=request_id, name=name)
 
         async def audio():
-            nonlocal received
+            nonlocal received, first_block
             total, tail = 0, b''
             payload = {'model': self.config.dashscope_tts_model, 'input': {
                 'text': body.input, 'voice': self.config.dashscope_tts_voice,
@@ -89,14 +102,33 @@ class QwenTTS:
             async with self.connection() as client:
                 async with client.stream('POST', self.endpoint(), json=payload, headers={
                     'Authorization': 'Bearer '+self.config.dashscope_api_key,
-                    'X-DashScope-SSE': 'enable'}) as response:
+                    'X-DashScope-SSE': 'enable'},
+                    extensions={'trace':http_trace} if self.probe.enabled else {}) as response:
+                    network=response.extensions.get('network_stream')
+                    reused=None if network is None else any(network is old for old in self.observed_streams)
+                    if self.probe.enabled and network is not None:
+                        self.observed_streams=(self.observed_streams+[network])[-16:]
+                    self.probe.emit('tts_response_headers', request_id=request_id, status=response.status_code,
+                                    http_version=response.http_version, connection_reused_observed=reused)
                     if response.status_code != 200:
                         code = {401:'TTS_AUTH_FAILED', 403:'TTS_PERMISSION_DENIED', 402:'TTS_QUOTA_EXHAUSTED', 429:'TTS_RATE_LIMITED'}.get(response.status_code, 'TTS_UPSTREAM_ERROR')
                         raise DomainError(code, '百炼语音服务不可用，请检查账号或额度', 503)
                     if not response.headers.get('content-type', '').startswith('text/event-stream'):
                         raise DomainError('TTS_BAD_STREAM', '百炼未返回SSE音频流', 503)
+                    async def finish_transport(lines):
+                        if not self.config.realtime_tts_drain_enabled:return
+                        before=now_ns()
+                        try:
+                            # Preserve exact audio/finish semantics; bounded tail read enables HTTP reuse.
+                            async with asyncio.timeout(.2):
+                                async for _ in lines:
+                                    if cancel.is_set():return
+                            self.probe.emit('tts_tail_drained',request_id=request_id,eof=True,duration_ns=now_ns()-before)
+                        except TimeoutError:
+                            self.probe.emit('tts_tail_drained',request_id=request_id,eof=False,duration_ns=now_ns()-before)
                     data = []
-                    async for line in response.aiter_lines():
+                    lines=response.aiter_lines()
+                    async for line in lines:
                         if line.startswith('data:'):
                             data.append(line[5:].lstrip())
                             if sum(map(len, data)) > 1024*1024:
@@ -107,6 +139,7 @@ class QwenTTS:
                         raw, data = '\n'.join(data), []
                         if raw == '[DONE]':
                             if received and not tail:
+                                await finish_transport(lines)
                                 return
                             raise DomainError('TTS_EMPTY', '音频输出为空或不完整', 503)
                         try:
@@ -118,6 +151,13 @@ class QwenTTS:
                             decoded = base64.b64decode(encoded, validate=True) if encoded else b''
                         except (ValueError, TypeError, KeyError, AttributeError, binascii.Error):
                             raise DomainError('TTS_BAD_STREAM', '音频流格式异常', 503)
+                        usage=obj.get('usage')
+                        if self.probe.enabled and isinstance(usage,dict):
+                            self.probe.emit('tts_usage',request_id=request_id,**{k:v for k,v in usage.items()
+                                if k in ('input_tokens','output_tokens','total_tokens') and isinstance(v,(int,float))})
+                        if decoded and not first_block:
+                            first_block=True
+                            self.probe.emit('tts_first_audio_block', request_id=request_id, bytes=len(decoded))
                         total += len(decoded)
                         if total > 10*1024*1024:
                             raise DomainError('TTS_TOO_LARGE', '音频超出本轮限制', 503)
@@ -125,11 +165,13 @@ class QwenTTS:
                         tail = chunk[-1:] if len(chunk) % 2 else b''
                         chunk = chunk[:len(chunk)-len(tail)]
                         if chunk:
+                            if not received:self.probe.emit('tts_first_pcm',request_id=request_id,bytes=len(chunk))
                             received = True
                             yield chunk
                         if output.get('finish_reason') == 'stop':
                             if not received or tail:
                                 raise DomainError('TTS_EMPTY', '音频输出为空或不完整', 503)
+                            await finish_transport(lines)
                             return
                     raise DomainError('TTS_TRUNCATED', '音频流提前结束', 503)
 
@@ -152,10 +194,14 @@ class QwenTTS:
                     except StopAsyncIteration:
                         return
         except (TimeoutError, httpx.TimeoutException):
+            self.probe.emit('tts_error',request_id=request_id,code='TTS_TIMEOUT',before_first_pcm=not received)
             raise DomainError('TTS_TIMEOUT', '语音合成响应超时', 503)
         except httpx.HTTPError:
+            self.probe.emit('tts_error',request_id=request_id,code='TTS_NETWORK_ERROR',before_first_pcm=not received)
             raise DomainError('TTS_NETWORK_ERROR', '语音合成连接失败', 503)
         finally:
+            self.probe.emit('tts_stream_end',request_id=request_id,received_pcm=received,
+                            cancelled=cancel.is_set(),duration_ns=now_ns()-request_start if request_start else None)
             if pending and not pending.done():
                 pending.cancel()
                 with suppress(asyncio.CancelledError):

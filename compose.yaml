@@ -22,6 +22,7 @@ services:
       APP_ENV: development
       COOKIE_SECRET: ${COOKIE_SECRET:-local-development-secret-change-before-exposure}
       DEMO_PASSWORD: ${DEMO_PASSWORD:-demo-local-only}
+      STAFF_PASSWORD: ${STAFF_PASSWORD:-staff-local-only}
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:3000}
       ENABLE_FAULTS: ${ENABLE_FAULTS:-false}
     depends_on:

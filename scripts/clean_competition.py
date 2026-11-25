@@ -111,7 +111,9 @@ def clean(package):
             'phone_candidates': [{**s['source_ref'], 'columns': ['B']} for s in scripts if s['source_ref']['sheet'] == '特殊场景'
                                  and s['source_ref']['row'] == phone_row],
         })
-    return {'version': 'pop-v1-clean-2', 'mappings': mappings, 'source_manifest': package['source_manifest'],
+    from workbench_knowledge import mappings as all_scene_mappings
+    all_mappings=all_scene_mappings({'scenarios':scenarios})
+    return {'all_scene_mappings':all_mappings,'version': 'pop-v1-clean-3', 'mappings': mappings, 'source_manifest': package['source_manifest'],
             'principles': principles, 'scenarios': scenarios, 'samples': samples,
             'scripts': scripts, 'qa': qa, 'internal_review': internal, 'issues': issues,
             'counts': dict(package['counts'], scripts=len(scripts), qa=len(qa),
