@@ -49,10 +49,6 @@ class Settings:
     max_daily_model_calls: int = int(os.getenv('MAX_DAILY_MODEL_CALLS', '30'))
     max_daily_voice_calls: int = int(os.getenv('MAX_DAILY_VOICE_CALLS', '3'))
     staging_password: str = os.getenv('STAGING_PASSWORD', '')
-    realtime_answer_first: bool = os.getenv('REALTIME_ANSWER_FIRST','false').lower() == 'true'
-    realtime_segmented_replies: bool = os.getenv('REALTIME_SEGMENTED_REPLIES','false').lower() == 'true'
-    realtime_prefetch_speech: bool = os.getenv('REALTIME_PREFETCH_SPEECH','false').lower() == 'true'
-    realtime_shadow_voice_enabled: bool = os.getenv('REALTIME_SHADOW_VOICE_ENABLED','false').lower() == 'true'
     realtime_speech_backend: str = os.getenv('REALTIME_SPEECH_BACKEND', 'qwen_http')
     realtime_vad_mode: str = os.getenv('REALTIME_VAD_MODE', 'server_vad')
     realtime_tts_drain_enabled: bool = os.getenv('REALTIME_TTS_DRAIN_ENABLED', 'false').lower() == 'true'

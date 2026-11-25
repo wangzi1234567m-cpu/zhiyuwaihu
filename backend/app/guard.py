@@ -4,7 +4,7 @@
 所有事实来自 ReviewCase（审核结论由业务系统提供，Agent 不能鉴真或批准）、
 服务器保存的会话证据（核验、告知、操作）与已审核知识。
 
-设计取舍（见 docs/agent/CONTRACT-CHANGES.md）：
+业务约束：
 - RoutingDecision.route 仍是 phone|jingmai|manual；followup 是**动作**，不是新 route。
 - State 沿用 0.3.0 原枚举，不新增平行状态。
 - submission_attempt（业务提交次数）与 call_attempt（本次提交的联系次数）分开计数。
@@ -63,7 +63,6 @@ AGENT_PROPOSABLE_STATES: tuple[State, ...] = (
 #: 允许继续对话的会话状态（业务处理中/终态不接受新轮次）。
 TURN_ALLOWED_STATES: tuple[State, ...] = ('OPENING', 'VERIFYING', 'EXPLAINING', 'QA', 'CALLBACK_PENDING')
 
-ALLOWED_TRANSITIONS_DOC = 'docs/agent/STATE-TRANSITIONS.md'
 
 #: 回写（writeback）独立重试上限。业务效果已经发生（operation=succeeded），
 #: 失败的只是结果回写；必须有界重试后如实转人工，不能无限重试也不能谎报 CLOSED。

@@ -1,108 +1,87 @@
 # 智语外呼 · 商户资审工作台
 
-本次 DDL 封版以 [最终交付、数据流与赛题对齐](docs/ddl-sealed-delivery-20261125.md) 和 [正式性能证据](docs/ddl-final-performance-20261125.json) 为准。默认演示入口采用 400ms + 同模型 WebSocket TTS，语音业务写入保持关闭；以下为历史阶段记录，不代表最新冻结配置。
+面向商家资质审核驳回的业务工作台：审核任务、身份核验、实时语音、整改问答、京麦书面驳回和结构化回写。业务渠道由后端 RoutingPolicy 决定，业务事实与事件保存在 PostgreSQL。
 
-2026-11-25 定向优化：534项后端回归通过；400/300ms A/B及TTS连接复用已实测。最终固定配比30有效/33交互，P50 2112ms、P95 2836ms、失败率9.09%，整体仍未达标；默认保留400ms，TTS候选需显式开启。[优化结果与回滚](docs/ddl-latency-optimization-20261125.md)。
+## 目录
 
-2026-11-25 DDL：v3 工作台真实 WebRTC 已恢复，517 项后端、5 项浏览器回归通过；30 有效语音轮次 P50 2078ms/P95 5323ms，性能门槛未通过，语音自动关单保持关闭。[最终交付与一键演示](docs/ddl-final-delivery-20261125.md)。
+- `backend/app`：业务规则、知识、数据库、实时语音、工具守卫与 RSI。
+- `backend/migrations`：数据库迁移；`backend/tests`：回归测试。
+- `frontend`：三栏工作台、字幕、语音及书面处理界面。
+- `scripts`：启动、知识导入、契约导出、检查和 RSI 入口。
+- `infra`、`compose*.yaml`：容器与 HTTPS 运行配置。
+- `docs`：机器契约、知识来源清单和第三方组件许可。
 
-2026-11-24：已整合v0.4 WebRTC实时交互与业务门面，补齐绑定、可信输入登记和主动开场接线。新模式默认关闭；离线验证通过尚不代表真实语音2秒、可信播放或完整语音闭环达标。当前数据流、架构、测试证据、赛题缺口及改进顺序见[双PR整合验收](docs/v04-integration-20261124.md)。
+## 数据流与运行边界
 
-2026-11-17 Agent增量的当前能力、复验结果、启动方式和剩余联调事项见[Agent交付说明](docs/agent/DELIVERY.md)。下文保留原骨架的环境与使用说明。
+麦克风 → WebRTC / aiortc → 原生音频理解 → RealtimeBusinessPort → 身份、版本与知识审核 → 流式 Qwen TTS → 浏览器播放。最终理解与审核消息通过持久事件 / SSE 更新字幕。
 
-京东 POP 商户资质审核驳回告知与整改指导的**合成演示骨架**。Next.js＋TypeScript、FastAPI＋Pydantic、PostgreSQL、REST＋SSE。默认FakeModel，不需要云账号，不执行真实外呼。
+京麦任务走书面预览 → 正文哈希与版本校验 → 幂等工具执行 → 结果回写。通话结束不代表业务完成。默认 `VOICE_WRITES_ENABLED=false`，不以浏览器播放或 RTP 发完代替可信告知证明。
 
-已有可运行的文本链路、模块替换接口及语音适配代码。本地三轮文本流程、结构化回写、刷新恢复与容器重启持久化已验证；2026年11月21日完成腾讯云联调环境部署。魏的语义Agent与翟的数据／Mock／前端交付已整合，合并后本地验收及待联调项见 [合并记录](docs/pr-integration-20261122.md)；公网服务器仍为此前版本，完整语音链路仍待联调。测试范围与历史记录见 [验证记录](docs/verification.md)。
+当前为单进程异步多任务架构。真实语音配置为 server_vad 400ms / threshold 0.5、Qwen-Audio-3.1-TTS-Flash WebSocket、longanhuan_v3.1。自然停顿、弱网/TURN、物理耳麦和多 worker 尚未完成完整验收。
 
-## 历史部署记录（2026-11-21，非本次冻结版本）
+## 安装与初始化
 
-| 内容 | 实际状态 |
-|---|---|
-| 公网联调入口 | https://192.144.214.34 ，页面返回200 |
-| 后端就绪检查 | https://192.144.214.34/health/ready ，返回`{"status":"ready"}` |
-| 部署服务 | PostgreSQL、FastAPI、Next.js、Caddy四个容器运行；仅网关发布80／443 |
-| 登录与配置 | 公网使用`STAGING_PASSWORD`；未登录申请单查询返回401，开发默认密码不适用于公网 |
-| 自动恢复与证书 | Docker开机启动、容器自动重启已配置；证书续期演练及Caddy重载通过，每天检查两次 |
-| 模型与语音 | DeepSeek文本、百炼Qwen TTS各一次独立真实探针通过；声网端到端语音、三轮对话和打断尚未验收 |
-
-当前服务器使用`MODEL_PROVIDER=fake`，`CLOUD_CALLS_ENABLED`、`VOICE_ENABLED`、`VOICE_WRITES_ENABLED`与`ENABLE_FAULTS`均为`false`。访问页面不会自动启用收费模型或语音。公网环境用于联调，队友继续按公共契约独立开发，无须等待正式页面和Agent完成才维护服务器。
-
-公网登录账号为`demo`，密码由部署负责人通过私密渠道提供。不要提交或分享服务器`.env`、SSH私钥、API Key。部署事实记录见 [公网验收证据](docs/public-deployment-evidence.json)，后续操作见 [部署说明](docs/public-deployment.md)。
-
-## 先看哪里
-
-- [当前实现与三人接入说明](docs/implementation.md)：模块入口、0.3契约和未实现范围。
-- [完整项目设计](docs/design/README.md)：业务目标、状态机、数据与RSI设计。
-- [魏鼎承交付](docs/design/handoffs/wei.md)／[翟雯交付](docs/design/handoffs/zhai.md)。
-- [公共DTO](backend/app/contracts.py)、[内部接口](backend/app/ports.py)、[OpenAPI](docs/design/contracts/openapi.json)。
-
-## 当前不需要Docker就能做的事
-
-要求Python 3.12、Node 22.22以上。项目已配置锁文件，不使用latest安装。
+需要 Python 3.12、Node.js 22.22 以上和 PostgreSQL 18。使用锁文件安装：
 
 ```powershell
 python -m venv .venv
-.venv/Scripts/python.exe -m pip install -r backend/requirements.lock
-npm ci --prefix frontend --cache .cache/npm --registry https://registry.npmjs.org
-./scripts/dev.ps1 Check
+.venv/Scripts/python.exe -m pip install -r backend/requirements.lock -r backend/requirements-rtc.lock
+npm ci --prefix frontend
 ```
 
-本机现有`.venv`使用Python 3.12，不必重复创建。默认检查会明确跳过数据库测试。只看前端页面：
-
-```powershell
-./scripts/dev.ps1 Frontend
-```
-
-浏览器访问 http://localhost:3000 。无后端／数据库时可以看到登录页面，但不能完成登录或业务流程。这里没有偷偷改成SQLite或浏览器伪造业务成功。
-
-## 不用Docker连接独立PostgreSQL
-
-先准备PostgreSQL 18和空数据库zhiyu；后端不会替你创建数据库。将连接凭证放在本地环境变量，密码特殊字符需URL编码，不提交到Git。
+新环境可复制 `.env.example` 为 `.env`，填写数据库和供应商配置；已有 `.env` 请继续使用。环境变量优先于配置文件。数据库需事先创建，例如：
 
 ```powershell
 $env:DATABASE_URL='postgresql+psycopg://zhiyu:local-dev-only@127.0.0.1:5432/zhiyu'
-$env:APP_ENV='development'
-$env:PUBLIC_ORIGIN='http://localhost:3000'
-./scripts/dev.ps1 Migrate
-./scripts/dev.ps1 Backend
+$env:WORKBENCH_DATABASE_URL=$env:DATABASE_URL
+$env:PYTHONPATH='backend'
+.venv/Scripts/python.exe -m alembic -c backend/alembic.ini upgrade head
+.venv/Scripts/python.exe -c 'from app.seed import seed_workbench; seed_workbench()'
 ```
 
-另外一个终端运行 `./scripts/dev.ps1 Frontend`。后端端口8000，文档 http://localhost:8000/docs ，健康检查 `/health/live` 和 `/health/ready`。后端单worker；迁移／种子可重复运行。
-
-开发登录用户demo，默认密码`demo-local-only`；用DEMO_PASSWORD覆盖。页面选择申请单1、创建会话、开始，然后依次输入：
-
-1. `我是演示商家1`
-2. `补齐材料一定必过吗`
-3. `明白了`
-
-应看到模拟处理结果及“通话记录已回写”，刷新后恢复。身份核对前不展示具体驳回原因。默认密码和演示登录仅供localhost，不用于公网部署。
-
-## Docker统一启动
+种子数据为合成演示数据。真实语音工作台使用 `workbench-reviewed-20261125-v3`，首次运行还需从团队私有交付包导入已审核知识：
 
 ```powershell
-Copy-Item .env.example .env
-# 修改本地配置后启动。不要覆盖已有.env。
+.venv/Scripts/python.exe scripts/publish_reviewed_knowledge.py private-evidence/business/staging.json private-evidence/business/reviewed-release-v3-final.json --publish
+```
+
+私有审核包不在公开源码中。导入会核对来源哈希、正文、审核范围及版本；同一发布版本不可覆盖修改。
+
+## 启动与使用
+
+已有数据库、已发布 v3 知识及供应商凭据时：
+
+```powershell
+./scripts/start_workbench_demo.ps1 -Restart -Build
+# 后续无需重建时省略 -Build；回退原 HTTP TTS：
+./scripts/start_workbench_demo.ps1 -Restart -Rollback
+```
+
+打开 `http://localhost:13000`。本机工作人员账号 `demo`，默认密码 `staff-local-only`，可用 `STAFF_PASSWORD` 覆盖。后端地址 `http://127.0.0.1:18000`。供应商凭据从根 `.env` 或 `VOICE_CONFIG_ENV_FILE` 读取；启动和查看任务不发起云调用，点击“开始通话”后才调用供应商。
+
+选择电话任务，在开发设置中选择“WebRTC 实时语音”，新建匹配的语音会话，允许麦克风后开始通话。例如任务1：
+
+1. “我是演示商家1的联系人。”
+2. “补齐材料一定必过吗？”
+3. “这个结论的依据是什么？”
+
+播报中可说话或点击“打断播报”。字幕显示服务端最终理解，暂不提供临时识别字串。京麦任务显示书面预览及执行结果。旧语音和文字方式保留在开发设置中。
+
+启动脚本只重启归属已核验的工作台进程，不清空数据库或调用账本。运行限额来自现有配置；不要将供应商凭据、Cookie 密钥、私有知识或数据库提交到 Git。
+
+## 容器运行
+
+```powershell
 docker compose up --build -d
 ```
 
-浏览器仍访问 http://localhost:3000 。Compose自动执行迁移与种子，数据库使用持久卷。停止使用 `docker compose down`，不要加 `-v`，以免删除数据。
+基础模式是离线合成演示，页面 `http://localhost:3000`，后端 `http://127.0.0.1:8000`。真实语音额外使用 `compose.cloud.yaml`、`compose.realtime.yaml`，并在本地配置 `.env` 中的云调用授权、供应商凭据、申请单白名单及 `REALTIME_SPEECH_BACKEND=qwen_ws`。不要启用语音业务写入。
 
-热更新：`docker compose -f compose.yaml -f compose.dev.yaml up --build`。开发前端使用独立node_modules卷，依赖变化后在容器内执行npm ci。
+公网 HTTPS 使用 `compose.public-ip.yaml` 与 `infra/Caddyfile.ip`，需配置有效 IP 证书、PUBLIC_IP、独立密码及 Cookie 密钥。`docker compose down` 停止服务；不要使用 `-v` 删除已有数据卷。
 
-`.env`由Compose读取；本机后端也会加载根目录.env，终端环境变量优先。修改.env后重启后端。
+## 检查与契约
 
-## 类型与测试
-
-翟雯分支的原件转换、三项授权场景、Mock 故障复现和架构接入补丁见[数据、Mock 与前端交付说明](docs/zhai-rework.md)。
-
-```powershell
-./scripts/dev.ps1 Types
-./scripts/dev.ps1 Check
-```
-
-Pydantic为唯一手写结构源。Types导出JSON Schema／OpenAPI，再生成frontend/app/api.generated.ts。不要手改生成文件。
-
-真实数据库测试需要专用数据库，名字以`_test`结尾；**测试会清空其中的业务表**：
+先创建并迁移独立的测试数据库；以下命令只应指向 `_test` 库，测试会清空该库的业务表：
 
 ```powershell
 $env:DATABASE_URL='postgresql+psycopg://zhiyu:local-dev-only@127.0.0.1:5432/zhiyu_test'
@@ -111,61 +90,13 @@ $env:RUN_DB_TESTS='1'
 $env:PYTHONPATH='backend'
 .venv/Scripts/python.exe -m alembic -c backend/alembic.ini upgrade head
 .venv/Scripts/python.exe -m pytest backend/tests -q
+npm run typecheck --prefix frontend
+npm run build --prefix frontend
+.venv/Scripts/python.exe scripts/export_realtime_contract.py --check
 ```
 
-浏览器验收也使用专用测试数据库。先运行 `python scripts/reset_test_db.py`，用该数据库启动后端与前端，再执行：
+浏览器回归运行 `npm run test:e2e --prefix frontend`，完整工作台回归可使用 `scripts/verify_workbench.py`。
 
-```powershell
-cd frontend
-npx playwright install chromium
-npm run test:e2e
-```
+公共 DTO 以 Pydantic 为源，使用 `scripts/export_contracts.py` 和 `npm run types --prefix frontend` 生成契约与类型；实时内部契约由 `scripts/export_realtime_contract.py` 生成。RSI 入口为 `scripts/rsi_run.py`，不会将缺少语音、成本或安全证据的候选自动采纳。
 
-CI配置包含PostgreSQL测试和浏览器验收，具体提交是否通过以GitHub Actions对应运行结果为准；本地通过不代表云端CI通过。
-
-## 交付范围
-
-已实现模块替身与连接点、DeepSeek适配、声网接入代码和Qwen TTS协议转换；语义Agent、RSI评测模块与数据／Mock／前端交付已整合；完整联系流程、知识审核管理台及正式发布仍待验收。预约与人工意图先转人工状态，未创建外部工单。取消只停止当前生成，已登记派发的业务操作继续查证。服务器部署通过不代表正式业务或语音验收通过。
-
-不提交.env、真实赛题数据、未脱敏日志、录音和保留评测集。旧套餐方案保留在docs/archive，仅作历史资料。
-
-复验完整数据流：准备专用`_test`数据库、完成迁移和前端构建，并安装Playwright Chromium后，运行 `.venv/Scripts/python.exe scripts/verify_browser_flow.py`。脚本会清空该测试库，自动启动／停止前后端并生成 [数据库事实证据](docs/flow-evidence.json)。
-
-## 语音／真实模型增量（2026-11-18）
-
-声网RTC／RTM语音组件、DeepSeek适配和自定义模型入口已经加入。配置与真实验收状态见 [接入说明](docs/voice-integration.md)。根目录`.env`已在本机生成，账号字段由本人填写；仓库仅提交`.env.example`。检查配置运行 `python scripts/cloud_doctor.py`，不会显示密钥或调用云服务。
-
-公网与声网操作顺序见 [腾讯云部署说明](docs/public-deployment.md)。目标为11月25日前完成联调。当前采用固定公网IP、可信IP证书和独立Caddy，使用`compose.yaml`＋`compose.cloud.yaml`＋`compose.public-ip.yaml`；不混用域名版或Nginx备选配置。公网HTTPS已验证，声网云端调用自研接口仍需真实验收。
-
-本机Docker容器验收已通过，证据见 [Docker验收记录](docs/docker-evidence.json)。DeepSeek和百炼TTS独立探针通过仅证明各自接口可调用，不能证明语音时延、抗噪或打断达标。再次运行真实探针会产生新的供应商请求。
-
-## 队友模块合入后的部署更新
-
-魏鼎承与翟雯继续在各自分支实现约定端口，提交PR后运行类型、业务回归及CI检查。公共DTO或端口发生变化时，同一PR更新Schema、前端生成类型和交付说明；业务模块内部修改不要求改动语音适配层。
-
-由部署负责人构建并上传确认版本的前后端镜像，在服务器`/opt/zhiyu`导入镜像后执行：
-
-```bash
-sudo docker load -i zhiyu-images.tar
-sudo docker compose -f compose.yaml -f compose.cloud.yaml -f compose.public-ip.yaml config --quiet
-sudo docker compose -f compose.yaml -f compose.cloud.yaml -f compose.public-ip.yaml up -d --no-build
-sudo docker compose -f compose.yaml -f compose.cloud.yaml -f compose.public-ip.yaml ps
-curl --fail --show-error https://192.144.214.34/health/ready
-```
-
-随后验证本次变更涉及的真实模块流程。涉及数据库迁移时先备份；保留服务器私有`.env`、证书目录与PostgreSQL数据卷，不用本地开发配置覆盖，不执行`down -v`。修改Compose环境配置后使用上述`up`命令重新创建受影响容器，单独`restart`不会应用新的环境变量。
-
-证书由`infra/renew-ip-cert.sh`经webroot续期并重载Caddy，定时任务在服务器`/etc/cron.d/zhiyu-ip-cert`，日志在`/var/log/zhiyu-ip-cert-renew.log`。当前初次证书到期时间为2026-11-27 17:10 UTC；续期演练已通过，未来正式续期结果以任务日志和实际证书为准。
-
-
-## 资审工作台业务闭环（2026-11-25）
-
-第一版三栏工作台的后端交付说明见 [业务后端交付报告](docs/workbench-business-delivery-20261125.md)、[68条场景映射](docs/workbench-scene-mapping-20261125.json) 和 [实际验收证据](docs/workbench-business-evidence-20261125.json)。
-
-工作台使用独立工作人员登录：本地开发/测试默认 `STAFF_PASSWORD=staff-local-only`；旧商家凭据不能读取工作人员事实。staging必须显式配置强工作人员密码、强Cookie签名密钥和HTTPS。此为演示授权边界，不能直接代替生产组织身份系统。
-
-首次列表读取不再创建会话。仅在处理任务时按服务端路由建会话，书面正文通过后端预览、版本与哈希核对后执行Mock业务，再单独确认结果回写。新增联系事件入口仅供本地合成任务，不能把WebRTC断线或静音当成未接通。
-
-已有原件时，按交付报告生成并发布 `workbench-reviewed-20261125-v3`；这是用户委托Codex逐格核对的范围化版本，未自动批准全部场景。没有原件的CI使用明确标识的合成知识。设置 `PYTHONPATH=backend` 后，可在独立演示库调用 `from app.seed import seed_workbench; seed_workbench()` 准备11条合成任务；种子不覆盖历史申请。
-
-浏览器回归仍可运行 `python scripts/verify_browser_flow.py`，会拒绝非 `_test` 数据库，并只重置指定测试库。已准备好全新迁移和种子的测试库，可直接运行不重置数据的 `scripts/verify_workbench.py`；不要对人工演示库执行测试重置。`WORKBENCH_SOURCE_ACCEPTANCE=1`额外验证原件QA，需先导入对应审核版本。
+相同发布配置已有固定音频真实 RTC 30轮记录：P50 1774.2ms、P95 1971.3ms、30/30有效。记录不代表物理扬声器时延或全部赛题通过。完整原始证据、录像和清理前源码保存在此前交付包及 Git 历史；本次精简未新增付费云调用。

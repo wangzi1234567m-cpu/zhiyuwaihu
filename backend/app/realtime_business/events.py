@@ -59,14 +59,11 @@ def project_event(db, row, event):
         message = db.get(Message, str(payload.message_id))
         text = message.data['view']['text'] if message else ''
         if text and len(text) <= 2000:
-            from ..realtime.reply_strategy import semantic_segments
-            parts=semantic_segments(text) if row.data.get('realtime_segmented_replies') else [text]
-            for index,part in enumerate(parts):
-                append_event(db, row, ReplySegmentReady(message_id=payload.message_id,
-                    segment_id=uuid4(), segment_index=index, text=part,
-                    text_sha256=hashlib.sha256(part.encode('utf-8')).hexdigest()), **binding)
+            append_event(db, row, ReplySegmentReady(message_id=payload.message_id,
+                segment_id=uuid4(), segment_index=0, text=text,
+                text_sha256=hashlib.sha256(text.encode('utf-8')).hexdigest()), **binding)
             append_event(db, row, ReplyCompleted(message_id=payload.message_id,
-                                                segment_count=len(parts)), **binding)
+                                                segment_count=1), **binding)
         else:
             append_event(db, row, TurnFailed(error=ContractError(code='INVALID_INPUT',
                 message='Reviewed answer is empty or exceeds the segment limit', retryable=False)), **binding)

@@ -130,7 +130,7 @@
   "cloud_models": [
     {
       "name": "qwen3.8-omni-flash-realtime",
-      "usage": "native audio understanding; isolated direct audio experiment only",
+      "usage": "native audio understanding",
       "distribution": "cloud API; no model weights distributed",
       "license": "Alibaba Cloud Model Studio service/model terms; not an open-source weight license"
     },
@@ -139,13 +139,6 @@
       "voice": "longanhuan_v3.1",
       "usage": "delivery TTS; same reviewed text and voice over HTTP/WS adapters",
       "distribution": "cloud API",
-      "license": "Alibaba Cloud Model Studio service/model terms"
-    },
-    {
-      "name": "cosyvoice-v3-flash",
-      "voice": "longanyang",
-      "usage": "comparison only; not selected",
-      "distribution": "cloud API; no voice cloning",
       "license": "Alibaba Cloud Model Studio service/model terms"
     }
   ],

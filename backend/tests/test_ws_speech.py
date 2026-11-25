@@ -19,7 +19,7 @@ class TaskSocket:
     async def recv(self):return await self.queue.get()
     async def close(self):self.closed=True
 
-@pytest.mark.parametrize('backend,model,voice',[('qwen_ws','qwen-audio-3.1-tts-flash','longanhuan_v3.1'),('cosyvoice_ws','cosyvoice-v3-flash','longanyang')])
+@pytest.mark.parametrize('backend,model,voice',[('qwen_ws','qwen-audio-3.1-tts-flash','longanhuan_v3.1')])
 async def test_ws_profiles_exact_pcm_and_connection_reuse(backend,model,voice):
     socket=TaskSocket();connections=[];reserved=[]
     async def connect(*args,**kwargs):connections.append(args[0]);return socket
@@ -88,7 +88,7 @@ async def test_consumer_cancelled_during_media_backpressure_closes_upstream_and_
     entered=asyncio.Event()
     class Output:
         async def write(self,pcm,epoch):entered.set();await asyncio.Event().wait()
-    session=SimpleNamespace(playback_id=uuid4(),prepared={},speech=speech,cancel_audio=asyncio.Event(),epoch=1,closed=False,media=SimpleNamespace(output=Output()),metric=lambda *a,**kw:None)
+    session=SimpleNamespace(playback_id=uuid4(),speech=speech,cancel_audio=asyncio.Event(),epoch=1,closed=False,media=SimpleNamespace(output=Output()),metric=lambda *a,**kw:None)
     segment=SimpleNamespace(segment_id=uuid4(),text='当前完整审核正文')
     task=asyncio.create_task(RealtimeSession.render(session,uuid4(),segment,1,False))
     await asyncio.wait_for(entered.wait(),1)

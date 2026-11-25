@@ -1,6 +1,0 @@
-Reviewed commit: 4fdd1fe58d48d4cd92c7dca8f320395f9dbeac3f
-High — `backend/app/rsi/gate.py:234-255, 408-429`: voice sample identifiers are checked for uniqueness only within each arm. There is no baseline/candidate disjointness check. An otherwise valid report can set `candidate.sample_ids` equal to `baseline.sample_ids`; both arms pass validation, and the same ten calls are counted as independent baseline and candidate evidence, permitting `adopt` when the claimed metrics satisfy the thresholds. Require disjoint arm sample sets (or arm-bound immutable measurement identities) and add a regression test using identical IDs across arms.
-
-The supplied Windows-host results pass, but they do not cover this cross-arm evidence-reuse counterexample. The disclosed W4 stale-effect race remains an acknowledged external dependency and correctly prevents claiming overall closure.
-
-VERDICT: CHANGES_REQUESTED

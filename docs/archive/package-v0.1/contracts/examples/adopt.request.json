@@ -1,7 +1,0 @@
-{
-  "action": "adopt",
-  "target_version_id": "strategy-candidate-1",
-  "expected_active_version_id": "strategy-baseline-1",
-  "evaluation_run_id": "00000000-0000-4000-8000-000000000050",
-  "reason": "示意请求，服务端仍须检查实际 gate-v1 证据。"
-}

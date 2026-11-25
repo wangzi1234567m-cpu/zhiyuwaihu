@@ -1,4 +1,4 @@
-param([switch]$Restart,[switch]$Build,[ValidateSet(250,300,400)][int]$VadSilenceMs=400,[switch]$TtsTailDrain,[ValidateSet('qwen_http','qwen_ws','cosyvoice_ws')][string]$SpeechBackend='qwen_ws',[switch]$Rollback)
+param([switch]$Restart,[switch]$Build,[ValidateSet(250,300,400)][int]$VadSilenceMs=400,[switch]$TtsTailDrain,[ValidateSet('qwen_http','qwen_ws')][string]$SpeechBackend='qwen_ws',[switch]$Rollback)
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $taskRoot
@@ -49,7 +49,6 @@ $env:REALTIME_STUN_URLS='[]';$env:REALTIME_TURN_URLS='';$env:MAX_DAILY_NATIVE_SE
 if($Rollback){$VadSilenceMs=400;$SpeechBackend='qwen_http';$TtsTailDrain=$false}
 $env:REALTIME_SPEECH_BACKEND=$SpeechBackend
 $env:REALTIME_VAD_MODE='server_vad'
-$env:REALTIME_ANSWER_FIRST='false';$env:REALTIME_SEGMENTED_REPLIES='false';$env:REALTIME_PREFETCH_SPEECH='false';$env:REALTIME_SHADOW_VOICE_ENABLED='false'
 $env:REALTIME_VAD_SILENCE_MS=[string]$VadSilenceMs
 $env:REALTIME_VAD_THRESHOLD='0.5'
 $env:REALTIME_TTS_DRAIN_ENABLED=([bool]$TtsTailDrain).ToString().ToLowerInvariant()

@@ -1,4 +1,4 @@
-"""Whitelisted Qwen/CosyVoice duplex TTS, exact reviewed text and bounded cancellation."""
+"""Whitelisted Qwen duplex TTS, exact reviewed text and bounded cancellation."""
 import asyncio
 import json
 import re
@@ -11,7 +11,6 @@ from .diagnostics import RealtimeProbe, now_ns
 
 PROFILES={
     'qwen_ws':('qwen-audio-3.1-tts-flash','longanhuan_v3.1'),
-    'cosyvoice_ws':('cosyvoice-v3-flash','longanyang'),
 }
 
 
