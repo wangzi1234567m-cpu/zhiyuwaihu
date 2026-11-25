@@ -8,15 +8,18 @@ from pathlib import Path
 def summarize(report):
     samples = report['samples']
     values = []
+    all_valid_count = 0
     for sample in samples:
         value = sample.get('effective_answer_ms')
         if sample.get('status') == 'success' and isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0:
-            values.append(value)
+            all_valid_count += 1
+            if sample.get('cohort', True):values.append(value)
     values.sort()
     def percentile(p):
         return values[max(0, math.ceil(len(values)*p)-1)] if values else None
-    return {'total': len(samples), 'valid': len(values), 'failed_or_missing': len(samples)-len(values),
-            'failure_rate': (len(samples)-len(values))/len(samples) if samples else 1,
+    return {'total': len(samples), 'valid': len(values), 'failed_or_missing': len(samples)-all_valid_count,
+            'extra_setup_successes':all_valid_count-len(values),
+            'failure_rate': (len(samples)-all_valid_count)/len(samples) if samples else 1,
             'p50_ms': percentile(.5), 'p95_ms': percentile(.95)}
 
 

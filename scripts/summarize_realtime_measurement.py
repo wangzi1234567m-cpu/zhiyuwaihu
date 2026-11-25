@@ -55,6 +55,7 @@ def summarize(report):
     valid = [s for s in samples if s.get('status')=='success' and s.get('cohort',True)]
     for sample in samples:
         decompose(sample)
+    all_valid = [s for s in samples if s.get('status')=='success']
     all_audio = [s for s in samples if s.get('effective_answer_ms') is not None]
     stage_names = sorted({k for s in valid for k in s.get('stages_ms', {})})
     additive = ('input_transport_vad_return', 'native_understanding_after_stop',
@@ -75,7 +76,7 @@ def summarize(report):
     result = {
         'metadata': report['metadata'],
         'counts': {'calls': len(report['calls']), 'attempted_turns': len(samples), 'valid_turns': len(valid),
-            'invalid_or_failed_turns':len(samples)-len(valid), 'calls_without_turn_samples':calls_without_samples,
+            'invalid_or_failed_turns':len(samples)-len(all_valid), 'extra_setup_successes':len(all_valid)-len(valid), 'calls_without_turn_samples':calls_without_samples,
             'statuses':dict(Counter(s['status'] for s in samples))},
         'valid_effective_answer':distribution([s['effective_answer_ms'] for s in valid]),
         'all_observed_answer_audio':distribution([s['effective_answer_ms'] for s in all_audio]),
@@ -105,17 +106,17 @@ def summarize(report):
             'Remote decoded PCM observed in browser is not a physical loudspeaker or trusted playback-completion proof.',
             'A single candidate run cannot establish same-condition improvement or the relative P95/failure gate.',
             'Stage P50 values must not be added to infer the end-to-end P50.'
-            ,'Server timing uses Windows GetTickCount64 in this run (15.625ms resolution); zero-length short stages mean below clock resolution, not zero work.'
+            ,'Clock implementation and resolution are recorded above; short stages below clock resolution do not mean zero work.'
         ]}
     p50 = result['valid_effective_answer']['p50_ms']
     # An attempt without a valid answer is a failed deadline, never zero latency.
     completed = [s for s in samples if s['status'] != 'pending']
-    ordered = sorted(s['effective_answer_ms'] for s in valid)
+    ordered = sorted(s['effective_answer_ms'] for s in all_valid)
     def all_attempt_quantile(p):
         rank = math.ceil(len(completed)*p)
         return round(ordered[rank-1], 2) if rank and rank <= len(ordered) else None
     result['all_attempt_deadline_distribution'] = {
-        'n':len(completed), 'failures_counted_as_no_valid_answer':len(completed)-len(valid),
+        'n':len(completed), 'failures_counted_as_no_valid_answer':len(completed)-len(all_valid),
         'p50_ms':all_attempt_quantile(.5), 'p95_ms':all_attempt_quantile(.95),
         'null_quantile_means_no_valid_answer_at_that_rank':True}
     usage_seen = set()

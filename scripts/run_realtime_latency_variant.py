@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('--phase',required=True,choices=['ab400','ab300','natural400','natural300','final'])
+    parser.add_argument('--phase',required=True,choices=['ab400','ab300','natural400','natural300','barge400','final'])
     parser.add_argument('--vad',type=int,required=True,choices=[250,300,400])
     parser.add_argument('--calls',type=int,default=1,choices=range(1,13))
     parser.add_argument('--per-case',type=int,default=3,choices=[0,3,10])
@@ -20,12 +20,12 @@ def main():
     env=os.environ.copy();env.update(PYTHONPATH=str(ROOT/'backend'),APP_ENV='test',PUBLIC_ORIGIN='http://127.0.0.1:18765',
       LATENCY_OPTIMIZATION_AUTHORIZED='20261125-20-62-100',LATENCY_RUN_ID=run,LATENCY_CONTROL_TOKEN=token,
       LATENCY_WORKSPACE=str(ROOT.parents[1]),LATENCY_VARIANT='opt-vad-'+str(args.vad),LATENCY_CALLS=str(args.calls),
-      LATENCY_TARGET_PER_CASE=str(args.per_case),LATENCY_TARGET_VALID='4' if args.plan else str(args.per_case*3),
+      LATENCY_TARGET_PER_CASE=str(args.per_case),LATENCY_TARGET_VALID=str(len(json.loads(Path(args.plan).read_text(encoding='utf-8')))) if args.plan else str(args.per_case*3),
       REALTIME_VAD_SILENCE_MS=str(args.vad),REALTIME_VAD_THRESHOLD='0.5',REALTIME_DIAGNOSTICS_ENABLED='true',
       DEMO_PASSWORD='local-latency-only',REALTIME_WEBRTC_ENABLED='true',REALTIME_APPLICATION_IDS='00000000-0000-0000-0000-000000000001',
       REALTIME_STUN_URLS='[]',REALTIME_TURN_URLS='',VOICE_ENABLED='false',VOICE_WRITES_ENABLED='false',MODEL_PROVIDER='fake',
       TTS_PROVIDER='qwen',CLOUD_CALLS_ENABLED='true',FREE_QUOTA_CONFIRMED='true',MAX_DAILY_NATIVE_SESSIONS='20',
-      MAX_DAILY_NATIVE_TURNS='4' if args.plan else '3',MAX_DAILY_TTS_CALLS='100',ZHIYU_KNOWLEDGE_VERSION='workbench-reviewed-20261125-v3',
+      MAX_DAILY_NATIVE_TURNS=str(len(json.loads(Path(args.plan).read_text(encoding='utf-8')))) if args.plan else '3',MAX_DAILY_TTS_CALLS='100',ZHIYU_KNOWLEDGE_VERSION='workbench-reviewed-20261125-v3',
       PLAYWRIGHT_BROWSERS_PATH=str(ROOT.parents[1]/'.cache/pw-browsers'),PYTHONIOENCODING='utf-8')
     if args.plan:env['LATENCY_AUDIO_PLAN']=str(Path(args.plan).resolve())
     else:env.pop('LATENCY_AUDIO_PLAN',None)
