@@ -1,4 +1,4 @@
-param([switch]$Restart,[switch]$Build,[ValidateSet(250,300,400)][int]$VadSilenceMs=400,[switch]$TtsTailDrain)
+param([switch]$Restart,[switch]$Build,[ValidateSet(250,300,400)][int]$VadSilenceMs=400,[switch]$TtsTailDrain,[ValidateSet('qwen_http','qwen_ws','cosyvoice_ws')][string]$SpeechBackend='qwen_ws',[switch]$Rollback)
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $taskRoot
@@ -42,6 +42,10 @@ $env:MODEL_PROVIDER='fake';$env:VOICE_ENABLED='false';$env:VOICE_WRITES_ENABLED=
 $env:CLOUD_CALLS_ENABLED='true';$env:FREE_QUOTA_CONFIRMED='true';$env:TTS_PROVIDER='qwen';$env:REALTIME_WEBRTC_ENABLED='true'
 $env:REALTIME_APPLICATION_IDS='00000000-0000-0000-0000-000000000001,00000000-0000-0000-0000-000000000002,00000000-0000-0000-0000-000000000003'
 $env:REALTIME_STUN_URLS='[]';$env:REALTIME_TURN_URLS='';$env:MAX_DAILY_NATIVE_SESSIONS='40';$env:MAX_DAILY_NATIVE_TURNS='8';$env:MAX_DAILY_TTS_CALLS='400'
+if($Rollback){$VadSilenceMs=400;$SpeechBackend='qwen_http';$TtsTailDrain=$false}
+$env:REALTIME_SPEECH_BACKEND=$SpeechBackend
+$env:REALTIME_VAD_MODE='server_vad'
+$env:REALTIME_ANSWER_FIRST='false';$env:REALTIME_SEGMENTED_REPLIES='false';$env:REALTIME_PREFETCH_SPEECH='false';$env:REALTIME_SHADOW_VOICE_ENABLED='false'
 $env:REALTIME_VAD_SILENCE_MS=[string]$VadSilenceMs
 $env:REALTIME_VAD_THRESHOLD='0.5'
 $env:REALTIME_TTS_DRAIN_ENABLED=([bool]$TtsTailDrain).ToString().ToLowerInvariant()
@@ -49,7 +53,7 @@ $env:ZHIYU_KNOWLEDGE_VERSION='workbench-reviewed-20261125-v3'
 if($Build -or !(Test-Path -LiteralPath 'frontend/.next/BUILD_ID')){npm run build --prefix frontend -- --webpack;if($LASTEXITCODE -ne 0){throw 'Frontend build failed'}}
 $taskBackend=Start-Process -FilePath $taskPython -ArgumentList @('-m','uvicorn','workbench_runtime:app','--app-dir','scripts','--host','127.0.0.1','--port','18000','--no-access-log') -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $taskCache 'backend.out.log') -RedirectStandardError (Join-Path $taskCache 'backend.err.log')
 $taskFrontend=Start-Process -FilePath (Get-Command node).Source -ArgumentList @('node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port','13000') -WorkingDirectory (Join-Path $taskRoot 'frontend') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $taskCache 'frontend.out.log') -RedirectStandardError (Join-Path $taskCache 'frontend.err.log')
-@{backend_pid=$taskBackend.Id;frontend_pid=$taskFrontend.Id;frontend='http://localhost:13000';backend='http://127.0.0.1:18000';knowledge_version=$env:ZHIYU_KNOWLEDGE_VERSION;vad_silence_ms=$VadSilenceMs;vad_threshold=0.5;tts_tail_drain=[bool]$TtsTailDrain;voice_writes_enabled=$false}|ConvertTo-Json|Set-Content -LiteralPath $taskState -Encoding utf8
+@{backend_pid=$taskBackend.Id;frontend_pid=$taskFrontend.Id;frontend='http://localhost:13000';backend='http://127.0.0.1:18000';knowledge_version=$env:ZHIYU_KNOWLEDGE_VERSION;speech_backend=$SpeechBackend;vad_mode='server_vad';vad_silence_ms=$VadSilenceMs;vad_threshold=0.5;tts_tail_drain=[bool]$TtsTailDrain;voice_writes_enabled=$false}|ConvertTo-Json|Set-Content -LiteralPath $taskState -Encoding utf8
 $taskReadiness=@'
 import time,urllib.request
 client=urllib.request.build_opener(urllib.request.ProxyHandler({}))

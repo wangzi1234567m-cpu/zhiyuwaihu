@@ -1,5 +1,6 @@
 """Per-session pooled deterministic TTS. Approved segment text is never rewritten."""
 import asyncio
+from contextlib import aclosing
 import httpx
 from ..tts import QwenTTS, SpeechRequest
 
@@ -19,8 +20,9 @@ class StreamingSpeech:
             body = SpeechRequest(input=text[offset:offset+1200])
             self.tts.validate(body)
             await asyncio.to_thread(self.reserve, 'tts', self.config.max_daily_tts_calls)
-            async for pcm in self.tts.stream(body, cancel):
-                yield pcm
+            async with aclosing(self.tts.stream(body,cancel)) as chunks:
+                async for pcm in chunks:
+                    yield pcm
 
     async def close(self):
         await self.client.aclose()

@@ -70,7 +70,7 @@ def summarize(report):
                     if t['kind']=='reviewed_segment_received' and t.get('generation_id')==sample.get('generation_id')]
         invariants.append({'call':sample['call'], 'case':sample['case'],
             'six_stages_present':complete, 'telescoping_error_ms':round(error, 5) if error is not None else None,
-            'reviewed_text_matches':len(reviewed)==1 and reviewed[0].get('text')==sample.get('answer_text'),
+            'reviewed_text_matches':bool(reviewed) and ''.join(t.get('text','') for t in sorted(reviewed,key=lambda t:t.get('segment_index',0)))==sample.get('answer_text'),
             'zero_business_effects':sample.get('server', {}).get('effects')==0})
     calls_without_samples = [c['index'] for c in report['calls'] if not c.get('samples')]
     failed_connections=[{'call':c['index'],'failure':c['failure'],'code_commit':c.get('code_commit')} for c in report['calls'] if not c.get('samples') and c.get('failure')]

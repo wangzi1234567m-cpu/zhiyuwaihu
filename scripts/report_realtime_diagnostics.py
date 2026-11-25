@@ -35,7 +35,7 @@ def inspect(sample):
       result['server_sent_last_voice_to_stopped_ms']=round(stop['at_ms']-last['at_ns']/1e6,3)
       result['last_voiced_receive_relative_to_calibrated_browser_end_ms']=round(last['queued_at_ns']/1e6-end,3)
       result['provider_audio_end_minus_sent_content_end_ms']=round(stop.get('audio_end_ms',0)-last['sequence']*20,3)
-    text=sample.get('answer_text','');sha=hashlib.sha256(text.encode()).hexdigest()
+    text=sample.get('first_answer_segment_text') or sample.get('answer_text','');sha=hashlib.sha256(text.encode()).hexdigest()
     tts=(diag.get('tts') or {}).get('events',[])
     req=next((e for e in tts if e['event']=='tts_request_start' and e.get('text_sha256')==sha and e['at_ns']/1e6>=end-200),None)
     if req:

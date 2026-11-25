@@ -134,3 +134,25 @@ async def test_repeated_onset_same_item_stays_one_logical_turn_and_replay_is_ign
     receiver=provider.events();first=await anext(receiver);again=await anext(receiver);final=await anext(receiver)
     assert first['epoch']==again['epoch']==final['epoch']==1 and again['continuation'] and provider.turns==1
     await receiver.aclose();await provider.close()
+
+
+@pytest.mark.parametrize('actual,accepted',[( {'type':'semantic_vad_ec','silence_duration_ms':300},True),({'type':'server_vad','silence_duration_ms':400},False),({},False)])
+async def test_semantic_endpoint_must_be_acknowledged_by_provider(actual,accepted):
+    c=replace(settings,realtime_vad_mode='semantic_vad_ec',realtime_vad_silence_ms=300,cloud_calls_enabled=True,free_quota_confirmed=True,dashscope_api_key='test',dashscope_workspace_id='ws-test',max_daily_native_turns=1)
+    socket=SocketBoundary([{'type':'session.created'},{'type':'session.updated','session':{'turn_detection':actual}}])
+    async def connect(*a,**kw):return socket
+    provider=NativeInput(c,lambda *a:None,connect)
+    try:
+        if accepted:await provider.open(SimpleNamespace(state='VERIFYING'))
+        else:
+            with pytest.raises(ProviderFailure,match='NATIVE_VAD_CONFIG_REJECTED'):await provider.open(SimpleNamespace(state='VERIFYING'))
+        assert socket.sent[0]['session']['turn_detection']['silence_duration_ms']==300
+    finally:await provider.close()
+
+
+async def test_repeated_onset_after_commit_cannot_cancel_or_rebind_final_understanding():
+    events=sequence();provider=NativeInput(settings,lambda *a:None)
+    provider.ws=SocketBoundary(events[:3]+[dict(events[0],event_id='late-repeat')]+events[3:])
+    receiver=provider.events();await anext(receiver)
+    assert (await anext(receiver))['type']=='final' and provider.turns==1
+    await receiver.aclose();await provider.close()

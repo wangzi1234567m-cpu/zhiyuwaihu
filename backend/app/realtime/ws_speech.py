@@ -63,7 +63,11 @@ class WebSocketSpeech:
         except (ValueError,TypeError,KeyError):
             raise DomainError('TTS_BAD_STREAM','语音任务响应无法关联',503) from None
         if event=='task-failed':
-            raise DomainError('TTS_UPSTREAM_ERROR','语音供应商任务失败',503)
+            code=str(header.get('error_code','UNKNOWN'))
+            if not re.fullmatch(r'[A-Za-z0-9_.-]{1,100}',code):code='UNKNOWN'
+            self.probe.emit('tts_ws_failed',task_id=task,provider_code=code)
+            public='TTS_RATE_LIMITED' if any(x in code.upper() for x in ('THROTTL','RATE_LIMIT')) else 'TTS_UPSTREAM_ERROR'
+            raise DomainError(public,'语音供应商任务失败',503)
         usage=value.get('payload',{}).get('usage') or {}
         self.probe.emit('tts_ws_event',task_id=task,name=event,**{k:v for k,v in usage.items() if k in ('characters','input_tokens','output_tokens','total_tokens') and isinstance(v,(int,float))})
         return event
@@ -75,8 +79,12 @@ class WebSocketSpeech:
                 await self._send('finish-task',task,{'input':{'directive':'cancel'}})
                 while True:
                     raw=await self.ws.recv()
-                    if not isinstance(raw,bytes) and self._event(raw,task)=='task-finished':return
+                    if not isinstance(raw,bytes) and self._event(raw,task)=='task-finished':break
         except (Exception,asyncio.CancelledError):
+            pass
+        finally:
+            # Cancellation may race a normal terminal event and leave another ack.
+            # Reconnect before any next task; never interpret old audio/acks as new.
             await self._drop()
 
     async def _drop(self):

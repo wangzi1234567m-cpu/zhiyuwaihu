@@ -220,6 +220,7 @@ class Coordinator:
                       'rule_version':decision.rule_version,'route':decision.route,
                       'routing_decision':decision.model_dump(mode='json'),
                       'verified':False,'explained':False,'ended':False,'busy':False,'epoch':0,'message_count':0,
+                      'realtime_answer_first':settings.realtime_answer_first,'realtime_segmented_replies':settings.realtime_segmented_replies,
                       'notifications':[],'contact_outcome':case.contact_outcome,'contact_outcome_source':'domain_event' if case.contact_event_id else 'none',
                       'submission_attempt':case.submission_attempt,'call_attempt':case.call_attempt,'contact_event_id':str(case.contact_event_id) if case.contact_event_id else None,
                       'model_version':model['model_version'],'model_mode':model['mode'],
@@ -469,6 +470,11 @@ class Coordinator:
             session_message_ids={m.message_id for m in messages_db_ids(self, sid)}
             entry_ids={str(e.entry_id) for e in entries}
             decision=self._validate_understanding(decision, session_message_ids, entry_ids)
+            if (source=='realtime' and verified and row.data.get('realtime_answer_first')
+                and decision.proposed_action=='none' and decision.understanding is not None):
+                from .realtime.reply_strategy import answer_first
+                decision=decision.model_copy(update={'reply_text':answer_first(decision.reply_text,
+                    decision.understanding.intents,self.services.agent.templates,company)})
             # 错人/拒绝结束：绝不自动驳回，也不伪造告知完成。
             # 联系结果由服务端裁决：模型提示只有在服务端核验/可信事件支持下才被采纳。
             outcome, outcome_source = self.resolve_contact_outcome(

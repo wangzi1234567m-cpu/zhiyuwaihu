@@ -131,7 +131,7 @@ class NativeInput:
                 item=event.get('item_id')
                 if not isinstance(item,str) or not item:raise ProviderFailure('NATIVE_INPUT_BINDING_INVALID')
                 existing=self.inputs.get(item)
-                if existing and existing['phase'] in ('done','cancelled'):continue
+                if existing and existing['phase'] != 'capturing':continue
                 continuation=existing is not None
                 if not existing:
                     if len(self.inputs)>=64:raise ProviderFailure('NATIVE_INPUT_BINDING_INVALID')

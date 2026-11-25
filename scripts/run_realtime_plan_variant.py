@@ -5,7 +5,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 def main():
     parser=argparse.ArgumentParser()
-    parser.add_argument('--phase',required=True,choices=['baseline','semantic','semantic400','natural','barge','diagnostic','final','segmented'])
+    parser.add_argument('--phase',required=True,choices=['baseline','semantic','semantic400','natural','barge','diagnostic','final','segmented','natural400','natural300','segmentedcontrol','server300','qwenws','bargefixed','segmentedws','bargefixed2'])
     parser.add_argument('--vad',type=int,required=True,choices=[250,300,400])
     parser.add_argument('--calls',type=int,default=1,choices=range(1,13))
     parser.add_argument('--per-case',type=int,default=3,choices=[0,3,10])

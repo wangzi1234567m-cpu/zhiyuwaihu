@@ -2,7 +2,7 @@
 import asyncio
 import time
 from collections import deque
-from contextlib import suppress
+from contextlib import suppress, aclosing
 from uuid import uuid4
 
 from .diagnostics import RealtimeProbe, now_ns
@@ -50,6 +50,7 @@ class RealtimeSession:
         self.wait_task = None
         self.playing_wait = False
         self.active_segment = None
+        self.prepared = {}
 
     def spawn(self, coro):
         if len(self.tasks) >= 32:
@@ -282,6 +283,9 @@ class RealtimeSession:
                     self.speech_task.cancel()
                 self.media.output.clear(self.epoch)
                 self.notify('playback.stop', epoch=self.epoch)
+            if self.manager.config.realtime_prefetch_speech:
+                from .prepared import PreparedSpeech
+                self.prepared[payload.segment_id]=PreparedSpeech(payload.text,self.speech,self.spawn)
             self.metric('reviewed_segment_ready', generation_id=str(event.generation_id))
             self.segments.put_nowait((event.generation_id, payload, self.epoch))
         elif kind == 'turn.interrupted':
@@ -328,16 +332,19 @@ class RealtimeSession:
         first = True
         playback_id = self.playback_id
         started = time.monotonic()
-        async for pcm in self.speech.stream(segment.text if segment else '正在核实，请稍等。', self.cancel_audio):
-            if epoch != self.epoch or self.closed or self.cancel_audio.is_set():
-                return
-            if first:
-                self.metric('tts_first_pcm', (time.monotonic()-started)*1000)
-                if needs_ready:
-                    async with asyncio.timeout(3):
-                        await self.playback_gate.wait()
-                first = False
-            await self.media.output.write(pcm, epoch)
+        prepared=self.prepared.get(segment.segment_id) if segment else None
+        chunks=prepared.stream() if prepared else self.speech.stream(segment.text if segment else '正在核实，请稍等。',self.cancel_audio)
+        async with aclosing(chunks):
+            async for pcm in chunks:
+                if epoch != self.epoch or self.closed or self.cancel_audio.is_set():
+                    return
+                if first:
+                    self.metric('tts_first_pcm', (time.monotonic()-started)*1000)
+                    if needs_ready:
+                        async with asyncio.timeout(3):
+                            await self.playback_gate.wait()
+                    first = False
+                await self.media.output.write(pcm, epoch)
         if epoch != self.epoch or self.cancel_audio.is_set():
             return
         if first:
@@ -357,6 +364,8 @@ class RealtimeSession:
         self.notify('playback.drained', segment_id=str(segment.segment_id), evidence=False)
 
     def stop_output(self):
+        for prepared in self.prepared.values():prepared.stop()
+        self.prepared.clear()
         if self.active_segment:
             self.spawn(self.report_interrupted(self.active_segment))
             self.active_segment = None
@@ -428,6 +437,8 @@ class RealtimeSession:
         if self.closed:
             return
         self.closed, self.input_ready = True, False
+        for prepared in self.prepared.values():prepared.stop()
+        self.prepared.clear()
         active = self.active_segment
         self.active_segment = None
         self.cancel_audio.set()

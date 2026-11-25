@@ -89,7 +89,7 @@ async function evaluate(){
       await request('/api/v1/dev/login',{username:'demo',password:'local-latency-only'});
       const actualProvider=await request('/eval/config',undefined,true);
       if(report.metadata.provider){
-        for(const key of ['vad_silence_ms','vad_threshold','tts_drain_enabled','model','voice','knowledge_version','speech_backend','vad_mode'])
+        for(const key of ['vad_silence_ms','vad_threshold','tts_drain_enabled','model','voice','knowledge_version','speech_backend','vad_mode','answer_first','segmented_replies','prefetch_speech'])
           if(report.metadata.provider[key]!==actualProvider[key])throw new Error('FROZEN_PROVIDER_CONFIG_MISMATCH_'+key);
         if(JSON.stringify(report.metadata.provider.limits)!==JSON.stringify(actualProvider.limits))
           (report.budget_revision_history??=[]).push({after_calls:report.calls.length-1,previous:report.metadata.provider.limits,current:actualProvider.limits});
@@ -141,15 +141,18 @@ async function evaluate(){
           sample.generation_id=answer.generation_id;sample.effective_answer_ms=answer.at-sample.input.speech_end_ms;
           sample.file_end_to_answer_ms=answer.at-sample.input.scheduled_file_end_ms;
           if(!fixture.allow_barge_after){
-            await page.waitForFunction(before=>evalState.notices.slice(before.notices).some(n=>n.type==='playback.drained')||evalState.failures.length,before,{timeout:60000});
+            const reviewedState=await request('/eval/state/'+sid,undefined,true);
+            const expected=reviewedState.traces.find(t=>t.kind==='reviewed_reply_completed'&&t.generation_id===answer.generation_id)?.segment_count||1;
+            await page.waitForFunction(({before,generation,expected})=>{const notices=evalState.notices.slice(before.notices),ids=new Set(notices.filter(n=>n.type==='playback.permit'&&n.generation_id===generation&&n.answer).map(n=>n.segment_id));return notices.filter(n=>n.type==='playback.drained'&&ids.has(n.segment_id)).length>=expected||evalState.failures.length;},{before,generation:answer.generation_id,expected},{timeout:60000});
             await page.waitForFunction(()=>performance.now()-evalState.lastRemote>500,{},{timeout:12000});
           }
           const state=await request('/eval/state/'+sid,undefined,true);sample.server=state;
-          const segment=state.traces.find(t=>t.kind==='reviewed_segment_received'&&t.generation_id===answer.generation_id);
+          const segments=state.traces.filter(t=>t.kind==='reviewed_segment_received'&&t.generation_id===answer.generation_id).sort((a,b)=>(a.segment_index||0)-(b.segment_index||0));
+          const segment=segments[0];
           const after=state.traces.filter(t=>t.at_ms>=sample.input.speech_end_ms+sample.clock_sync.offset_ms-200);
           const final=after.find(t=>t.kind==='input_final');
           sample.recognized=final?{text:final.text,candidate:final.candidate}:null;
-          sample.answer_text=segment?.text;
+          sample.answer_text=segments.map(s=>s.text).join('');sample.first_answer_segment_text=segment?.text;
           sample.browser_audio_stats=await page.evaluate(async()=>{
             const rows=[];for(const stat of (await evalState.pc.getStats()).values())
               if(stat.type==='inbound-rtp'&&stat.kind==='audio')rows.push({jitter:stat.jitter,jitterBufferDelay:stat.jitterBufferDelay,jitterBufferEmittedCount:stat.jitterBufferEmittedCount,jitterBufferTargetDelay:stat.jitterBufferTargetDelay,packetsLost:stat.packetsLost,packetsReceived:stat.packetsReceived});
@@ -160,8 +163,8 @@ async function evaluate(){
 
           const intents=final?.candidate?.intents||[];
           sample.business_valid=fixture.id==='identity'?state.verified&&intents.includes('confirm_identity'):
-            fixture.id==='guarantee'?intents.includes('ask_guarantee')&&/不能保证|不能承诺|无法保证/.test(segment?.text||''):
-            intents.includes('ask_source')&&/依据|来源/.test(segment?.text||'');
+            fixture.id==='guarantee'?intents.includes('ask_guarantee')&&/不能保证|不能承诺|无法保证/.test(sample.answer_text||''):
+            intents.includes('ask_source')&&/依据|来源/.test(sample.answer_text||'');
           if(fixture.expect_transcript_regex&&!new RegExp(fixture.expect_transcript_regex).test(sample.recognized?.text||''))sample.business_valid=false;
           if(fixture.expect_barge_in&&!sample.barge_in_observed)sample.business_valid=false;
           if(state.effects!==0)throw new Error('UNEXPECTED_BUSINESS_EFFECT');
@@ -173,6 +176,7 @@ async function evaluate(){
           failures:sample.server?.traces.filter(t=>t.kind==='session_metric'&&t.name==='failure').map(t=>t.code)}));
         if(sample.status==='failed')break;
       }
+      if(process.env.LATENCY_SHADOW_EXPERIMENT==='true')call.shadow=await request('/eval/shadow/'+sid,{},true);
       call.final=await request('/eval/state/'+sid,undefined,true);
     }catch(error){call.failure=String(error.message).slice(0,150);
       if(sid)try{call.final=await page.evaluate(async({sid,token})=>{const r=await fetch('/eval/state/'+sid,{headers:{'X-Latency-Token':token}});return r.json();},{sid,token});}catch{}

@@ -9,7 +9,7 @@ import os
 import re
 import sys
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, aclosing
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -164,12 +164,13 @@ class MeasuredSpeech:
         first = True
         total = 0
         try:
-            async for chunk in self.inner.stream(text, cancel):
-                if first:
-                    first = False
-                    trace(self.sid, 'synthesis_first_pcm', synthesis_id=identity, waiting=waiting)
-                total += len(chunk)
-                yield chunk
+            async with aclosing(self.inner.stream(text,cancel)) as chunks:
+                async for chunk in chunks:
+                    if first:
+                        first = False
+                        trace(self.sid, 'synthesis_first_pcm', synthesis_id=identity, waiting=waiting)
+                    total += len(chunk)
+                    yield chunk
         except Exception as error:
             trace(self.sid, 'synthesis_error', synthesis_id=identity,
                   error_type=type(error).__name__, code=getattr(error, 'code', None))
@@ -215,7 +216,9 @@ class MeasuredSession(RealtimeSession):
         if event.payload.type == 'reply.segment_ready':
             trace(self.context.session_id, 'reviewed_segment_received',
                 generation_id=str(event.generation_id), text=event.payload.text,
-                message_id=str(event.payload.message_id), segment_id=str(event.payload.segment_id))
+                message_id=str(event.payload.message_id), segment_id=str(event.payload.segment_id), segment_index=event.payload.segment_index)
+        elif event.payload.type == 'reply.completed':
+            trace(self.context.session_id,'reviewed_reply_completed',generation_id=str(event.generation_id),segment_count=event.payload.segment_count)
         await super().handle_event(event)
 
 
@@ -299,6 +302,7 @@ async def config(request: Request):
         'voice':speech_profile(settings)['voice'],'speech_backend':settings.realtime_speech_backend,'vad_mode':settings.realtime_vad_mode, 'voice_writes': settings.voice_writes_enabled,
         'vad_silence_ms':settings.realtime_vad_silence_ms, 'vad_threshold':settings.realtime_vad_threshold,
         'diagnostics':settings.realtime_diagnostics_enabled, 'tts_drain_enabled':settings.realtime_tts_drain_enabled, 'budget_id':BUDGET_ID,
+        'answer_first':settings.realtime_answer_first,'segmented_replies':settings.realtime_segmented_replies,'prefetch_speech':settings.realtime_prefetch_speech,
         'server_clock':'perf_counter_ns',
         'knowledge_version':os.getenv('ZHIYU_KNOWLEDGE_VERSION','demo-k1')}
 
@@ -337,3 +341,42 @@ async def diagnostics(sid:str,request:Request):
     if sid in app.state.realtime.sessions:raise HTTPException(409,'Close measured media before exporting diagnostics')
     if sid not in DIAGNOSTICS:raise HTTPException(404)
     return DIAGNOSTICS[sid]
+
+
+@app.post('/eval/shadow/{sid}')
+async def shadow_experiment(sid:str,request:Request):
+    await private(request)
+    if os.getenv('LATENCY_SHADOW_EXPERIMENT')!='true':raise HTTPException(404)
+    from dataclasses import replace
+    from app.realtime.shadow import ShadowVoice
+    from app.realtime_business.events import RealtimeEventRow
+    session=app.state.realtime.sessions.get(sid)
+    if session is None:raise HTTPException(409)
+    with Session() as db:
+        events=list(db.scalars(select(RealtimeEventRow).where(RealtimeEventRow.session_id==sid).order_by(RealtimeEventRow.seq.desc())))
+        event=next((e for e in events if e.data['generation_id']==str(session.generation) and e.data['payload']['type']=='reply.segment_ready'),None)
+        if event is None:raise HTTPException(409)
+        event_id=event.id
+    shadow=ShadowVoice(replace(settings,realtime_shadow_voice_enabled=True,max_daily_native_turns=4),reserve,port)
+    rows=[]
+    try:
+        for index in range(4):
+            cancel=asyncio.Event();start=ms();shadow.audio_started.clear()
+            task=asyncio.create_task(shadow.generate(session.context,event_id,cancel))
+            first=None
+            while not task.done():
+                if shadow.audio_started.is_set():
+                    first=ms()-start
+                    if index==3:cancel.set()
+                    break
+                await asyncio.sleep(.005)
+            result=await task
+            row={'index':index+1,'first_candidate_audio_ms':first,'merchant_playback':False,'audio_verified':False,'cancel_requested':index==3}
+            if result:
+                row.update(text_matches=result['text_matches'],approved_sha256=result['approved_sha256'],pcm_bytes=len(result['candidate_pcm']),generation_id=result['generation_id'])
+            else:row['cancelled_without_playback']=cancel.is_set()
+            rows.append(row)
+        return {'shadow_only':True,'rows':rows,'effective_business_answer_latency':None}
+    except Exception as error:
+        return {'shadow_only':True,'rows':rows,'failure':str(error)[:100],'effective_business_answer_latency':None}
+    finally:await shadow.close()

@@ -72,3 +72,27 @@ async def test_ws_connect_can_be_cancelled_without_waiting_for_connect_timeout()
 
 async def test_unknown_backend_and_invalid_config_cannot_spend_budget():
     with pytest.raises(DomainError):create_speech(replace(configured(),realtime_speech_backend='browser-chosen-model'),lambda *a:None)
+
+
+async def test_consumer_cancelled_during_media_backpressure_closes_upstream_and_unlocks_next_turn():
+    from contextlib import aclosing
+    from types import SimpleNamespace
+    from uuid import uuid4
+    from app.realtime.session import RealtimeSession
+    socket=TaskSocket()
+    async def connect(*a,**kw):
+        nonlocal socket
+        if socket.closed:socket=TaskSocket()
+        return socket
+    speech=WebSocketSpeech(replace(configured(),realtime_speech_backend='qwen_ws'),lambda *a:None,connect)
+    entered=asyncio.Event()
+    class Output:
+        async def write(self,pcm,epoch):entered.set();await asyncio.Event().wait()
+    session=SimpleNamespace(playback_id=uuid4(),prepared={},speech=speech,cancel_audio=asyncio.Event(),epoch=1,closed=False,media=SimpleNamespace(output=Output()),metric=lambda *a,**kw:None)
+    segment=SimpleNamespace(segment_id=uuid4(),text='当前完整审核正文')
+    task=asyncio.create_task(RealtimeSession.render(session,uuid4(),segment,1,False))
+    await asyncio.wait_for(entered.wait(),1)
+    session.cancel_audio.set();task.cancel();await asyncio.gather(task,return_exceptions=True)
+    assert not speech.lock.locked()
+    assert b''.join([pcm async for pcm in speech.stream('下一轮审核正文',asyncio.Event())])==bytes(range(4))
+    await speech.close()

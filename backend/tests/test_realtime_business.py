@@ -232,3 +232,40 @@ async def test_parallel_reply_delivery_before_held_operation_and_writeback(setup
         execute_release.set()
         writeback_release.set()
         await consumer.disconnect()
+
+
+async def test_segmented_review_preserves_full_message_and_does_not_grant_playback_proof(setup):
+    from app.db import Message
+    from app.realtime_business.events import RealtimeEventRow
+    facade,consumer=await pair(setup)
+    with Session.begin() as db:
+        row=db.get(Conversation,str(consumer.context.session_id))
+        row.data={**row.data,'realtime_segmented_replies':True}
+    context,value,accepted=await submit(facade,consumer,'我是演示商家1')
+    with Session() as db:
+        rows=list(db.scalars(select(RealtimeEventRow).where(RealtimeEventRow.session_id==str(context.session_id)).order_by(RealtimeEventRow.seq)))
+        events=[r.data for r in rows if r.data['generation_id']==str(accepted.generation_id)]
+        parts=[e['payload'] for e in events if e['payload']['type']=='reply.segment_ready']
+        complete=next(e['payload'] for e in events if e['payload']['type']=='reply.completed')
+        message=db.get(Message,parts[0]['message_id'])
+        assert len(parts)==complete['segment_count']==2
+        assert ''.join(p['text'] for p in parts)==message.data['view']['text']
+        assert [p['segment_index'] for p in parts]==[0,1]
+        row=db.get(Conversation,str(context.session_id))
+        assert not row.data.get('voice_explanation_verified') and db.scalar(select(func.count()).select_from(Effect))==0
+
+
+async def test_shadow_authorization_requires_persisted_current_review_and_verified_identity(setup):
+    from app.realtime.shadow import approved_shadow_text,ShadowDenied
+    from app.realtime_business.events import RealtimeEventRow
+    facade,consumer=await pair(setup)
+    with pytest.raises(ShadowDenied):approved_shadow_text(facade,consumer.context,uuid4())
+    context,value,accepted=await submit(facade,consumer,'我是演示商家1')
+    with Session() as db:
+        rows=list(db.scalars(select(RealtimeEventRow).where(RealtimeEventRow.session_id==str(context.session_id))))
+        event=next(r for r in rows if r.data['generation_id']==str(accepted.generation_id) and r.data['payload']['type']=='reply.segment_ready')
+        event_id=event.id
+    text,digest,generation=approved_shadow_text(facade,consumer.context,event_id)
+    assert text and len(digest)==64 and generation==str(accepted.generation_id)
+    await submit(facade,consumer,'补齐材料一定必过吗')
+    with pytest.raises(ShadowDenied,match='SHADOW_STALE'):approved_shadow_text(facade,consumer.context,event_id)
