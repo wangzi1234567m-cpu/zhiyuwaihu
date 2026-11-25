@@ -18,6 +18,7 @@ async def main():
     path=folder/('tts-short-control.json' if args.short_text_control else 'tts-candidates.json')
     if path.exists() and not args.resume:raise SystemExit('Existing experiment retained; explicit --resume required')
     source=ROOT.parent/'v04-latency/.cache/v04-latency-20261124-b.json' if args.short_text_control else ROOT/'.cache/v04-latency-opt-20261125-ab400.json'
+    if not source.exists():source=ROOT/'.cache/evidence/latency-old-20261124.json' if args.short_text_control else ROOT/'.cache/v04-latency-plan-20261125-final.json'
     raw=json.loads(source.read_text(encoding='utf-8'));texts={s['case']:s['answer_text'] for s in raw['samples'] if s['status']=='success'}
     result={'component_only':True,'native_connections':0,'repeats':args.repeats,'samples':[],'profiles':{},'source_sha256':hashlib.sha256(source.read_bytes()).hexdigest()}
     if path.exists():

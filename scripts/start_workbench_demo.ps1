@@ -2,7 +2,8 @@ param([switch]$Restart,[switch]$Build,[ValidateSet(250,300,400)][int]$VadSilence
 $ErrorActionPreference='Stop'
 $taskRoot=Split-Path $PSScriptRoot -Parent
 Set-Location -LiteralPath $taskRoot
-$taskPython=Join-Path $taskRoot '../../.venv/Scripts/python.exe'
+$taskPython=Join-Path $taskRoot '.venv/Scripts/python.exe'
+if(!(Test-Path -LiteralPath $taskPython) -and (Split-Path (Split-Path $taskRoot -Parent) -Leaf) -eq 'tmp'){$taskPython=Join-Path $taskRoot '../../.venv/Scripts/python.exe'}
 if(!(Test-Path -LiteralPath $taskPython)){$taskPython='python'}
 $taskCache=Join-Path $taskRoot '.cache/ddl'
 New-Item -ItemType Directory -Path $taskCache -Force | Out-Null
@@ -37,7 +38,10 @@ $env:SESSION_COOKIE_NAME='zhiyu_ddl_session';$env:STAFF_COOKIE_NAME='zhiyu_ddl_s
 $taskSecret=Join-Path $taskCache 'cookie-secret'
 if(!(Test-Path -LiteralPath $taskSecret)){[guid]::NewGuid().ToString('N')+[guid]::NewGuid().ToString('N')|Set-Content -LiteralPath $taskSecret -Encoding utf8}
 $env:COOKIE_SECRET=(Get-Content -LiteralPath $taskSecret -Raw).Trim()
-if(!$env:VOICE_CONFIG_ENV_FILE){$env:VOICE_CONFIG_ENV_FILE=(Join-Path $taskRoot '../../.env')}
+if(!$env:VOICE_CONFIG_ENV_FILE){
+  $env:VOICE_CONFIG_ENV_FILE=Join-Path $taskRoot '.env'
+  if(!(Test-Path -LiteralPath $env:VOICE_CONFIG_ENV_FILE) -and (Split-Path (Split-Path $taskRoot -Parent) -Leaf) -eq 'tmp'){$env:VOICE_CONFIG_ENV_FILE=Join-Path $taskRoot '../../.env'}
+}
 $env:MODEL_PROVIDER='fake';$env:VOICE_ENABLED='false';$env:VOICE_WRITES_ENABLED='false'
 $env:CLOUD_CALLS_ENABLED='true';$env:FREE_QUOTA_CONFIRMED='true';$env:TTS_PROVIDER='qwen';$env:REALTIME_WEBRTC_ENABLED='true'
 $env:REALTIME_APPLICATION_IDS='00000000-0000-0000-0000-000000000001,00000000-0000-0000-0000-000000000002,00000000-0000-0000-0000-000000000003'

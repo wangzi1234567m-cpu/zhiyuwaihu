@@ -42,8 +42,11 @@ def inspect(sample):
       tt=[e for e in tts if e.get('request_id')==req['request_id']]
       def first(name):return next((e for e in tt if e['event']==name),None)
       head,block,pcm=first('tts_response_headers'),first('tts_first_audio_block'),first('tts_first_pcm')
-      result['tts']={'text_chars':req['text_chars'],'connection_reused_observed':head.get('connection_reused_observed') if head else None,
-        'request_to_headers_ms':round((head['at_ns']-req['at_ns'])/1e6,3) if head else None,
+      transport=head.get('transport','http_sse') if head else None
+      result['tts']={'transport':transport,'text_chars':req['text_chars'],'connection_reused_observed':head.get('connection_reused_observed') if head else None,
+        'request_to_headers_ms':round((head['at_ns']-req['at_ns'])/1e6,3) if head and transport!='websocket' else None,
+        'request_to_task_started_ms':round((head['at_ns']-req['at_ns'])/1e6,3) if head and transport=='websocket' else None,
+        'task_started_to_first_pcm_ms':round((pcm['at_ns']-head['at_ns'])/1e6,3) if pcm and head and transport=='websocket' else None,
         'headers_to_first_audio_ms':round((block['at_ns']-head['at_ns'])/1e6,3) if head and block else None,
         'first_audio_to_pcm_ms':round((pcm['at_ns']-block['at_ns'])/1e6,3) if block and pcm else None,
         'http_events':[{'name':e['name'],'since_request_ms':round((e['at_ns']-req['at_ns'])/1e6,3)} for e in tt if e['event']=='tts_http_trace'],

@@ -282,7 +282,13 @@ async def private(request):
         raise HTTPException(403)
 
 @app.get('/')
-def index():
+async def index():
+    if os.getenv('LATENCY_WORKBENCH_UI')=='true':
+        import httpx
+        async with httpx.AsyncClient(trust_env=False) as client:
+            response=await client.get('http://127.0.0.1:13000',timeout=3)
+            response.raise_for_status()
+            return HTMLResponse(response.text)
     return HTMLResponse('<!doctype html><meta charset="utf-8"><title>Bounded real-provider latency evaluation</title>')
 
 @app.get('/realtime-meter.js')
@@ -380,3 +386,11 @@ async def shadow_experiment(sid:str,request:Request):
     except Exception as error:
         return {'shadow_only':True,'rows':rows,'failure':str(error)[:100],'effective_business_answer_latency':None}
     finally:await shadow.close()
+
+
+# Local acceptance recorder only. Production application assembly does not mount these.
+if os.getenv('LATENCY_WORKBENCH_UI')=='true':
+    from fastapi.staticfiles import StaticFiles
+    app.mount('/_next/static',StaticFiles(directory=ROOT/'frontend/.next/static'),name='recording-static')
+    @app.get('/zhiyu-logo.jpg')
+    async def recording_logo():return FileResponse(ROOT/'frontend/public/zhiyu-logo.jpg')
