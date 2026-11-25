@@ -66,10 +66,13 @@ class NativeInput:
         url = f'wss://{c.dashscope_workspace_id}.{c.dashscope_region}.maas.aliyuncs.com/api-ws/v1/realtime?model=qwen3.8-omni-flash-realtime'
         try:
             async with asyncio.timeout(8):
+                self.probe.emit('native_ws_connect_start')
                 self.ws = await self.connector(url, additional_headers={'Authorization': 'Bearer '+c.dashscope_api_key},
                     open_timeout=8, max_size=1024*1024, ping_interval=15)
+                self.probe.emit('native_ws_connected')
                 while (await self.receive()).get('type') != 'session.created':
                     pass
+                self.probe.emit('native_session_created')
                 await self.send('session.update', session={
                     'modalities': ['text'], 'tools': [], 'max_tokens': 512,
                     'instructions': ('你是音频输入理解器，不对用户回答。只输出JSON：transcript为本轮用户原话，'
@@ -85,7 +88,9 @@ class NativeInput:
                 })
                 while (await self.receive()).get('type') != 'session.updated':
                     pass
-        except BaseException:
+                self.probe.emit('native_session_updated')
+        except BaseException as error:
+            self.probe.emit('native_open_failed',error_type=type(error).__name__)
             await self.close()
             raise
 

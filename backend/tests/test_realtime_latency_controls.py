@@ -69,3 +69,11 @@ def test_extra_identity_setup_successes_cannot_dilute_failure_gate():
     assert result['candidate']['valid']==30 and result['candidate']['extra_setup_successes']==30
     assert result['candidate']['failure_rate']<=result['baseline']['failure_rate']
     assert not result['failure_rate_not_worse'] and not result['latency_gate_passed']
+
+
+def test_opening_failures_are_counted_even_without_turn_samples():
+    from report_realtime_latency import summarize
+    report={'samples':[{'status':'success','effective_answer_ms':1500} for _ in range(30)],'calls':[{'failure':'OPENING_FAILED','samples':[]},{'failure':'OPENING_FAILED','samples':[]}]}
+    result=summarize(report)
+    assert result['valid']==30 and result['total']==32 and result['failed_or_missing']==2
+    assert result['failure_rate']==2/32 and result['acceptance_failure_rate']==2/32

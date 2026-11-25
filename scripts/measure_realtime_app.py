@@ -41,10 +41,12 @@ TRACES = {}
 DIAGNOSTICS = {}
 LIMITS = {'native_realtime_session': 15, 'native_realtime_turn': 45, 'tts': 120}
 BUDGET_ID = RUN
-if os.getenv('LATENCY_OPTIMIZATION_AUTHORIZED') == '20261125-20-62-100':
+if os.getenv('LATENCY_OPTIMIZATION_AUTHORIZED') in ('20261125-20-62-100','20261125-24-74-100'):
     # User-approved additional budget, shared by ALL variants and final evaluation.
     LIMITS = {'native_realtime_session':20,'native_realtime_turn':62,'tts':100}
     BUDGET_ID = 'v04-latency-opt-20261125'
+    if os.getenv('LATENCY_OPTIMIZATION_AUTHORIZED')=='20261125-24-74-100':
+        LIMITS={'native_realtime_session':24,'native_realtime_turn':74,'tts':100}
 
 
 def ms():
@@ -74,7 +76,11 @@ class MeasuredInput(NativeInput):
     async def open(self, snapshot):
         self.sid = str(snapshot.session_id)
         trace(self.sid, 'provider_open_start')
-        await super().open(snapshot)
+        try:
+            await super().open(snapshot)
+        except BaseException as error:
+            trace(self.sid,'provider_open_failure',error_type=type(error).__name__)
+            raise
         trace(self.sid, 'provider_open_ready')
 
     async def receive(self):

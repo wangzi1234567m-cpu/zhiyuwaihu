@@ -76,7 +76,9 @@ def project_event(db, row, event):
 
 
 def publish_writeback(db, row, record):
-    if not row.data.get('realtime_enabled'):
+    # An opening failure can end a session before any business turn exists.
+    # Persist its unknown-contact record without inventing a turn/generation binding.
+    if not row.data.get('realtime_enabled') or not row.data.get('turn_id') or not row.data.get('generation_id'):
         return
     identity = f'{record.record_id}:{record.record_revision}'
     if row.data.get('realtime_writeback') == identity:

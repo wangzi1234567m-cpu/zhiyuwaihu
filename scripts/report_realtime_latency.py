@@ -17,14 +17,16 @@ def summarize(report):
     values.sort()
     def percentile(p):
         return values[max(0, math.ceil(len(values)*p)-1)] if values else None
-    cohort_attempts=sum(sample.get('cohort', True) for sample in samples)
-    all_failure_rate=(len(samples)-all_valid_count)/len(samples) if samples else 1
+    failed_connections=sum(bool(call.get('failure')) and not call.get('samples') for call in report.get('calls',[]))
+    total_attempts=len(samples)+failed_connections
+    cohort_attempts=sum(sample.get('cohort', True) for sample in samples)+failed_connections
+    all_failure_rate=(total_attempts-all_valid_count)/total_attempts if total_attempts else 1
     cohort_failure_rate=(cohort_attempts-len(values))/cohort_attempts if cohort_attempts else 1
-    return {'total': len(samples), 'valid': len(values), 'failed_or_missing': len(samples)-all_valid_count,
+    return {'total': total_attempts, 'turn_attempts':len(samples), 'failed_connections_without_turns':failed_connections, 'valid': len(values), 'failed_or_missing': total_attempts-all_valid_count,
             'extra_setup_successes':all_valid_count-len(values),
             'cohort_attempts':cohort_attempts, 'cohort_failure_rate':cohort_failure_rate,
             'acceptance_failure_rate':max(all_failure_rate,cohort_failure_rate),
-            'failure_rate': (len(samples)-all_valid_count)/len(samples) if samples else 1,
+            'failure_rate': all_failure_rate,
             'p50_ms': percentile(.5), 'p95_ms': percentile(.95)}
 
 

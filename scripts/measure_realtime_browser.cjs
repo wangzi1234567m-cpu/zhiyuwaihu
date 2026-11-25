@@ -165,7 +165,10 @@ async function evaluate(){
         if(sample.status==='failed')break;
       }
       call.final=await request('/eval/state/'+sid,undefined,true);
-    }catch(error){call.failure=String(error.message).slice(0,150);}
+    }catch(error){call.failure=String(error.message).slice(0,150);
+      if(sid)try{call.final=await page.evaluate(async({sid,token})=>{const r=await fetch('/eval/state/'+sid,{headers:{'X-Latency-Token':token}});return r.json();},{sid,token});}catch{}
+      try{call.browser_failure=await page.evaluate(()=>({failures:evalState.failures,notices:evalState.notices}));}catch{}
+    }
     finally{
       call.page_faults=faults;
       try{await page.evaluate(async()=>{await window.client?.close(true);await evalState.input?.ctx.close();await evalState.remoteContext?.close();});}catch{}

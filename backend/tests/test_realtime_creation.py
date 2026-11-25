@@ -38,3 +38,22 @@ async def test_pre_v04_creation_receipt_can_still_be_replayed(setup):
         db.get(RequestReceipt, f'demo:create:{key}').payload_hash = old_hash
     replay = await client.post('/api/v1/sessions', json=payload, headers={'Idempotency-Key':key})
     assert replay.status_code == 201 and replay.json()['session_id'] == first.json()['session_id']
+
+
+async def test_end_before_native_opening_records_unknown_without_inventing_turn(setup):
+    from sqlalchemy import select,func
+    from app.db import Record,Effect,Operation
+    from app.realtime_business.events import RealtimeEventRow
+    client,app,services=setup
+    view=app.state.coordinator.create('demo',CreateSession(application_id=fixture_id(1),mode='voice',voice_transport='native_webrtc'),str(uuid4()),realtime_available=True)
+    response=await client.post(f'/api/v1/sessions/{view.session_id}/end',json={'reason':'user_ended'})
+    assert response.status_code==200 and response.json()['ended'] and response.json()['state']=='CLOSING'
+    assert (await client.post(f'/api/v1/sessions/{view.session_id}/end',json={'reason':'user_ended'})).status_code==200
+    with Session() as db:
+        row=db.get(Conversation,str(view.session_id))
+        assert not row.data.get('turn_id') and not row.data.get('generation_id') and not row.data['verified']
+        record=db.scalar(select(Record).where(Record.session_id==row.id))
+        assert record.data['contact_status']=='unknown' and record.data['explanation_status']=='not_started'
+        assert db.scalar(select(func.count()).select_from(RealtimeEventRow).where(RealtimeEventRow.session_id==row.id))==0
+        assert db.scalar(select(func.count()).select_from(Effect))==0
+        assert db.scalar(select(func.count()).select_from(Operation))==0
