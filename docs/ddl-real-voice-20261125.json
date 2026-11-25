@@ -1,0 +1,28 @@
+{
+  "commit": "fb0fed74edc18deb2400b46afac3ba66adb981ac",
+  "knowledge_version": "workbench-reviewed-20261125-v3",
+  "phase": "complete",
+  "passed": true,
+  "session_id": "0de7d140-c14e-48af-bd01-a26999d9ad48",
+  "opening_remote_pcm": true,
+  "spoken_barge_in": true,
+  "reviewed_qa": true,
+  "reconnect_remote_pcm": true,
+  "code_checkpoint": "679ed92",
+  "tested_before_checkpoint": true,
+  "transport": "real browser WebRTC / aiortc / real Qwen native understanding / real streaming Qwen TTS",
+  "physical_microphone_verified": false,
+  "trusted_playback_verified": false,
+  "automatic_voice_closure_verified": false,
+  "voice_writes_enabled": false,
+  "raw_evidence_sha256": "d98b96ab829f260b41dc487ffcef80af1cf5918ff9f4f01d9060463b883a2189",
+  "raw_evidence_path": ".cache/ddl/v3-real-voice.json",
+  "retained_failed_smoke": {
+    "path": ".cache/ddl/voice-attempt-01.json",
+    "reason": "ambiguous identity fixture rejected by identity guard; explicit merchant identity fixture used in completed regression"
+  },
+  "voice_operations": 0,
+  "final_state": "CLOSING",
+  "final_ended": true,
+  "final_verified": true
+}

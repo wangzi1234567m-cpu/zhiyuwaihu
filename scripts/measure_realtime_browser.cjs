@@ -37,6 +37,7 @@ const report=fs.existsSync(output)?JSON.parse(fs.readFileSync(output,'utf8')):{
     business_writes:false,physical_speaker_measurement:false,audio:audio.map(({encoded,...rest})=>rest)},
   calls:[],samples:[]};
 if(report.metadata.case_set_sha256!==hash||report.metadata.run_id!==run)throw new Error('Frozen input mismatch');
+for(const sample of report.samples){if(sample.status==='pending'){sample.status='failed';sample.failure='measurement_client_stopped_to_correct_reviewed_playback_wait';}}
 const save=()=>fs.writeFileSync(output,JSON.stringify(report,null,2)+'\n');
 save();
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -45,7 +46,7 @@ const watchdog=setTimeout(()=>{report.deadline=true;save();void browser?.close()
 async function evaluate(){
   browser=await chromium.launch({headless:true,args:['--autoplay-policy=no-user-gesture-required','--disable-background-timer-throttling']});
   for(let n=0;n<calls&&report.calls.length<15&&report.samples.filter(s=>s.status==='success').length<target;n++){
-    const call={index:report.calls.length+1,started_at:new Date().toISOString(),samples:[],harness_revision:'continuous-silent-source-v2'};
+    const call={index:report.calls.length+1,started_at:new Date().toISOString(),samples:[],harness_revision:'continuous-silent-source-v3-long-reviewed-drain'};
     report.calls.push(call);save();
     const context=await browser.newContext(),page=await context.newPage();let sid;
     const faults=[];page.on('pageerror',e=>faults.push(e.name));
@@ -122,7 +123,7 @@ async function evaluate(){
           if(!answer)throw new Error('NO_EFFECTIVE_AUDIO');
           sample.generation_id=answer.generation_id;sample.effective_answer_ms=answer.at-sample.input.speech_end_ms;
           sample.file_end_to_answer_ms=answer.at-sample.input.scheduled_file_end_ms;
-          await page.waitForFunction(before=>evalState.notices.slice(before.notices).some(n=>n.type==='playback.drained')||evalState.failures.length,before,{timeout:23000});
+          await page.waitForFunction(before=>evalState.notices.slice(before.notices).some(n=>n.type==='playback.drained')||evalState.failures.length,before,{timeout:60000});
           await page.waitForFunction(()=>performance.now()-evalState.lastRemote>500,{},{timeout:12000});
           const state=await request('/eval/state/'+sid,undefined,true);sample.server=state;
           const segment=state.traces.find(t=>t.kind==='reviewed_segment_received'&&t.generation_id===answer.generation_id);

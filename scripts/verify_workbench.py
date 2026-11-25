@@ -22,6 +22,14 @@ def main():
         raise SystemExit('Use a dedicated, fresh _test database.')
     backend_port=int(env.get('WORKBENCH_BACKEND_PORT','8000'));frontend_port=int(env.get('WORKBENCH_FRONTEND_PORT','3000'))
     frontend_url=f'http://localhost:{frontend_port}';backend_url=f'http://127.0.0.1:{backend_port}'
+    manifest=ROOT/'frontend/.next/routes-manifest.json'
+    if not manifest.exists():
+        raise SystemExit('Build frontend with BACKEND_URL matching the isolated backend first.')
+    rewrites=json.loads(manifest.read_text(encoding='utf-8'))['rewrites']
+    rules=rewrites if isinstance(rewrites,list) else [rule for group in rewrites.values() for rule in group]
+    targets=[r.get('destination') for r in rules if r.get('source')=='/api/:path*']
+    if targets!=[backend_url+'/api/:path*']:
+        raise SystemExit('Frontend production proxy does not target the isolated backend; rebuild with BACKEND_URL='+backend_url)
     env['E2E_URL']=frontend_url
     env.update(PYTHONPATH=str(ROOT/'backend'),APP_ENV='test',PUBLIC_ORIGIN=frontend_url,
                PYTHONIOENCODING='utf-8',MODEL_PROVIDER='fake',VOICE_ENABLED='false',

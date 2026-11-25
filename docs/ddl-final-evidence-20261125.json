@@ -1,0 +1,66 @@
+{
+  "branch": "codex/ddl-realtime-delivery-20261125",
+  "runtime_code_checkpoint": "679ed92",
+  "knowledge_version": "workbench-reviewed-20261125-v3",
+  "pytest": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "0",
+    "skipped": "0",
+    "tests": "517",
+    "time": "80.099",
+    "timestamp": "2026-11-25T14:34:13.734012+08:00",
+    "hostname": "LAPTOP-9MQGLI9O"
+  },
+  "frontend_typecheck": "passed",
+  "production_build": "passed (Webpack; BACKEND_URL=http://127.0.0.1:18000)",
+  "browser_tests": {
+    "passed": 5,
+    "failed": 0,
+    "retained_first_attempt": "production proxy defaulted to original8000; Origin rejected login; zero test sessions; corrected build and reran"
+  },
+  "business_database": {
+    "counts": {
+      "sessions": 10,
+      "operations": 10,
+      "business_effects": 10,
+      "call_records": 10
+    },
+    "closed_authorization_cases": 3,
+    "direct_jingmai": "4 task closures: no_brand, qualification_fraud, governance_disabled, third_submission",
+    "unanswered": "synthetic contact ingress: first no_answer -> reject; second_submission first no_answer -> followup -> second no_answer -> reject",
+    "event_sequence_contiguous": true,
+    "runtime": "reviewed Excel knowledge + FakeModel + MockBusiness + isolated PostgreSQL",
+    "list_read_created_sessions": 0,
+    "reject_effects": 9,
+    "followup_effects": 1,
+    "staff_and_merchant_isolation": true,
+    "real_cloud_latency_measured": false
+  },
+  "runtime": {
+    "frontend": "http://localhost:13000",
+    "backend": "http://127.0.0.1:18000",
+    "frontend_proxy": "http://127.0.0.1:18000/api/:path*",
+    "cookie_names": [
+      "zhiyu_ddl_session",
+      "zhiyu_ddl_staff"
+    ],
+    "realtime_webrtc": true,
+    "realtime_unavailable_reason": null,
+    "legacy_voice": false,
+    "knowledge_version": "workbench-reviewed-20261125-v3",
+    "published_scenarios": 6,
+    "voice_writes_enabled": false,
+    "startup_command_exit": 0,
+    "cloud_probe_performed": false
+  },
+  "real_v3_voice_passed": true,
+  "latency_gate_passed": false,
+  "voice_automatic_closure_passed": false,
+  "checksums": {
+    ".cache/ddl/pytest-final.xml": "e9bb7baffdd0e2d392a90e52e4c314236b34e613ec0649a179f7752367c48108",
+    ".cache/ddl/browser-final.log": "e482498a5df1739011f6a6c865e415d67e3662765007b31b53a1dacb4713711d",
+    ".cache/ddl/typecheck-final.log": "cbe839bac925c7ca9143db87ecb04daf45228b8277e35ed780d1bd8be33d6744",
+    ".cache/ddl/build-final.log": "6c544276f0c83851762c0265d9e8ca99165309612421612754a5f67c571fc228"
+  }
+}

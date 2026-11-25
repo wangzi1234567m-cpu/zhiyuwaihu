@@ -9,6 +9,13 @@ New-Item -ItemType Directory -Path $taskCache -Force | Out-Null
 $taskState=Join-Path $taskCache 'services.json'
 $taskPrevious=if(Test-Path -LiteralPath $taskState){Get-Content -LiteralPath $taskState -Raw|ConvertFrom-Json}else{$null}
 if(!$taskPrevious -and (Test-Path -LiteralPath '.cache/workbench/demo-services.json')){$taskPrevious=Get-Content '.cache/workbench/demo-services.json' -Raw|ConvertFrom-Json}
+$taskManifest=Join-Path $taskRoot 'frontend/.next/routes-manifest.json'
+if(Test-Path -LiteralPath $taskManifest){
+  $taskRoutes=Get-Content -LiteralPath $taskManifest -Raw|ConvertFrom-Json
+  $taskRewrites=@($taskRoutes.rewrites.beforeFiles)+@($taskRoutes.rewrites.afterFiles)+@($taskRoutes.rewrites.fallback)
+  $taskTargets=@($taskRewrites|Where-Object {$_.source -eq '/api/:path*'}|ForEach-Object {$_.destination})
+  if($taskTargets.Count -ne 1 -or $taskTargets[0] -ne 'http://127.0.0.1:18000/api/:path*'){$Build=$true}
+}
 foreach($taskPort in @(13000,18000)){
   $taskListener=Get-NetTCPConnection -State Listen -LocalPort $taskPort -ErrorAction SilentlyContinue
   if(!$taskListener){continue}

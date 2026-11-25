@@ -55,3 +55,25 @@ test('failed read projection stays unavailable and never creates sessions',async
   await expect(page.getByRole('button',{name:'登录',exact:true})).toBeEnabled();
   expect(creates).toBe(0);
 });
+
+
+test('restored text session needs explicit compatible realtime session without automatic media calls',async({page})=>{
+  const old={session_id:id(1),application_id:id(1),case_revision:1,state:'CASE_READY',state_revision:1,last_event_seq:0,route:'phone',mode:'text',verified:false,ended:false,busy:false,operations:[],metrics:[],source_refs:[],messages:[]};
+  let current:Record<string,unknown>=old,creates=0,mediaCalls=0;
+  await mockStaff(page,()=>[current]);
+  await page.route('**/api/v1/capabilities',r=>r.fulfill({json:{voice:false,realtime_webrtc:true}}));
+  await page.route('**/events?*',r=>r.fulfill({contentType:'text/event-stream',body:': ready\n\n'}));
+  await page.route('**/api/v1/sessions',async r=>{
+    creates++;expect(r.request().postDataJSON()).toMatchObject({application_id:id(1),mode:'voice',voice_transport:'native_webrtc'});
+    expect(r.request().headers()['idempotency-key']).toBeTruthy();
+    current={...old,session_id:id(21),mode:'voice',voice_transport:'native_webrtc'};
+    await r.fulfill({json:current});
+  });
+  await page.route('**/realtime/**',r=>{mediaCalls++;return r.abort();});
+  await page.goto('/');
+  const create=page.getByRole('button',{name:'建立实时语音会话',exact:true});
+  await expect(create).toBeVisible();expect(creates).toBe(0);expect(mediaCalls).toBe(0);
+  await create.click();await expect(page.getByRole('button',{name:'开始通话',exact:true})).toBeEnabled();
+  expect(creates).toBe(1);expect(mediaCalls).toBe(0);
+  await expect(page.getByRole('button',{name:'开始文字联调',exact:true})).toHaveCount(0);
+});
