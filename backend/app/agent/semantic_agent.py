@@ -36,7 +36,7 @@ def select_grounding(case: ReviewCase, knowledge, *,
     """
     approved = [
         entry for entry in knowledge
-        if entry.status == 'approved' and not entry.issue_codes and entry.approved_text
+        if entry.status == 'approved' and not entry.issue_codes and entry.approved_text and entry.channel=='phone' and entry.kind in ('scenario','script')
         and entry.scenario_id == case.scenario_id
         and (knowledge_version is None or entry.knowledge_version == knowledge_version)
         and set(scope).issubset(set(entry.scope))
@@ -51,9 +51,7 @@ def select_grounding(case: ReviewCase, knowledge, *,
 def missing_required_slots(case: ReviewCase, entry: KnowledgeEntry,
                            understanding: Understanding | None) -> list[str]:
     """已审依据声明必需但本轮仍未取得的槽位；缺项不播空模板。"""
-    slots = dict(case.slots)
-    if understanding is not None:
-        slots.update({k: v for k, v in understanding.slots.items() if v})
+    slots = dict(case.slots)  # Audit facts cannot be supplied by chat or model slots.
     missing = [name for name in entry.required_slots if not str(slots.get(name) or '').strip()]
     # company_name 由审核任务提供，属于可信事实，不算"用户没给"。
     return [name for name in missing if name != 'company_name']
@@ -81,7 +79,7 @@ class ReplyTemplates:
     ungrounded_escalation: str = '我没能确认您的具体诉求，为避免误判，已转人工核实，本次不办理任何业务。'
     wrong_person_close: str = '已记录本次为非本人接听，不会披露任何申请详情，后续由人工处理。'
     refused_close: str = '已记录您的要求，停止本次告知，后续不再自动联系。'
-    action_notice: str = '已记录您的反馈，正在提交模拟处理；请以页面业务结果为准。'
+    action_notice: str = '感谢您的配合。本次为模拟业务处理，请以工作台核实的结果为准，祝您生活愉快，再见。'
     understanding_unavailable: str = '理解服务暂时不可用，已转人工核实，稍后由人工联系您。'
 
 
@@ -149,6 +147,8 @@ class SemanticAgent:
         def reply(template: str) -> str:
             return template.replace('{company}', company)
 
+        selected_qa=[]
+
         def decision(text_out: str, state: str, *, action: str = 'none', payload=None,
                      entries: tuple[KnowledgeEntry, ...] = (),
                      missing: list[str] | None = None,
@@ -157,7 +157,7 @@ class SemanticAgent:
                 reply_text=text_out, proposed_action=action,  # type: ignore[arg-type]
                 action_payload=payload,
                 evidence_message_ids=[input.message_id],
-                knowledge_entry_ids=[e.entry_id for e in entries] if verified else [],
+                knowledge_entry_ids=list(dict.fromkeys([e.entry_id for e in entries]+[e.entry_id for e in selected_qa if e.approved_text in text_out])) if verified else [],
                 next_state=state,  # type: ignore[arg-type]
                 understanding=understanding,
                 contact_outcome=outcome,  # type: ignore[arg-type]
@@ -213,6 +213,10 @@ class SemanticAgent:
         if 'ask_source' in intents:
             sections.append(reply(templates.source_grounding))
 
+        from .reviewed_qa import select_qa
+        selected_qa,qa_conflict=select_qa(knowledge,case,version,input.text,intents)
+        if qa_conflict:return decision(reply(templates.conflict_escalation),'MANUAL_REVIEW')
+        sections.extend(e.approved_text for e in selected_qa)
         missing = missing_required_slots(case, entry, understanding)
 
         def spoken(extra: str = '') -> str:
@@ -251,6 +255,8 @@ class SemanticAgent:
         # 8) 原因/整改/结果/来源：只播已审依据（不拿 knowledge[0] 应付全部问题）。
         if any(i in intents for i in ('ask_reason', 'ask_remedy', 'ask_outcome', 'ask_source')):
             return decision(spoken(), next_base, entries=(entry,), missing=missing)
+        if selected_qa:
+            return decision(spoken(),next_base,entries=(entry,),missing=missing)
         # 8.5) 理解层给了高风险意图（否认身份/拒绝联系/投诉）但**原文不支持**，
         #      且降级后没有任何可证诉求：这是"模型自述当依据"，必须转人工，
         #      不能把它当成正常理解继续走到派发。
@@ -285,9 +291,7 @@ class SemanticAgent:
                                  evidence_message_ids=[input.message_id],
                                  knowledge_entry_ids=[entry.entry_id],
                                  next_state='ACTION_READY', understanding=understanding)
-        payload = RejectPayload(type='reject_application', reason_codes=[case.scenario_id],
-                                written_text=entry.approved_text or '',
-                                knowledge_entry_ids=[entry.entry_id])
+        payload = None  # Written payload is constructed only by Coordinator.
         return AgentDecision(reply_text=text_out(self.templates.action_notice),
                              proposed_action='reject_application', action_payload=payload,
                              evidence_message_ids=[input.message_id],

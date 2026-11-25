@@ -4,6 +4,142 @@
  */
 
 export interface paths {
+    "/api/v1/auth/staff/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff Login */
+        post: operations["staff_login_api_v1_auth_staff_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/sessions/{sid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Session */
+        get: operations["session_api_v1_staff_sessions__sid__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Applications */
+        get: operations["applications_api_v1_staff_applications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/applications/{aid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detail */
+        get: operations["detail_api_v1_staff_applications__aid__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/support-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Catalog */
+        get: operations["catalog_api_v1_staff_support_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/sessions/{sid}/written-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preview */
+        get: operations["preview_api_v1_staff_sessions__sid__written_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/sessions/{sid}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject */
+        post: operations["reject_api_v1_staff_sessions__sid__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/staff/sessions/{sid}/contact-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Contact */
+        post: operations["contact_api_v1_staff_sessions__sid__contact_events_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{sid}/realtime/ice": {
         parameters: {
             query?: never;
@@ -500,7 +636,7 @@ export interface components {
              * Contact Status
              * @enum {string}
              */
-            contact_status: "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
+            contact_status: "connected" | "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
             /**
              * Explanation Status
              * @enum {string}
@@ -615,6 +751,21 @@ export interface components {
              * @default user_ended
              */
             reason: string;
+        };
+        /** ExecuteWritten */
+        ExecuteWritten: {
+            /** Case Revision */
+            case_revision: number;
+            /** Expected Revision */
+            expected_revision: number;
+            /** Knowledge Version */
+            knowledge_version: string;
+            /** Rule Version */
+            rule_version: string;
+            /** Body Sha256 */
+            body_sha256: string;
+            /** Preview Id */
+            preview_id: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -818,6 +969,67 @@ export interface components {
             /** Expected State Revision */
             expected_state_revision: number;
         };
+        /** RoutingDecision */
+        RoutingDecision: {
+            /**
+             * Decision Id
+             * Format: uuid
+             */
+            decision_id: string;
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Case Revision */
+            case_revision: number;
+            /**
+             * Route
+             * @enum {string}
+             */
+            route: "phone" | "jingmai" | "manual";
+            /** Reason Codes */
+            reason_codes: string[];
+            /** Rule Version */
+            rule_version: string;
+            /** Required Evidence */
+            required_evidence: string[];
+            /** Evidence */
+            evidence?: components["schemas"]["RoutingEvidence"][];
+            /**
+             * Submission Attempt
+             * @default 1
+             */
+            submission_attempt: number;
+            /**
+             * Call Attempt
+             * @default 0
+             */
+            call_attempt: number;
+        };
+        /**
+         * RoutingEvidence
+         * @description 规则命中证据：为什么得到这个 route，可追溯、不含个人信息。
+         */
+        RoutingEvidence: {
+            /** Code */
+            code: string;
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /**
+             * Source
+             * @default rule
+             * @enum {string}
+             */
+            source: "case" | "rule" | "knowledge" | "contact_history" | "authorization" | "attempts";
+            /** Ref */
+            ref?: string | null;
+            /** Knowledge Entry Ids */
+            knowledge_entry_ids?: string[];
+        };
         /** Scenario */
         Scenario: {
             /** Row */
@@ -834,6 +1046,22 @@ export interface components {
              * @default false
              */
             missing_template: boolean;
+        };
+        /** SceneSupport */
+        SceneSupport: {
+            /** Scenario Id */
+            scenario_id: string;
+            /**
+             * Published
+             * @default false
+             */
+            published: boolean;
+            /** Phone */
+            phone: boolean;
+            /** Written */
+            written: boolean;
+            /** Unavailable Reasons */
+            unavailable_reasons: string[];
         };
         /** SessionView */
         SessionView: {
@@ -917,10 +1145,138 @@ export interface components {
             /** Columns */
             columns: string[];
         };
+        /** StaffApplication */
+        StaffApplication: {
+            /**
+             * Application Id
+             * Format: uuid
+             */
+            application_id: string;
+            /** Label */
+            label: string;
+            /** Company Hint */
+            company_hint: string;
+            /** Brand Name */
+            brand_name: string | null;
+            /** Scene Name */
+            scene_name: string;
+            /** Business Category */
+            business_category: string;
+            /** Scenario Id */
+            scenario_id: string;
+            /**
+             * Default Route
+             * @enum {string}
+             */
+            default_route: "phone" | "jingmai" | "manual";
+            /**
+             * Effective Route
+             * @enum {string}
+             */
+            effective_route: "phone" | "jingmai" | "manual";
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "CASE_READY" | "ROUTING" | "OPENING" | "VERIFYING" | "EXPLAINING" | "QA" | "CALLBACK_PENDING" | "CLOSING" | "ACTION_READY" | "EXECUTING" | "RECONCILING" | "WRITEBACK_PENDING" | "CLOSED" | "MANUAL_REVIEW";
+            /** Case Revision */
+            case_revision: number;
+            /** Submission Attempt */
+            submission_attempt: number;
+            /** Call Attempt */
+            call_attempt: number;
+            /**
+             * Contact Outcome
+             * @enum {string}
+             */
+            contact_outcome: "connected" | "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
+            /** Contact Event Id */
+            contact_event_id: string | null;
+            /** Reason */
+            reason: string | null;
+            /** Remedy */
+            remedy: string | null;
+            routing_decision: components["schemas"]["RoutingDecision"];
+            /** Knowledge Version */
+            knowledge_version: string;
+            /** Rule Version */
+            rule_version: string;
+            /** Source Refs */
+            source_refs: components["schemas"]["SourceRef"][];
+            snapshot: components["schemas"]["SessionView"] | null;
+            /** Available Actions */
+            available_actions: string[];
+        };
         /** StartSession */
         StartSession: {
             /** Expected Revision */
             expected_revision: number;
+        };
+        /** SupportCatalog */
+        SupportCatalog: {
+            /**
+             * Original Total
+             * @default 68
+             */
+            original_total: number;
+            /**
+             * Original Phone
+             * @default 54
+             */
+            original_phone: number;
+            /**
+             * Original Jingmai
+             * @default 14
+             */
+            original_jingmai: number;
+            /** Knowledge Version */
+            knowledge_version: string;
+            /** Published Scenarios */
+            published_scenarios: number;
+            /**
+             * Approved Entry Count
+             * @default 0
+             */
+            approved_entry_count: number;
+            /**
+             * Quarantined Entry Count
+             * @default 0
+             */
+            quarantined_entry_count: number;
+            /**
+             * Renderable Tasks
+             * @default 0
+             */
+            renderable_tasks: number;
+            /** Phone Supported */
+            phone_supported: number;
+            /** Written Supported */
+            written_supported: number;
+            /** Scenes */
+            scenes: components["schemas"]["SceneSupport"][];
+            /**
+             * Scope
+             * @default synthetic_tasks_only
+             * @constant
+             */
+            scope: "synthetic_tasks_only";
+        };
+        /** SyntheticContact */
+        SyntheticContact: {
+            /**
+             * Event Id
+             * Format: uuid
+             */
+            event_id: string;
+            /** Case Revision */
+            case_revision: number;
+            /** Expected Call Attempt */
+            expected_call_attempt: number;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "connected" | "no_answer" | "wrong_person" | "refused" | "disconnected" | "unknown";
         };
         /** TextTurn */
         TextTurn: {
@@ -1000,6 +1356,48 @@ export interface components {
             /** Provider Metric Value */
             provider_metric_value?: number | null;
         };
+        /** WrittenPreview */
+        WrittenPreview: {
+            /**
+             * Session Id
+             * Format: uuid
+             */
+            session_id: string;
+            /** Case Revision */
+            case_revision: number;
+            /** State Revision */
+            state_revision: number;
+            /** Knowledge Version */
+            knowledge_version: string;
+            /** Rule Version */
+            rule_version: string;
+            /** Written Text */
+            written_text?: string | null;
+            /** Knowledge Entry Id */
+            knowledge_entry_id?: string | null;
+            /** Source Refs */
+            source_refs?: components["schemas"]["SourceRef"][];
+            /** Template Version */
+            template_version?: string | null;
+            /** Missing Slots */
+            missing_slots?: string[];
+            /** Body Sha256 */
+            body_sha256?: string | null;
+            /** Preview Id */
+            preview_id?: string | null;
+            /**
+             * Previewable
+             * @default false
+             */
+            previewable: boolean;
+            /**
+             * Executable
+             * @default false
+             */
+            executable: boolean;
+            /** Unavailable Reasons */
+            unavailable_reasons?: string[];
+        };
         /**
          * ActionCommand
          * @description 仅服务端构造；工具守门查库验证decision、confirmation、权限和revision。
@@ -1073,7 +1471,7 @@ export interface components {
              * Contact Outcome
              * @default null
              */
-            contact_outcome: ("verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown") | null;
+            contact_outcome: ("connected" | "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown") | null;
             /** Required Slot Missing */
             required_slot_missing?: string[];
         };
@@ -1136,6 +1534,32 @@ export interface components {
              */
             confirmation_id: string;
         };
+        /** ContactRecorded */
+        ContactRecorded: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "contact.recorded";
+            /**
+             * Event Id
+             * Format: uuid
+             */
+            event_id: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "connected" | "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
+            /** Call Attempt */
+            call_attempt: number;
+            /**
+             * Source
+             * @default synthetic_adapter
+             * @constant
+             */
+            source: "synthetic_adapter";
+        };
         /** Event */
         Event: {
             /**
@@ -1183,7 +1607,7 @@ export interface components {
             /** Knowledge Version */
             knowledge_version: string;
             /** Payload */
-            payload: components["schemas"]["StateChanged"] | components["schemas"]["TurnStarted"] | components["schemas"]["OperationUpdated"] | components["schemas"]["KnowledgeUsed"] | components["schemas"]["TextDelta"] | components["schemas"]["TurnInterrupted"] | components["schemas"]["MetricRecorded"] | components["schemas"]["SessionEnded"] | components["schemas"]["GenerationFinished"];
+            payload: components["schemas"]["StateChanged"] | components["schemas"]["TurnStarted"] | components["schemas"]["OperationUpdated"] | components["schemas"]["KnowledgeUsed"] | components["schemas"]["TextDelta"] | components["schemas"]["TurnInterrupted"] | components["schemas"]["MetricRecorded"] | components["schemas"]["SessionEnded"] | components["schemas"]["GenerationFinished"] | components["schemas"]["ContactRecorded"];
         };
         /** FollowupPayload */
         FollowupPayload: {
@@ -1432,70 +1856,35 @@ export interface components {
              * @constant
              */
             synthetic: true;
-        };
-        /** RoutingDecision */
-        RoutingDecision: {
             /**
-             * Decision Id
-             * Format: uuid
-             */
-            decision_id: string;
-            /**
-             * Application Id
-             * Format: uuid
-             */
-            application_id: string;
-            /** Case Revision */
-            case_revision: number;
-            /**
-             * Route
+             * Default Route
+             * @default phone
              * @enum {string}
              */
-            route: "phone" | "jingmai" | "manual";
-            /** Reason Codes */
-            reason_codes: string[];
-            /** Rule Version */
-            rule_version: string;
-            /** Required Evidence */
-            required_evidence: string[];
-            /** Evidence */
-            evidence?: components["schemas"]["RoutingEvidence"][];
+            default_route: "phone" | "jingmai" | "manual";
             /**
-             * Submission Attempt
-             * @default 1
-             */
-            submission_attempt: number;
-            /**
-             * Call Attempt
-             * @default 0
-             */
-            call_attempt: number;
-        };
-        /**
-         * RoutingEvidence
-         * @description 规则命中证据：为什么得到这个 route，可追溯、不含个人信息。
-         */
-        RoutingEvidence: {
-            /** Code */
-            code: string;
-            /**
-             * Detail
+             * Scene Name
              * @default
              */
-            detail: string;
+            scene_name: string;
             /**
-             * Source
-             * @default rule
+             * Business Category
+             * @default
+             */
+            business_category: string;
+            /** Source Refs */
+            source_refs?: components["schemas"]["SourceRef"][];
+            /**
+             * Contact Outcome
+             * @default unknown
              * @enum {string}
              */
-            source: "case" | "rule" | "knowledge" | "contact_history" | "authorization" | "attempts";
+            contact_outcome: "connected" | "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
             /**
-             * Ref
+             * Contact Event Id
              * @default null
              */
-            ref: string | null;
-            /** Knowledge Entry Ids */
-            knowledge_entry_ids?: string[];
+            contact_event_id: string | null;
         };
         /**
          * SessionContext
@@ -1551,7 +1940,7 @@ export interface components {
              * @default unknown
              * @enum {string}
              */
-            contact_outcome: "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
+            contact_outcome: "connected" | "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown";
             /**
              * Contact Outcome Source
              * @default none
@@ -1706,7 +2095,7 @@ export interface components {
              * Contact Outcome Hint
              * @default null
              */
-            contact_outcome_hint: ("verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown") | null;
+            contact_outcome_hint: ("connected" | "verified" | "wrong_person" | "refused" | "no_answer" | "disconnected" | "not_required" | "unknown") | null;
             /**
              * Source
              * @default fake
@@ -1738,6 +2127,244 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    staff_login_api_v1_auth_staff_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    session_api_v1_staff_sessions__sid__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    applications_api_v1_staff_applications_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffApplication"][];
+                };
+            };
+        };
+    };
+    detail_api_v1_staff_applications__aid__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                aid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StaffApplication"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    catalog_api_v1_staff_support_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SupportCatalog"];
+                };
+            };
+        };
+    };
+    preview_api_v1_staff_sessions__sid__written_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WrittenPreview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_api_v1_staff_sessions__sid__reject_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "idempotency-key"?: string | null;
+            };
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExecuteWritten"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    contact_api_v1_staff_sessions__sid__contact_events_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                sid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SyntheticContact"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ice_api_v1_sessions__sid__realtime_ice_get: {
         parameters: {
             query?: never;

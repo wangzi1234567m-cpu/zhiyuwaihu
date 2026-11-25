@@ -13,6 +13,7 @@ class Settings:
     cookie_secret: str = os.getenv('COOKIE_SECRET', 'local-development-secret-change-before-exposure')
     public_origin: str = os.getenv('PUBLIC_ORIGIN', 'http://localhost:3000')
     demo_password: str = os.getenv('DEMO_PASSWORD', 'demo-local-only')
+    staff_password: str = os.getenv('STAFF_PASSWORD', 'staff-local-only' if os.getenv('APP_ENV','development') in ('development','test') else '')
     token_delay: float = float(os.getenv('FAKE_TOKEN_DELAY', '0.015'))
     faults_enabled: bool = os.getenv('ENABLE_FAULTS', 'false').lower() == 'true'
     model_provider: str = os.getenv('MODEL_PROVIDER', 'fake')

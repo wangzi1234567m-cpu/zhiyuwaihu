@@ -34,7 +34,7 @@ jobs:
         env: {PYTHONPATH: backend}
       - run: npm run typecheck --prefix frontend && npm run build --prefix frontend
       - run: |
-          python scripts/reset_test_db.py
+          python scripts/reset_test_db.py --workbench
           uvicorn app.main:app --host 127.0.0.1 --port 8000 --no-access-log > backend.log 2>&1 &
         env: {PYTHONPATH: backend, FAKE_TOKEN_DELAY: '0.08'}
       - run: npm run start --prefix frontend > frontend.log 2>&1 &

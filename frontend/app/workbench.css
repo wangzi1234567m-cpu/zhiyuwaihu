@@ -217,3 +217,5 @@ main{padding:17px 12px}
 .routing .decision strong{font-size:12px}
 .routing input[type=checkbox]{margin-right:6px}
 .routing label:has(input[type=checkbox]){display:block}
+
+@media(min-width:741px){.case-list{max-height:880px;overflow:auto;padding-right:3px}}

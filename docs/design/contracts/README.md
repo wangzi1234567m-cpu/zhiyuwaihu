@@ -25,3 +25,12 @@ ActionCommand.payload 按 type 判别：驳回包含依据ID、原因与书面�
 本轮保留原有业务端口和必填字段，新增语音媒体／生命周期／观测DTO，SessionView增加默认text的mode，ModelRequest增加可选相关ID及allow_rephrase，Capabilities.model允许deepseek。Event.text.delta允许voice_transport；语音UI不把该流当字幕。实际接口签名及验收状态见 [语音接入交接](../../voice-integration.md)。
 
 Qwen TTS增量：新增会话绑定的`POST /integrations/agora/sessions/{sid}/v1/audio/speech`，仅供声网调用，不供浏览器提交业务。供应商协议结构唯一手写源为`backend/app/tts.py::SpeechRequest`，其JSON Schema自动进入OpenAPI；输出24kHz单声道PCM16。model／voice由服务端固定，鉴权与LLM入口分离，允许starting状态的主动开场，拒绝结束／过期会话；不会改变Agent或BusinessPort签名。详细错误与配置见接入交接。
+
+
+## 工作人员业务增量 0.4.1
+
+新增StaffApplication、SupportCatalog、WrittenPreview、ExecuteWritten、SyntheticContact，以及安全的contact.recorded事件；ReviewCase增加独立默认渠道、场景元数据与可信联系引用。API元信息为0.4.1，旧实时内部契约0.4.0和Capabilities兼容字段不改写。
+
+工作人员接口有独立角色和owner校验；商家视图不会获得工作人员的核验前审核事实。reject只接受版本、预览ID与正文哈希，不接受客户端书面正文；执行仍通过Coordinator、ToolGuard、同一WrittenResponseRenderer和持久操作账本。
+
+使用 `python scripts/export_contracts.py` 与 `npm run types --prefix frontend` 生成Schema、OpenAPI及前端类型，禁止手工改造生成结果。详见业务交付报告。

@@ -32,7 +32,7 @@ JINGMAI_MIN_EVIDENCE = ['preauthorized_task', 'case_revision', 'routing_decision
 TRUSTED_OUTCOMES = ('verified', 'wrong_person', 'refused', 'no_answer',
                     'disconnected', 'not_required', 'unknown')
 #: 这些结果不是"未接通"，不能拿去套未接通关单规则。
-NOT_NO_ANSWER = ('refused', 'wrong_person', 'disconnected', 'verified')
+NOT_NO_ANSWER = ('connected', 'refused', 'wrong_person', 'disconnected', 'verified')
 
 CASE_READY: State = 'CASE_READY'
 TERMINAL: tuple[State, ...] = ('CLOSED', 'MANUAL_REVIEW')
@@ -145,7 +145,7 @@ BRANCH_RULES: dict[str, tuple[str, tuple[str, ...]]] = {
     'jingmai_channel': ('jingmai', tuple(JINGMAI_MIN_EVIDENCE)),
     'jingmai_first_no_answer': ('jingmai', tuple(JINGMAI_MIN_EVIDENCE) + ('contact_outcome_event',)),
     'followup_second_submission': ('phone', tuple(PHONE_MIN_EVIDENCE) + ('followup_plan',)),
-    'jingmai_after_followup': ('jingmai', tuple(JINGMAI_MIN_EVIDENCE) + ('contact_outcome_event',)),
+    'jingmai_after_followup': ('jingmai', tuple(JINGMAI_MIN_EVIDENCE) + ('contact_outcome_event','followup_operation_succeeded')),
     'phone_explain': ('phone', tuple(PHONE_MIN_EVIDENCE)),
 }
 
@@ -222,13 +222,13 @@ class RoutingPolicy:
             return self._build(case, route, required, codes, evidence)
 
         if branch == 'jingmai_channel':
-            add('channel_jingmai_only', '已发布渠道为京麦，无需外呼，不做语音核验', 'knowledge',
+            add('channel_jingmai_only', '申请单绑定的主表默认渠道为京麦，无需外呼，不做语音核验', 'case',ref='default_route',
                 entry_refs=entry_ids)
             return self._build(case, route, required, codes, evidence)
 
-        # 以下都按电话渠道处理，渠道来自已审核知识条目，不由模型猜。
+        # 以下都按电话渠道处理，默认渠道由可信申请单绑定，不由话术是否存在或模型猜测决定。
         if knowledge_channel == 'phone':
-            add('channel_phone', '已发布渠道为电话，先尝试告知', 'knowledge', entry_refs=entry_ids)
+            add('channel_phone', '申请单绑定的主表默认渠道为电话，先尝试告知', 'case',ref='default_route',entry_refs=entry_ids)
         else:
             add('channel_unspecified', '未取得已发布渠道，按电话先尝试，缺依据时人工', 'knowledge')
 
@@ -347,7 +347,10 @@ class ToolGuard:
             session_revision = decision.get('case_revision')
         if session_revision != case.case_revision:
             raise DomainError('STALE_REVISION', '会话证据版本已过期，拒绝执行', 409)
-        if data.get('ended') and command.kind != 'writeback':
+        if data.get('ended') and command.kind != 'writeback' and not (
+                data.get('execution_origin')=='staff' and command.kind=='reject_application'
+                and data.get('verified') and data.get('explained')
+                and data.get('contact_outcome')=='verified'):
             raise DomainError('SESSION_ENDED', '会话已结束，不再派发新动作', 409)
         if case.review_conclusion != 'rejected':
             raise DomainError('ACTION_FORBIDDEN', '审核结论不是驳回，不能执行驳回动作', 403)
@@ -383,9 +386,14 @@ class ToolGuard:
             if data.get('verified') and not data.get('explained'):
                 raise DomainError('INVALID_EVIDENCE', '已核验但未完成告知，不能按京麦结论驳回', 403)
 
+        if codes & {'no_answer_first_submission','no_answer_after_followup'} and (
+                outcome!='no_answer' or data.get('contact_outcome_source')!='domain_event'):
+            raise DomainError('INVALID_EVIDENCE','缺少可信未接通事件',403)
+        if 'no_answer_after_followup' in codes and not data.get('trusted_followup'):
+            raise DomainError('FOLLOWUP_EVIDENCE_REQUIRED','缺少本审核版本首次未接通后的成功跟进记录',403)
         allowed_entries = {e.entry_id: e for e in entries
                            if e.status == 'approved' and not e.issue_codes
-                           and e.scenario_id == case.scenario_id
+                           and e.scenario_id == case.scenario_id and e.channel=='jingmai'
                            and e.knowledge_version == data.get('knowledge_version', 'demo-k1')}
         if not isinstance(command.payload, RejectPayload):
             raise DomainError('INVALID_FACTS', '驳回动作的payload类型不匹配', 403)

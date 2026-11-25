@@ -24,12 +24,12 @@ async def test_selected_release_drives_routing(setup, monkeypatch):
         headers={'Idempotency-Key': str(uuid4())})
     assert response.status_code == 201
     view = response.json()
-    assert view['route'] == 'jingmai'
+    assert view['route'] == 'phone'  # Written knowledge cannot change a task's default route.
     sid = view['session_id']
     with Session() as db:
         data = db.get(Conversation, sid).data
         assert data['knowledge_version'] == entry.knowledge_version
         decision = data['routing_decision']
-        assert 'channel_jingmai_only' in decision['reason_codes']
+        assert 'channel_phone' in decision['reason_codes']
         assert any(str(entry.entry_id) in item['knowledge_entry_ids']
                    for item in decision['evidence'])

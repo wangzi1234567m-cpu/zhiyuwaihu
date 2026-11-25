@@ -1,14 +1,18 @@
 {
   "counts": {
-    "sessions": 7,
-    "operations": 3,
-    "business_effects": 3,
-    "call_records": 3
+    "sessions": 10,
+    "operations": 10,
+    "business_effects": 10,
+    "call_records": 10
   },
   "closed_authorization_cases": 3,
-  "direct_jingmai": "backend route verified; execution blocked by missing API",
-  "unanswered": "three backend rule-preview outcomes verified; provider no-answer ingress unavailable",
+  "direct_jingmai": "4 task closures: no_brand, qualification_fraud, governance_disabled, third_submission",
+  "unanswered": "synthetic contact ingress: first no_answer -> reject; second_submission first no_answer -> followup -> second no_answer -> reject",
   "event_sequence_contiguous": true,
-  "runtime": "FakeModel + MockBusiness + isolated PostgreSQL",
+  "runtime": "reviewed Excel knowledge + FakeModel + MockBusiness + isolated PostgreSQL",
+  "list_read_created_sessions": 0,
+  "reject_effects": 9,
+  "followup_effects": 1,
+  "staff_and_merchant_isolation": true,
   "real_cloud_latency_measured": false
 }

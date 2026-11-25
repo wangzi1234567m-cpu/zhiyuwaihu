@@ -231,6 +231,7 @@
           "anyOf": [
             {
               "enum": [
+                "connected",
                 "verified",
                 "wrong_person",
                 "refused",
@@ -364,6 +365,7 @@
         },
         "contact_status": {
           "enum": [
+            "connected",
             "verified",
             "wrong_person",
             "refused",
@@ -604,6 +606,53 @@
       "title": "Capabilities",
       "type": "object"
     },
+    "ContactRecorded": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "contact.recorded",
+          "default": "contact.recorded",
+          "title": "Type",
+          "type": "string"
+        },
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "connected",
+            "verified",
+            "wrong_person",
+            "refused",
+            "no_answer",
+            "disconnected",
+            "not_required",
+            "unknown"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "call_attempt": {
+          "title": "Call Attempt",
+          "type": "integer"
+        },
+        "source": {
+          "const": "synthetic_adapter",
+          "default": "synthetic_adapter",
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "outcome",
+        "call_attempt"
+      ],
+      "title": "ContactRecorded",
+      "type": "object"
+    },
     "CreateSession": {
       "additionalProperties": false,
       "properties": {
@@ -734,6 +783,7 @@
         "payload": {
           "discriminator": {
             "mapping": {
+              "contact.recorded": "#/$defs/ContactRecorded",
               "generation.finished": "#/$defs/GenerationFinished",
               "knowledge.used": "#/$defs/KnowledgeUsed",
               "metric.recorded": "#/$defs/MetricRecorded",
@@ -773,6 +823,9 @@
             },
             {
               "$ref": "#/$defs/GenerationFinished"
+            },
+            {
+              "$ref": "#/$defs/ContactRecorded"
             }
           ],
           "title": "Payload"
@@ -789,6 +842,49 @@
         "payload"
       ],
       "title": "Event",
+      "type": "object"
+    },
+    "ExecuteWritten": {
+      "additionalProperties": false,
+      "properties": {
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "expected_revision": {
+          "minimum": 0,
+          "title": "Expected Revision",
+          "type": "integer"
+        },
+        "knowledge_version": {
+          "title": "Knowledge Version",
+          "type": "string"
+        },
+        "rule_version": {
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "body_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Body Sha256",
+          "type": "string"
+        },
+        "preview_id": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Preview Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "case_revision",
+        "expected_revision",
+        "knowledge_version",
+        "rule_version",
+        "body_sha256",
+        "preview_id"
+      ],
+      "title": "ExecuteWritten",
       "type": "object"
     },
     "FollowupPayload": {
@@ -1779,6 +1875,61 @@
           "default": true,
           "title": "Synthetic",
           "type": "boolean"
+        },
+        "default_route": {
+          "default": "phone",
+          "enum": [
+            "phone",
+            "jingmai",
+            "manual"
+          ],
+          "title": "Default Route",
+          "type": "string"
+        },
+        "scene_name": {
+          "default": "",
+          "title": "Scene Name",
+          "type": "string"
+        },
+        "business_category": {
+          "default": "",
+          "title": "Business Category",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "contact_outcome": {
+          "default": "unknown",
+          "enum": [
+            "connected",
+            "verified",
+            "wrong_person",
+            "refused",
+            "no_answer",
+            "disconnected",
+            "not_required",
+            "unknown"
+          ],
+          "title": "Contact Outcome",
+          "type": "string"
+        },
+        "contact_event_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Contact Event Id"
         }
       },
       "required": [
@@ -1930,6 +2081,43 @@
       "title": "RoutingEvidence",
       "type": "object"
     },
+    "SceneSupport": {
+      "additionalProperties": false,
+      "properties": {
+        "scenario_id": {
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "published": {
+          "default": false,
+          "title": "Published",
+          "type": "boolean"
+        },
+        "phone": {
+          "title": "Phone",
+          "type": "boolean"
+        },
+        "written": {
+          "title": "Written",
+          "type": "boolean"
+        },
+        "unavailable_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unavailable Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "scenario_id",
+        "phone",
+        "written",
+        "unavailable_reasons"
+      ],
+      "title": "SceneSupport",
+      "type": "object"
+    },
     "SessionContext": {
       "additionalProperties": false,
       "description": "服务端组装的可信只读上下文。Agent 只能读，不能写入或回填。",
@@ -2027,6 +2215,7 @@
         "contact_outcome": {
           "default": "unknown",
           "enum": [
+            "connected",
             "verified",
             "wrong_person",
             "refused",
@@ -2319,6 +2508,207 @@
       "title": "SourceRef",
       "type": "object"
     },
+    "StaffApplication": {
+      "additionalProperties": false,
+      "properties": {
+        "application_id": {
+          "format": "uuid",
+          "title": "Application Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "company_hint": {
+          "title": "Company Hint",
+          "type": "string"
+        },
+        "brand_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Brand Name"
+        },
+        "scene_name": {
+          "title": "Scene Name",
+          "type": "string"
+        },
+        "business_category": {
+          "title": "Business Category",
+          "type": "string"
+        },
+        "scenario_id": {
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "default_route": {
+          "enum": [
+            "phone",
+            "jingmai",
+            "manual"
+          ],
+          "title": "Default Route",
+          "type": "string"
+        },
+        "effective_route": {
+          "enum": [
+            "phone",
+            "jingmai",
+            "manual"
+          ],
+          "title": "Effective Route",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "CASE_READY",
+            "ROUTING",
+            "OPENING",
+            "VERIFYING",
+            "EXPLAINING",
+            "QA",
+            "CALLBACK_PENDING",
+            "CLOSING",
+            "ACTION_READY",
+            "EXECUTING",
+            "RECONCILING",
+            "WRITEBACK_PENDING",
+            "CLOSED",
+            "MANUAL_REVIEW"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "case_revision": {
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "submission_attempt": {
+          "title": "Submission Attempt",
+          "type": "integer"
+        },
+        "call_attempt": {
+          "title": "Call Attempt",
+          "type": "integer"
+        },
+        "contact_outcome": {
+          "enum": [
+            "connected",
+            "verified",
+            "wrong_person",
+            "refused",
+            "no_answer",
+            "disconnected",
+            "not_required",
+            "unknown"
+          ],
+          "title": "Contact Outcome",
+          "type": "string"
+        },
+        "contact_event_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contact Event Id"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Reason"
+        },
+        "remedy": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Remedy"
+        },
+        "routing_decision": {
+          "$ref": "#/$defs/RoutingDecision"
+        },
+        "knowledge_version": {
+          "title": "Knowledge Version",
+          "type": "string"
+        },
+        "rule_version": {
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "snapshot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SessionView"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "available_actions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Available Actions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "application_id",
+        "label",
+        "company_hint",
+        "brand_name",
+        "scene_name",
+        "business_category",
+        "scenario_id",
+        "default_route",
+        "effective_route",
+        "state",
+        "case_revision",
+        "submission_attempt",
+        "call_attempt",
+        "contact_outcome",
+        "contact_event_id",
+        "reason",
+        "remedy",
+        "routing_decision",
+        "knowledge_version",
+        "rule_version",
+        "source_refs",
+        "snapshot",
+        "available_actions"
+      ],
+      "title": "StaffApplication",
+      "type": "object"
+    },
     "StartSession": {
       "additionalProperties": false,
       "properties": {
@@ -2368,6 +2758,119 @@
         "state"
       ],
       "title": "StateChanged",
+      "type": "object"
+    },
+    "SupportCatalog": {
+      "additionalProperties": false,
+      "properties": {
+        "original_total": {
+          "default": 68,
+          "title": "Original Total",
+          "type": "integer"
+        },
+        "original_phone": {
+          "default": 54,
+          "title": "Original Phone",
+          "type": "integer"
+        },
+        "original_jingmai": {
+          "default": 14,
+          "title": "Original Jingmai",
+          "type": "integer"
+        },
+        "knowledge_version": {
+          "title": "Knowledge Version",
+          "type": "string"
+        },
+        "published_scenarios": {
+          "title": "Published Scenarios",
+          "type": "integer"
+        },
+        "approved_entry_count": {
+          "default": 0,
+          "title": "Approved Entry Count",
+          "type": "integer"
+        },
+        "quarantined_entry_count": {
+          "default": 0,
+          "title": "Quarantined Entry Count",
+          "type": "integer"
+        },
+        "renderable_tasks": {
+          "default": 0,
+          "title": "Renderable Tasks",
+          "type": "integer"
+        },
+        "phone_supported": {
+          "title": "Phone Supported",
+          "type": "integer"
+        },
+        "written_supported": {
+          "title": "Written Supported",
+          "type": "integer"
+        },
+        "scenes": {
+          "items": {
+            "$ref": "#/$defs/SceneSupport"
+          },
+          "title": "Scenes",
+          "type": "array"
+        },
+        "scope": {
+          "const": "synthetic_tasks_only",
+          "default": "synthetic_tasks_only",
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "knowledge_version",
+        "published_scenarios",
+        "phone_supported",
+        "written_supported",
+        "scenes"
+      ],
+      "title": "SupportCatalog",
+      "type": "object"
+    },
+    "SyntheticContact": {
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {
+          "format": "uuid",
+          "title": "Event Id",
+          "type": "string"
+        },
+        "case_revision": {
+          "minimum": 1,
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "expected_call_attempt": {
+          "minimum": 0,
+          "title": "Expected Call Attempt",
+          "type": "integer"
+        },
+        "outcome": {
+          "enum": [
+            "connected",
+            "no_answer",
+            "wrong_person",
+            "refused",
+            "disconnected",
+            "unknown"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event_id",
+        "case_revision",
+        "expected_call_attempt",
+        "outcome"
+      ],
+      "title": "SyntheticContact",
       "type": "object"
     },
     "TextDelta": {
@@ -2603,6 +3106,7 @@
           "anyOf": [
             {
               "enum": [
+                "connected",
                 "verified",
                 "wrong_person",
                 "refused",
@@ -2834,8 +3338,135 @@
       ],
       "title": "WritebackPayload",
       "type": "object"
+    },
+    "WrittenPreview": {
+      "additionalProperties": false,
+      "properties": {
+        "session_id": {
+          "format": "uuid",
+          "title": "Session Id",
+          "type": "string"
+        },
+        "case_revision": {
+          "title": "Case Revision",
+          "type": "integer"
+        },
+        "state_revision": {
+          "title": "State Revision",
+          "type": "integer"
+        },
+        "knowledge_version": {
+          "title": "Knowledge Version",
+          "type": "string"
+        },
+        "rule_version": {
+          "title": "Rule Version",
+          "type": "string"
+        },
+        "written_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Written Text"
+        },
+        "knowledge_entry_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Knowledge Entry Id"
+        },
+        "source_refs": {
+          "items": {
+            "$ref": "#/$defs/SourceRef"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "template_version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Template Version"
+        },
+        "missing_slots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Slots",
+          "type": "array"
+        },
+        "body_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body Sha256"
+        },
+        "preview_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preview Id"
+        },
+        "previewable": {
+          "default": false,
+          "title": "Previewable",
+          "type": "boolean"
+        },
+        "executable": {
+          "default": false,
+          "title": "Executable",
+          "type": "boolean"
+        },
+        "unavailable_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unavailable Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "session_id",
+        "case_revision",
+        "state_revision",
+        "knowledge_version",
+        "rule_version"
+      ],
+      "title": "WrittenPreview",
+      "type": "object"
     }
   },
-  "title": "JD POP contracts 0.3.0",
+  "title": "JD POP contracts 0.4.1",
   "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

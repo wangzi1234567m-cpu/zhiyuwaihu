@@ -8,7 +8,7 @@ REQUIRED_SLOTS = {
     'demo.authorization_expired': ('company_name', 'brand_name'),
     'demo.authorization_chain': ('company_name', 'brand_name', 'authorization_from', 'authorization_to'),
 }
-SLOT_NAMES = {name for names in REQUIRED_SLOTS.values() for name in names} | {'shop_name', 'missing_document'}
+SLOT_NAMES = {name for names in REQUIRED_SLOTS.values() for name in names} | {'shop_name', 'missing_document', 'authorization_expiry', 'rectification_action', 'business_rule', 'qualification_name', 'invalid_fact'}
 TOKEN = re.compile(r'\{([a-z][a-z0-9_]*)\}|【([a-z][a-z0-9_]*)】')
 UNFILLED = re.compile(r'[{}]|【\s*(?:[a-zA-Z_][\w ]*|待填[^】]*|请填写[^】]*|品牌名(?:称)?|公司名(?:称)?|缺失材料|授权方|被授权方|[＊*＿_…]*)\s*】|(?<![a-zA-Z])[xX]{2,}(?![a-zA-Z])')
 EMPTY_CLASSIFICATION = re.compile(

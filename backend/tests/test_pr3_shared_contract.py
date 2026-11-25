@@ -38,7 +38,7 @@ def test_all_explicit_main_ports_are_preserved():
 def test_voice_requires_both_enabled_writes_and_trusted_playback(monkeypatch,enabled,proof):
     import app.config as config
     monkeypatch.setattr(config,'settings',replace(config.settings,voice_writes_enabled=enabled))
-    case=make_case();entry=make_entry(case);data=guard_data(case)
+    case=make_case();entry=make_entry(case,channel='jingmai');data=guard_data(case)
     data.update(mode='voice',voice_explanation_verified=proof)
     command=reject_command(case,entry,UUID(data['routing_decision']['decision_id']))
     if enabled and proof:ToolGuard().authorize(case,data,command,(entry,))
@@ -50,7 +50,7 @@ def test_voice_requires_both_enabled_writes_and_trusted_playback(monkeypatch,ena
 def test_voice_playback_proof_does_not_bypass_revision_or_decision_binding(monkeypatch):
     import app.config as config
     monkeypatch.setattr(config,'settings',replace(config.settings,voice_writes_enabled=True))
-    case=make_case();entry=make_entry(case);data=guard_data(case)
+    case=make_case();entry=make_entry(case,channel='jingmai');data=guard_data(case)
     data.update(mode='voice',voice_explanation_verified=True)
     command=reject_command(case,entry,uuid4())
     with pytest.raises(DomainError):ToolGuard().authorize(case,data,command,(entry,))

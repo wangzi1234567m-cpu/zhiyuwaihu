@@ -150,3 +150,16 @@ curl --fail --show-error https://192.144.214.34/health/ready
 随后验证本次变更涉及的真实模块流程。涉及数据库迁移时先备份；保留服务器私有`.env`、证书目录与PostgreSQL数据卷，不用本地开发配置覆盖，不执行`down -v`。修改Compose环境配置后使用上述`up`命令重新创建受影响容器，单独`restart`不会应用新的环境变量。
 
 证书由`infra/renew-ip-cert.sh`经webroot续期并重载Caddy，定时任务在服务器`/etc/cron.d/zhiyu-ip-cert`，日志在`/var/log/zhiyu-ip-cert-renew.log`。当前初次证书到期时间为2026-11-27 17:10 UTC；续期演练已通过，未来正式续期结果以任务日志和实际证书为准。
+
+
+## 资审工作台业务闭环（2026-11-25）
+
+第一版三栏工作台的后端交付说明见 [业务后端交付报告](docs/workbench-business-delivery-20261125.md)、[68条场景映射](docs/workbench-scene-mapping-20261125.json) 和 [实际验收证据](docs/workbench-business-evidence-20261125.json)。
+
+工作台使用独立工作人员登录：本地开发/测试默认 `STAFF_PASSWORD=staff-local-only`；旧商家凭据不能读取工作人员事实。staging必须显式配置强工作人员密码、强Cookie签名密钥和HTTPS。此为演示授权边界，不能直接代替生产组织身份系统。
+
+首次列表读取不再创建会话。仅在处理任务时按服务端路由建会话，书面正文通过后端预览、版本与哈希核对后执行Mock业务，再单独确认结果回写。新增联系事件入口仅供本地合成任务，不能把WebRTC断线或静音当成未接通。
+
+已有原件时，按交付报告生成并发布 `workbench-reviewed-20261125-v3`；这是用户委托Codex逐格核对的范围化版本，未自动批准全部场景。没有原件的CI使用明确标识的合成知识。设置 `PYTHONPATH=backend` 后，可在独立演示库调用 `from app.seed import seed_workbench; seed_workbench()` 准备11条合成任务；种子不覆盖历史申请。
+
+浏览器回归仍可运行 `python scripts/verify_browser_flow.py`，会拒绝非 `_test` 数据库，并只重置指定测试库。已准备好全新迁移和种子的测试库，可直接运行不重置数据的 `scripts/verify_workbench.py`；不要对人工演示库执行测试重置。`WORKBENCH_SOURCE_ACCEPTANCE=1`额外验证原件QA，需先导入对应审核版本。

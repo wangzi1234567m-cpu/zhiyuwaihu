@@ -18,7 +18,7 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
-from uuid import NAMESPACE_URL, uuid5
+from uuid import NAMESPACE_URL, uuid5, UUID
 
 from ..contracts import KnowledgeEntry, ReviewCase, SourceRef
 
@@ -205,13 +205,14 @@ def _build_knowledge(scenario_id: str, mode: str, case: ReviewCase, channel: str
                 **base,
             ),
         )
-    return (KnowledgeEntry(
-        entry_id=_det_uuid('knowledge', f'{scenario_id}:0'),
-        approved_text=f'{reason}。{remedy}',
-        status='approved',
-        issue_codes=[],
-        **base,
-    ),)
+    phone_or_written=KnowledgeEntry(
+        entry_id=_det_uuid('knowledge', f'{scenario_id}:0'),approved_text=f'{reason}。{remedy}',
+        status='approved',issue_codes=[],**base)
+    # Explicitly separate synthetic written fixture; never a production fallback.
+    if channel=='phone':
+        written=phone_or_written.model_copy(update={'entry_id':UUID(_det_uuid('knowledge',f'{scenario_id}:written')),'channel':'jingmai','kind':'script'})
+        return (phone_or_written,written)
+    return (phone_or_written,)
 
 
 def _require(mapping: dict, key: str, where: str):

@@ -34,9 +34,10 @@ def main():
         'CLOUD_CALLS_ENABLED':'false','FREE_QUOTA_CONFIRMED':'false'}}}}),encoding='utf-8')
     try:
         run(['docker','compose','-f','compose.yaml','-f',str(overlay),'up','--no-build','-d','--wait','backend'])
+        run(['docker','compose','exec','-T','backend','python','-c','from app.seed import seed_workbench; seed_workbench()'])
         env=os.environ.copy()
         env.update(PLAYWRIGHT_BROWSERS_PATH=str(cache/'pw-browsers'),
-            DEMO_PASSWORD=values.get('DEMO_PASSWORD') or 'demo-local-only',E2E_URL='http://localhost:3000')
+            DEMO_PASSWORD=values.get('DEMO_PASSWORD') or 'demo-local-only',STAFF_PASSWORD=values.get('STAFF_PASSWORD') or 'staff-local-only',E2E_URL='http://localhost:3000')
         result=subprocess.run(['node','node_modules/@playwright/test/cli.js','test'],cwd=ROOT/'frontend',env=env,
             capture_output=True,text=True,encoding='utf-8',timeout=120)
         (cache/'tts-browser-flow.log').write_text(result.stdout+result.stderr,encoding='utf-8')
@@ -49,9 +50,9 @@ def main():
         data=run(['docker','compose','exec','-T','db','psql','-U','zhiyu','-d',database,'-At','-c',sql],
             capture_output=True,text=True,encoding='utf-8')
         facts=json.loads(data.stdout)
-        assert all(value==1 for value in facts.values()),facts
+        assert all(value==10 for value in facts.values()),facts
         (cache/'tts-browser-evidence.json').write_text(json.dumps({'test_database':database,'facts':facts},indent=2),encoding='utf-8')
-        print('PASS: fresh test database has one completed operation/effect/writeback.')
+        print('PASS: fresh test database has ten operations/effects/writebacks (nine rejections and one followup).')
     finally:
         # Restore the original DATABASE_URL and switches even when the browser fails.
         run(['docker','compose','up','--no-build','-d','--wait','backend'])

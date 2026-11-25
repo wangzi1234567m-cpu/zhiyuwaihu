@@ -2,7 +2,9 @@ import type {components} from '../app/api.generated';
 import manifest from '../../docs/design/source-manifest.json';
 
 export type View = components['schemas']['SessionView'];
-export type Application = components['schemas']['ApplicationView'];
+export type Application = components['schemas']['StaffApplication'];
+export type SupportCatalog = components['schemas']['SupportCatalog'];
+export type WrittenPreview = components['schemas']['WrittenPreview'];
 export type BusinessEvent = components['schemas']['Event'];
 export type Capabilities = components['schemas']['Capabilities'];
 export type Transport = 'text'|'voice'|'native_webrtc';
@@ -17,11 +19,12 @@ const counts = manifest.files.find(file=>'main_channel_counts_D13_D80' in file)?
 export const sourceStats = {total:(counts?.['电话']??0)+(counts?.['京麦驳回']??0),phone:counts?.['电话']??0,
   jingmai:counts?.['京麦驳回']??0,archiveSha256:manifest.archive_sha256};
 export function taskComplete(view?: View) {
-  return !!view && view.state==='CLOSED' && !!view.record && view.operations.length>0 && view.operations.every(op=>op.status==='succeeded');
+  return !!view && view.state==='CLOSED' && !!view.record && view.operations.some(op=>op.kind==='reject_application') && view.operations.every(op=>op.status==='succeeded');
 }
 export function eventLabel(event:BusinessEvent):string {
   const p=event.payload;
   switch(p.type) {
+    case 'contact.recorded': return `合成联系事件：${p.outcome}，第${p.call_attempt}次联系`;
     case 'state.changed': return stateNames[p.state];
     case 'turn.started': return '受理新一轮对话';
     case 'generation.finished': return p.status==='completed'?'本轮回答已生成':p.status==='failed'?'本轮回答失败':'本轮回答已中断';
@@ -32,4 +35,12 @@ export function eventLabel(event:BusinessEvent):string {
     case 'metric.recorded': return '记录响应测量';
     default: return '对话内容更新';
   }
+}
+
+export function sessionStatus(view:View){
+  if(view.state==='CLOSED'&&!view.operations.some(op=>op.kind==='reject_application')){
+    if(view.operations.some(op=>op.kind==='create_followup'))return '跟进已登记 · 待再联系';
+    if(view.operations.some(op=>op.kind==='create_callback'))return '预约已登记';
+  }
+  return stateNames[view.state];
 }

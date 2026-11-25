@@ -96,15 +96,17 @@ async def test_written_command_checked_at_mock_boundary(setup, brand, template, 
         case = db.get(Application, aid)
         slots = {**case.data['slots'], 'brand_name': brand}
         case.data = {**case.data, 'slots': slots}
+        # Generic rendering probe; no_brand fact consistency has its own regression.
+        case.data={**case.data,'scenario_id':'demo.template_probe'}
         kb = db.get(Knowledge, fixture_id(204))
-        kb.data = {**kb.data, 'approved_text': template,
+        kb.data = {**kb.data, 'scenario_id':'demo.template_probe','approved_text': template,
                    'required_slots': ['brand_name']}
         # The team policy supplies a written routing decision at this port boundary.
         session = db.get(Conversation, sid)
         session.data = {**session.data, 'route': 'jingmai'}
         command = ActionCommand(session_id=sid, application_id=aid, case_revision=1,
             decision_id=uuid4(), operation_id=oid, kind='reject_application', idempotency_key=str(oid),
-            evidence_refs=[], payload={'type': 'reject_application', 'reason_codes': ['demo.no_brand'],
+            evidence_refs=[], payload={'type': 'reject_application', 'reason_codes': ['demo.template_probe'],
                 'knowledge_entry_ids': [kb.id], 'written_text': written})
         db.add(Operation(id=str(oid), session_id=sid, key=command.idempotency_key, status='pending',
                          data={'manual': True, 'command': command.model_dump(mode='json')}))
@@ -153,8 +155,9 @@ async def test_three_releases_render_task_values_and_writeback(setup, monkeypatc
             entry = services.knowledge.lookup(scenario, '', ['synthetic'], 'demo-k1')[0]
             entries.append(entry.model_copy(update={'entry_id': uuid4(), 'knowledge_version': release,
                 'required_slots': list(REQUIRED_SLOTS[scenario]), 'approved_text': template}))
-    publish(release, entries)
-    publish(release, entries)
+    written_entries=[e.model_copy(update={'entry_id':uuid4(),'channel':'jingmai','kind':'script'}) for e in entries]
+    publish(release, [*entries,*written_entries])
+    publish(release, [*entries,*written_entries])
     monkeypatch.setenv('ZHIYU_KNOWLEDGE_VERSION', release)
     for i, entry in enumerate(entries, 1):
         aid = fixture_id(i)

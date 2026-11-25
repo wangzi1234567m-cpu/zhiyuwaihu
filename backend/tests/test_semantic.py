@@ -321,8 +321,7 @@ async def test_acknowledge_only_proposes_action_without_dispatch():
     assert decision.next_state == 'ACTION_READY'
     assert decision.proposed_action == 'reject_application'
     # Agent 只提议；payload 的正文必须来自已审依据，原因必须与申请单一致。
-    assert decision.action_payload.written_text == entry.approved_text
-    assert decision.action_payload.reason_codes == [case.scenario_id]
+    assert decision.action_payload is None  # Only Coordinator may render authoritative written text.
 
 
 async def test_callback_request_goes_to_human_window_not_auto_booking():
@@ -473,14 +472,14 @@ async def test_acknowledge_with_unanswered_question_does_not_dispatch():
     assert entry.approved_text in decision.reply_text
 
 
-def test_select_grounding_prefers_channel_but_never_filters_by_it():
+def test_phone_grounding_excludes_written_output_even_when_route_is_jingmai():
     """渠道是排序偏好而非过滤：京麦场景不能因为渠道不同就拿不到依据。"""
     case = make_case()
     phone_entry = make_entry(case, channel='phone')
     jingmai_entry = make_entry(case, channel='jingmai')
     entries, conflict = select_grounding(case, (phone_entry, jingmai_entry),
                                          knowledge_version='demo-k1', route='jingmai')
-    assert entries[0] is jingmai_entry and not conflict
+    assert entries == [phone_entry] and not conflict
     entries, conflict = select_grounding(case, (phone_entry,), knowledge_version='demo-k1',
                                          route='jingmai')
     assert entries == [phone_entry], '渠道不同仍应可用作依据（不能变成空）'

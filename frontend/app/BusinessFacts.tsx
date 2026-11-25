@@ -1,12 +1,13 @@
-import type {View} from '../lib/workbench';
+import type {View,Application} from '../lib/workbench';
 const actions={reject_application:'京麦驳回',create_callback:'预约',create_followup:'人工跟进',writeback:'回写'};
 const results={pending:'处理中',succeeded:'模拟处理成功',unknown:'结果待查证',not_found_yet:'尚未查到',failed:'处理失败'};
 const explanations={not_started:'未开始',partial:'部分完成',completed:'已确认完成',unknown:'待确认',not_required:'无需电话告知'};
-export default function BusinessFacts({view}:{view:View}) {
+export default function BusinessFacts({view,task}:{view:View;task?:Application}) {
   const rejection=view.operations.find(op=>op.kind==='reject_application');
   const written=view.state==='CLOSED'&&!!view.record;
   return <>
-    <dl className="execution-facts"><div><dt>通话次数</dt><dd>后端未提供</dd></div>
+    <dl className="execution-facts"><div><dt>通话次数</dt><dd>{task?.call_attempt??0} 次</dd></div>
+      <div><dt>联系结果</dt><dd>{task?({connected:'已接通，身份待核对',verified:'已核验',wrong_person:'身份不符',refused:'拒绝沟通',no_answer:'合成未接通',disconnected:'通话中断',not_required:'无需联系',unknown:'未知'})[task.contact_outcome]:'读取中'}</dd></div>
       <div><dt>身份核验</dt><dd>{view.verified?'已核对':view.route==='jingmai'?'不强制电话核验':'未核对'}</dd></div>
       <div><dt>告知完成</dt><dd>{view.record?explanations[view.record.explanation_status]:'待后端证据确认'}</dd></div>
       <div><dt>京麦操作</dt><dd>{rejection?results[rejection.status]:'尚未确认执行'}</dd></div>

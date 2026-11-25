@@ -1,7 +1,7 @@
 'use client';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {api,ApiRequestError} from './api';
-import type {Application,BusinessEvent,Capabilities,TaskViews,Transport,View} from './workbench';
+import type {Application,BusinessEvent,Capabilities,TaskViews,Transport,View,SupportCatalog,WrittenPreview} from './workbench';
 import type {components} from '../app/api.generated';
 type Accepted=components['schemas']['AcceptedTurn'];
 const STORE='zhiyu.workbench.sessions.v1';
@@ -14,6 +14,7 @@ function savedSessions():Record<string,string> {
 export function useWorkbench() {
   const [logged,setLogged]=useState(false),[loading,setLoading]=useState(false),[pending,setPending]=useState(false);
   const [error,setError]=useState(''),[applications,setApplications]=useState<Application[]>([]);
+  const [catalog,setCatalog]=useState<SupportCatalog|null>(null);
   const [caps,setCaps]=useState<Capabilities|null>(null),[views,setViews]=useState<TaskViews>({});
   const [selected,setSelected]=useState(''),[sid,setSid]=useState(''),[live,setLive]=useState('');
   const [transport,setTransportState]=useState<Transport>('text'),[connecting,setConnecting]=useState(false);
@@ -41,50 +42,32 @@ export function useWorkbench() {
     return api<View>('/sessions',{application_id:applicationId,mode:mode==='native_webrtc'?'voice':mode,
       voice_transport:mode==='native_webrtc'?'native_webrtc':'agora'},key??crypto.randomUUID());
   },[]);
-  const prepare=useCallback(async(next:View,mode:Transport)=>{
-    if(next.route!=='phone'||next.state!=='CASE_READY'||next.mode==='voice'||mode==='text')return next;
-    return create(next.application_id,mode);
-  },[create]);
   const initialize=useCallback(async()=>{
     if(initTask.current)return initTask.current;
     const work=async()=>{
       setLoading(true);setError('');
       try {
-        const [items,capabilities]=await Promise.all([api<Application[]>('/applications'),api<Capabilities>('/capabilities')]);
-        setApplications(items);setCaps(capabilities);setLogged(true);
+        const [items,capabilities,support]=await Promise.all([api<Application[]>('/staff/applications'),api<Capabilities>('/capabilities'),api<SupportCatalog>('/staff/support-catalog')]);
+        setApplications(items);setCaps(capabilities);setCatalog(support);setLogged(true);setTaskErrors({});
         const storedMode=localStorage.getItem('zhiyu.workbench.transport');
         const mode:Transport=storedMode==='text'?'text':storedMode==='native_webrtc'&&capabilities.realtime_webrtc?'native_webrtc':
           storedMode==='voice'&&capabilities.voice?'voice':capabilities.realtime_webrtc?'native_webrtc':capabilities.voice?'voice':'text';
         setTransportState(mode);sessionIds.current=savedSessions();
-        const restored:TaskViews={};let preferred='';
+        const restored:TaskViews={};
+        for(const task of items)if(task.snapshot){restored[task.application_id]=task.snapshot;remember(task.snapshot);}
+        setViews(restored);
         const legacy=localStorage.getItem('zhiyu.session');
-        if(legacy)try{const previous=await api<View>(`/sessions/${legacy}`);
-          if(items.some(a=>a.application_id===previous.application_id)){restored[previous.application_id]=previous;preferred=previous.application_id;remember(previous);}
-        }catch{/* Stale legacy IDs never authorize another task. */}
-        for(const task of items){
-          if(restored[task.application_id])continue;
-          try{
-            let next:View;
-            const saved=sessionIds.current[task.application_id];
-            if(saved){try{next=await api<View>(`/sessions/${saved}`);}catch(e){if(!(e instanceof ApiRequestError)||e.status!==404)throw e;next=await create(task.application_id,'text');}}
-            else {
-              // Persist a request key before admission so StrictMode/network retries
-              // cannot create duplicate preview sessions. No start/turn is sent.
-              const keyName=`zhiyu.workbench.admission.${task.application_id}`;
-              let key=localStorage.getItem(keyName);if(!key){key=crypto.randomUUID();localStorage.setItem(keyName,key);}
-              next=await create(task.application_id,'text',key);
-            }
-            if(next.application_id!==task.application_id)throw new Error('会话与申请单不匹配');
-            restored[task.application_id]=next;remember(next);
-          }catch(e){setTaskErrors(old=>({...old,[task.application_id]:e instanceof Error?e.message:'任务加载失败'}));}
-        }
-        const chosen=restored[preferred]??items.map(a=>restored[a.application_id]).find(Boolean);
-        if(chosen){try{activate(await prepare(chosen,mode));}catch(e){activate(chosen);setError(e instanceof Error?e.message:'语音会话准备失败，可切换开发设置');}}
-      }catch(e){if(e instanceof ApiRequestError&&e.status===401)setLogged(false);else setError(e instanceof Error?e.message:'加载失败，请重试');}
+        let chosen=items.find(task=>task.snapshot?.session_id===legacy)??items[0];
+        if(legacy&&!items.some(task=>task.snapshot?.session_id===legacy))try{
+          const previous=await api<View>(`/sessions/${legacy}`);
+          chosen=items.find(task=>task.application_id===previous.application_id)??chosen;
+        }catch{/* Staff projection remains authoritative if a cached session is stale. */}
+        if(chosen){setSelected(chosen.application_id);if(chosen.snapshot)activate(chosen.snapshot);else{setSid('');activeSid.current='';setLive('');}}
+      }catch(e){if(e instanceof ApiRequestError&&(e.status===401||e.status===403))setLogged(false);else setError(e instanceof Error?e.message:'加载失败，请重试');}
       finally{setLoading(false);}
     };
     initTask.current=work();try{await initTask.current;}finally{initTask.current=null;}
-  },[activate,create,prepare,remember]);
+  },[activate,remember]);
   useEffect(()=>{void initialize();},[initialize]);
 
   useEffect(()=>{
@@ -92,7 +75,7 @@ export function useWorkbench() {
     let closed=false;let source:EventSource|undefined;let timer:ReturnType<typeof setTimeout>|undefined;
     activeSid.current=sid;setLive('');setConnecting(true);
     const refresh=async()=>{
-      const next=await api<View>(`/sessions/${sid}`);
+      const next=await api<View>(`/staff/sessions/${sid}`);
       if(closed||activeSid.current!==sid||next.last_event_seq<cursor.current)return;
       remember(next);cursor.current=next.last_event_seq;generation.current=next.generation_id??null;setLive('');
     };
@@ -120,9 +103,9 @@ export function useWorkbench() {
             const state=event.payload.state;
             setViews(old=>{const entry=Object.entries(old).find(([,v])=>v.session_id===sid);return entry?{...old,[entry[0]]:{...entry[1],state,state_revision:event.state_revision}}:old;});
           }
-          if(['generation.finished','operation.updated','session.ended','knowledge.used'].includes(event.payload.type))void refresh().catch(e=>{if(!closed)setError(String(e));});
+          if(['generation.finished','operation.updated','session.ended','knowledge.used','contact.recorded'].includes(event.payload.type))void refresh().catch(e=>{if(!closed)setError(String(e));});
         };
-        for(const name of ['turn.started','text.delta','state.changed','generation.finished','turn.interrupted','operation.updated','session.ended','knowledge.used','metric.recorded'])source.addEventListener(name,receive as EventListener);
+        for(const name of ['turn.started','text.delta','state.changed','generation.finished','turn.interrupted','operation.updated','session.ended','knowledge.used','metric.recorded','contact.recorded'])source.addEventListener(name,receive as EventListener);
         source.onerror=()=>{source?.close();if(!closed){setConnecting(true);timer=setTimeout(connect,1500);}};
       }catch(e){if(!closed){setError(e instanceof Error?e.message:'状态恢复失败');setConnecting(true);timer=setTimeout(connect,2500);}}
     };
@@ -133,17 +116,19 @@ export function useWorkbench() {
     if(actionLock.current)return;actionLock.current=true;setPending(true);setError('');
     try{await fn();}catch(e){setError(e instanceof Error?e.message:String(e));}finally{actionLock.current=false;setPending(false);}
   };
-  return {logged,loading,pending,error,setError,applications,caps,views,view,selected,sid,live,transport,connecting,
+  return {logged,loading,pending,error,setError,applications,caps,catalog,views,view,selected,sid,live,transport,connecting,
     generation:generation.current,events:events[sid]??[],taskErrors,
-    login:(password:string)=>run(async()=>{await api('/auth/login',{username:'demo',password});await initialize();}),
-    selectTask:(id:string)=>run(async()=>{const next=views[id];if(!next)throw new Error('该任务尚未加载，请重试加载队列');activate(await prepare(next,transport));}),
+    login:(password:string)=>run(async()=>{await api('/auth/staff/login',{username:'demo',password});await initialize();}),
+    selectTask:(id:string)=>run(async()=>{const task=await api<Application>(`/staff/applications/${id}`);setApplications(old=>old.map(a=>a.application_id===id?task:a));if(task.snapshot)activate(task.snapshot);else{setViews(old=>{const next={...old};delete next[id];return next;});setSelected(id);setSid('');activeSid.current='';setLive('');}}),
     reload:()=>run(async()=>{await initialize();}),
-    refresh:()=>run(async()=>{if(sid)remember(await api<View>(`/sessions/${sid}`));}),
+    refresh:()=>run(async()=>{if(selected){const task=await api<Application>(`/staff/applications/${selected}`);setApplications(old=>old.map(a=>a.application_id===selected?task:a));if(task.snapshot)activate(task.snapshot);else{setViews(old=>{const next={...old};delete next[selected];return next;});setSid('');activeSid.current='';setLive('');}}}),
     changeTransport:(mode:Transport)=>run(async()=>{
       setTransportState(mode);localStorage.setItem('zhiyu.workbench.transport',mode);
       if(view?.state==='CASE_READY'&&!view.busy){const next=await create(view.application_id,view.route==='phone'?mode:'text');activate(next);}
     }),
-    newSession:()=>run(async()=>{if(view)activate(await create(view.application_id,view.route==='phone'?transport:'text'));}),
+    newSession:()=>run(async()=>{const task=applications.find(a=>a.application_id===selected);if(task)activate(await create(selected,task.effective_route==='phone'?transport:'text'));}),
+    rejectWritten:(preview:WrittenPreview,key:string)=>run(async()=>{if(!sid)return;const next=await api<View>(`/staff/sessions/${sid}/reject`,{case_revision:preview.case_revision,expected_revision:preview.state_revision,knowledge_version:preview.knowledge_version,rule_version:preview.rule_version,body_sha256:preview.body_sha256,preview_id:preview.preview_id},key);remember(next);}),
+    recordNoAnswer:()=>run(async()=>{if(!view)return;const task=await api<Application>(`/staff/applications/${selected}`);const next=await api<View>(`/staff/sessions/${sid}/contact-events`,{event_id:crypto.randomUUID(),case_revision:task.case_revision,expected_call_attempt:task.call_attempt,outcome:'no_answer'});remember(next);const fresh=await api<Application>(`/staff/applications/${selected}`);setApplications(old=>old.map(a=>a.application_id===selected?fresh:a));}),
     start:()=>run(async()=>{if(!view)return;const key=startKeys.current[sid]??(startKeys.current[sid]=crypto.randomUUID());
       const turn=await api<Accepted>(`/sessions/${sid}/start`,{expected_revision:view.state_revision},key);
       generation.current=turn.generation_id;remember({...view,busy:true,generation_id:turn.generation_id});}),
