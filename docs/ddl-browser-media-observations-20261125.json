@@ -1,0 +1,608 @@
+{
+  "notes": [
+    "Values are cumulative inbound RTP counters; not current-turn latency.",
+    "AudioContext and RTP counters share browser observations, not server clocks."
+  ],
+  "observations": [
+    {
+      "call": 3,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 23412.10000000149,
+        "inbound": [
+          {
+            "jitter": 0.006,
+            "jitterBufferDelay": 81494.4,
+            "jitterBufferEmittedCount": 1024320,
+            "jitterBufferTargetDelay": 58521.6,
+            "packetsLost": 0,
+            "packetsReceived": 1070
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 3,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 54535.199999999255,
+        "inbound": [
+          {
+            "jitter": 0.005,
+            "jitterBufferDelay": 210921.6,
+            "jitterBufferEmittedCount": 2515200,
+            "jitterBufferTargetDelay": 159417.6,
+            "packetsLost": 0,
+            "packetsReceived": 2626
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 3,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 76403.80000000075,
+        "inbound": [
+          {
+            "jitter": 0.005,
+            "jitterBufferDelay": 496876.8,
+            "jitterBufferEmittedCount": 3563520,
+            "jitterBufferTargetDelay": 222316.8,
+            "packetsLost": 0,
+            "packetsReceived": 3714
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 4,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 22091.5,
+        "inbound": [
+          {
+            "jitter": 0.008,
+            "jitterBufferDelay": 71539.2,
+            "jitterBufferEmittedCount": 974400,
+            "jitterBufferTargetDelay": 55891.2,
+            "packetsLost": 0,
+            "packetsReceived": 1018
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 4,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 53036.89999999851,
+        "inbound": [
+          {
+            "jitter": 0.01,
+            "jitterBufferDelay": 164400,
+            "jitterBufferEmittedCount": 2458560,
+            "jitterBufferTargetDelay": 139468.8,
+            "packetsLost": 0,
+            "packetsReceived": 2565
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 4,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 74555.89999999851,
+        "inbound": [
+          {
+            "jitter": 0.005,
+            "jitterBufferDelay": 242208,
+            "jitterBufferEmittedCount": 3489600,
+            "jitterBufferTargetDelay": 200889.6,
+            "packetsLost": 0,
+            "packetsReceived": 3636
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 6,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 24789.900000002235,
+        "inbound": [
+          {
+            "jitter": 0.006,
+            "jitterBufferDelay": 115238.4,
+            "jitterBufferEmittedCount": 1099200,
+            "jitterBufferTargetDelay": 75648,
+            "packetsLost": 0,
+            "packetsReceived": 1148
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 6,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 55774.60000000149,
+        "inbound": [
+          {
+            "jitter": 0.005,
+            "jitterBufferDelay": 224054.4,
+            "jitterBufferEmittedCount": 2580480,
+            "jitterBufferTargetDelay": 168518.4,
+            "packetsLost": 0,
+            "packetsReceived": 2690
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 6,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 77278.19999999925,
+        "inbound": [
+          {
+            "jitter": 0.006,
+            "jitterBufferDelay": 392064,
+            "jitterBufferEmittedCount": 3606720,
+            "jitterBufferTargetDelay": 355411.2,
+            "packetsLost": 0,
+            "packetsReceived": 3759
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 7,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 25139.5,
+        "inbound": [
+          {
+            "jitter": 0.005,
+            "jitterBufferDelay": 108864,
+            "jitterBufferEmittedCount": 1085760,
+            "jitterBufferTargetDelay": 80236.8,
+            "packetsLost": 0,
+            "packetsReceived": 1135
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 7,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 55826,
+        "inbound": [
+          {
+            "jitter": 0.01,
+            "jitterBufferDelay": 302265.6,
+            "jitterBufferEmittedCount": 2543040,
+            "jitterBufferTargetDelay": 284832,
+            "packetsLost": 0,
+            "packetsReceived": 2652
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 7,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 78195,
+        "inbound": [
+          {
+            "jitter": 0.007,
+            "jitterBufferDelay": 542841.6,
+            "jitterBufferEmittedCount": 3609600,
+            "jitterBufferTargetDelay": 563059.2,
+            "packetsLost": 0,
+            "packetsReceived": 3762
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 8,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 25301.300000000745,
+        "inbound": [
+          {
+            "jitter": 0.007,
+            "jitterBufferDelay": 80112,
+            "jitterBufferEmittedCount": 1078080,
+            "jitterBufferTargetDelay": 63667.2,
+            "packetsLost": 0,
+            "packetsReceived": 1126
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 8,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 58153.39999999851,
+        "inbound": [
+          {
+            "jitter": 0.005,
+            "jitterBufferDelay": 197625.6,
+            "jitterBufferEmittedCount": 2651520,
+            "jitterBufferTargetDelay": 183014.4,
+            "packetsLost": 0,
+            "packetsReceived": 2764
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 8,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 80186.89999999851,
+        "inbound": [
+          {
+            "jitter": 0.015,
+            "jitterBufferDelay": 323068.8,
+            "jitterBufferEmittedCount": 3703680,
+            "jitterBufferTargetDelay": 309254.4,
+            "packetsLost": 0,
+            "packetsReceived": 3860
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 9,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 30172.800000000745,
+        "inbound": [
+          {
+            "jitter": 0.007,
+            "jitterBufferDelay": 145555.2,
+            "jitterBufferEmittedCount": 1294080,
+            "jitterBufferTargetDelay": 86476.8,
+            "packetsLost": 0,
+            "packetsReceived": 1352
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 9,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 62058.39999999851,
+        "inbound": [
+          {
+            "jitter": 0.01,
+            "jitterBufferDelay": 252662.4,
+            "jitterBufferEmittedCount": 2822400,
+            "jitterBufferTargetDelay": 172204.8,
+            "packetsLost": 0,
+            "packetsReceived": 2947
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 9,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 83813.39999999851,
+        "inbound": [
+          {
+            "jitter": 0.014,
+            "jitterBufferDelay": 316627.2,
+            "jitterBufferEmittedCount": 3864960,
+            "jitterBufferTargetDelay": 222816,
+            "packetsLost": 0,
+            "packetsReceived": 4028
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 10,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 24388.199999999255,
+        "inbound": [
+          {
+            "jitter": 0.008,
+            "jitterBufferDelay": 87427.2,
+            "jitterBufferEmittedCount": 1048320,
+            "jitterBufferTargetDelay": 60883.2,
+            "packetsLost": 0,
+            "packetsReceived": 1096
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 10,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 54981.10000000149,
+        "inbound": [
+          {
+            "jitter": 0.013,
+            "jitterBufferDelay": 190944,
+            "jitterBufferEmittedCount": 2513280,
+            "jitterBufferTargetDelay": 148780.8,
+            "packetsLost": 0,
+            "packetsReceived": 2619
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 10,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 77172.30000000075,
+        "inbound": [
+          {
+            "jitter": 0.015,
+            "jitterBufferDelay": 337526.4,
+            "jitterBufferEmittedCount": 3574080,
+            "jitterBufferTargetDelay": 304761.6,
+            "packetsLost": 0,
+            "packetsReceived": 3729
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 11,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 32902.79999999702,
+        "inbound": [
+          {
+            "jitter": 0.005,
+            "jitterBufferDelay": 99456,
+            "jitterBufferEmittedCount": 1394880,
+            "jitterBufferTargetDelay": 74668.8,
+            "packetsLost": 0,
+            "packetsReceived": 1456
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 11,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 65032.89999999851,
+        "inbound": [
+          {
+            "jitter": 0.004,
+            "jitterBufferDelay": 203164.8,
+            "jitterBufferEmittedCount": 2933760,
+            "jitterBufferTargetDelay": 167001.6,
+            "packetsLost": 0,
+            "packetsReceived": 3062
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 11,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 87033.59999999776,
+        "inbound": [
+          {
+            "jitter": 0.003,
+            "jitterBufferDelay": 298233.6,
+            "jitterBufferEmittedCount": 3989760,
+            "jitterBufferTargetDelay": 230361.6,
+            "packetsLost": 0,
+            "packetsReceived": 4162
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 12,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 24698.29999999702,
+        "inbound": [
+          {
+            "jitter": 0.004,
+            "jitterBufferDelay": 97708.8,
+            "jitterBufferEmittedCount": 1054080,
+            "jitterBufferTargetDelay": 67276.8,
+            "packetsLost": 0,
+            "packetsReceived": 1101
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 12,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 55939.89999999851,
+        "inbound": [
+          {
+            "jitter": 0.008,
+            "jitterBufferDelay": 201398.4,
+            "jitterBufferEmittedCount": 2549760,
+            "jitterBufferTargetDelay": 157017.6,
+            "packetsLost": 0,
+            "packetsReceived": 2658
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 12,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 79465.09999999776,
+        "inbound": [
+          {
+            "jitter": 0.007,
+            "jitterBufferDelay": 339945.6,
+            "jitterBufferEmittedCount": 3674880,
+            "jitterBufferTargetDelay": 307084.8,
+            "packetsLost": 0,
+            "packetsReceived": 3834
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 13,
+      "case": "identity",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 27163.800000000745,
+        "inbound": [
+          {
+            "jitter": 0.007,
+            "jitterBufferDelay": 78249.6,
+            "jitterBufferEmittedCount": 1080960,
+            "jitterBufferTargetDelay": 61804.8,
+            "packetsLost": 0,
+            "packetsReceived": 1130
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 13,
+      "case": "guarantee",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 58955.60000000149,
+        "inbound": [
+          {
+            "jitter": 0.004,
+            "jitterBufferDelay": 194630.4,
+            "jitterBufferEmittedCount": 2605440,
+            "jitterBufferTargetDelay": 157305.6,
+            "packetsLost": 0,
+            "packetsReceived": 2720
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    },
+    {
+      "call": 13,
+      "case": "source",
+      "observed": {
+        "clock_domain": "browser.performance",
+        "at_ms": 80944.30000000075,
+        "inbound": [
+          {
+            "jitter": 0.006,
+            "jitterBufferDelay": 287836.8,
+            "jitterBufferEmittedCount": 3660480,
+            "jitterBufferTargetDelay": 220608,
+            "packetsLost": 0,
+            "packetsReceived": 3814
+          }
+        ],
+        "base_latency_s": 0.01,
+        "output_latency_s": 0.04
+      }
+    }
+  ]
+}

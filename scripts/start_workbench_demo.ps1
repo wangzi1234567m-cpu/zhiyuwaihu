@@ -49,7 +49,7 @@ $env:ZHIYU_KNOWLEDGE_VERSION='workbench-reviewed-20261125-v3'
 if($Build -or !(Test-Path -LiteralPath 'frontend/.next/BUILD_ID')){npm run build --prefix frontend -- --webpack;if($LASTEXITCODE -ne 0){throw 'Frontend build failed'}}
 $taskBackend=Start-Process -FilePath $taskPython -ArgumentList @('-m','uvicorn','workbench_runtime:app','--app-dir','scripts','--host','127.0.0.1','--port','18000','--no-access-log') -WorkingDirectory $taskRoot -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $taskCache 'backend.out.log') -RedirectStandardError (Join-Path $taskCache 'backend.err.log')
 $taskFrontend=Start-Process -FilePath (Get-Command node).Source -ArgumentList @('node_modules/next/dist/bin/next','start','--hostname','127.0.0.1','--port','13000') -WorkingDirectory (Join-Path $taskRoot 'frontend') -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $taskCache 'frontend.out.log') -RedirectStandardError (Join-Path $taskCache 'frontend.err.log')
-@{backend_pid=$taskBackend.Id;frontend_pid=$taskFrontend.Id;frontend='http://localhost:13000';backend='http://127.0.0.1:18000';knowledge_version=$env:ZHIYU_KNOWLEDGE_VERSION}|ConvertTo-Json|Set-Content -LiteralPath $taskState -Encoding utf8
+@{backend_pid=$taskBackend.Id;frontend_pid=$taskFrontend.Id;frontend='http://localhost:13000';backend='http://127.0.0.1:18000';knowledge_version=$env:ZHIYU_KNOWLEDGE_VERSION;vad_silence_ms=$VadSilenceMs;vad_threshold=0.5;tts_tail_drain=[bool]$TtsTailDrain;voice_writes_enabled=$false}|ConvertTo-Json|Set-Content -LiteralPath $taskState -Encoding utf8
 $taskReadiness=@'
 import time,urllib.request
 client=urllib.request.build_opener(urllib.request.ProxyHandler({}))

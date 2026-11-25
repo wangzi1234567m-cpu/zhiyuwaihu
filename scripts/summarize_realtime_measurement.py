@@ -73,11 +73,12 @@ def summarize(report):
             'reviewed_text_matches':len(reviewed)==1 and reviewed[0].get('text')==sample.get('answer_text'),
             'zero_business_effects':sample.get('server', {}).get('effects')==0})
     calls_without_samples = [c['index'] for c in report['calls'] if not c.get('samples')]
+    failed_connections=[{'call':c['index'],'failure':c['failure'],'code_commit':c.get('code_commit')} for c in report['calls'] if not c.get('samples') and c.get('failure')]
     result = {
         'metadata': report['metadata'],
         'counts': {'calls': len(report['calls']), 'attempted_turns': len(samples), 'valid_turns': len(valid),
             'invalid_or_failed_turns':len(samples)-len(all_valid), 'extra_setup_successes':len(all_valid)-len(valid), 'calls_without_turn_samples':calls_without_samples,
-            'statuses':dict(Counter(s['status'] for s in samples))},
+            'statuses':dict(Counter(s['status'] for s in samples)), 'failed_connections_without_turn_samples':len(failed_connections), 'interaction_attempts':len(samples)+len(failed_connections)},
         'valid_effective_answer':distribution([s['effective_answer_ms'] for s in valid]),
         'all_successful_effective_answer':distribution([s['effective_answer_ms'] for s in all_valid]),
         'all_observed_answer_audio':distribution([s['effective_answer_ms'] for s in all_audio]),
@@ -88,7 +89,7 @@ def summarize(report):
         'server_clock': {'implementation':time.get_clock_info('perf_counter' if report.get('metadata',{}).get('provider',{}).get('server_clock')=='perf_counter_ns' else 'monotonic').implementation,
                          'resolution_ms':time.get_clock_info('perf_counter' if report.get('metadata',{}).get('provider',{}).get('server_clock')=='perf_counter_ns' else 'monotonic').resolution*1000},
         'under_2000ms_valid_count':sum(s['effective_answer_ms']<2000 for s in valid),
-        'under_2000ms_all_attempt_rate':sum(s['effective_answer_ms']<2000 for s in valid)/len(samples) if samples else None,
+        'under_2000ms_all_attempt_rate':sum(s['effective_answer_ms']<2000 for s in valid)/(len(samples)+len(failed_connections)) if samples or failed_connections else None,
         'enough_samples':len(valid)>=30,
         'absolute_p50_under_2000ms':False,
         'full_latency_gate_passed':False,
@@ -97,6 +98,7 @@ def summarize(report):
         'measurement_invariants':{'all_passed':all(x['six_stages_present'] and x['telescoping_error_ms']<.02
             and x['reviewed_text_matches'] and x['zero_business_effects'] for x in invariants),
             'valid_samples_checked':len(invariants), 'samples':invariants},
+        'connection_failures':failed_connections,
         'failures':[{'call':s['call'],'case':s['case'],'status':s['status'],'failure':s.get('failure'),
             'provider_errors':[t for t in s.get('server',{}).get('traces',[]) if t.get('event')=='error']}
             for s in samples if s['status']!='success'],
@@ -114,10 +116,10 @@ def summarize(report):
     completed = [s for s in samples if s['status'] != 'pending']
     ordered = sorted(s['effective_answer_ms'] for s in all_valid)
     def all_attempt_quantile(p):
-        rank = math.ceil(len(completed)*p)
+        rank = math.ceil((len(completed)+len(failed_connections))*p)
         return round(ordered[rank-1], 2) if rank and rank <= len(ordered) else None
     result['all_attempt_deadline_distribution'] = {
-        'n':len(completed), 'failures_counted_as_no_valid_answer':len(completed)-len(all_valid),
+        'n':len(completed)+len(failed_connections), 'failures_counted_as_no_valid_answer':len(completed)+len(failed_connections)-len(all_valid),
         'p50_ms':all_attempt_quantile(.5), 'p95_ms':all_attempt_quantile(.95),
         'null_quantile_means_no_valid_answer_at_that_rank':True}
     usage_seen = set()

@@ -1,0 +1,5018 @@
+{
+  "variants": [
+    {
+      "path": ".cache\\v04-latency-opt-20261125-ab400.json",
+      "sha256": "9a01c02ab1d85ee9aedd3e601f0dbb1825caf3714c042ac68be30014089d4cc3",
+      "metadata": {
+        "run_id": "v04-latency-opt-20261125-ab400",
+        "commit": "fb098b134e8acb2176e953a582e240523d354289",
+        "knowledge_version": "workbench-reviewed-20261125-v3",
+        "case_set_sha256": "d071d54bca089bca6550e1690ac724888171a7102d69834af37f4408408315e0",
+        "code_variant": "opt-vad-400",
+        "provider_source_sha256": "2b9ed5ebc0f7f88d728a71527fbbe1dd61d12fb3c6bf6945ffacf5cfbcdd49b5",
+        "network_profile": "same Windows host/browser and aiortc loopback; real Beijing provider WAN; no TURN",
+        "client": "headless Chromium, shipped RealtimeVoice and AudioWorklet",
+        "measurement_method": "controlled_input_end_to_remote_pcm",
+        "input_end_definition": "last 10ms RMS>0.004 block in fixed synthetic WAV; AudioContext scheduled playback mapped to performance clock",
+        "planned_target_valid": 9,
+        "planned_target_per_case": 3,
+        "cohort_rule": "first planned quota of successful samples per case; extra identity setup retained separately; all attempts retained",
+        "business_writes": false,
+        "physical_speaker_measurement": false,
+        "audio": [
+          {
+            "id": "identity",
+            "name": "merchant-1.trimmed.wav",
+            "sha256": "05d2105402e9868524a8f4219332b6b03d6451b78c285d7f5e84b17703f14cb5",
+            "duration_ms": 1920,
+            "speech_end_ms": 1870
+          },
+          {
+            "id": "guarantee",
+            "name": "merchant-2.trimmed.wav",
+            "sha256": "5fa03e70c63e8ae403eae7509ac045be4d5c0535bd05625af9ec46430bead3c4",
+            "duration_ms": 1640,
+            "speech_end_ms": 1590
+          },
+          {
+            "id": "source",
+            "name": "merchant-source.trimmed.wav",
+            "sha256": "ba9e2ad040c8e38d3b2d6c225f87a45bf4c972ca824e91d99948551118aa170b",
+            "duration_ms": 2080,
+            "speech_end_ms": 2029.9999999999998
+          }
+        ],
+        "provider": {
+          "run_id": "v04-latency-opt-20261125-ab400",
+          "limits": {
+            "native_realtime_session": 20,
+            "native_realtime_turn": 62,
+            "tts": 100
+          },
+          "model": "qwen3.8-omni-flash-realtime",
+          "region": "cn-beijing",
+          "tts_model": "qwen-audio-3.1-tts-flash",
+          "voice": "longanhuan_v3.1",
+          "voice_writes": false,
+          "vad_silence_ms": 400,
+          "vad_threshold": 0.5,
+          "diagnostics": true,
+          "budget_id": "v04-latency-opt-20261125",
+          "server_clock": "perf_counter_ns",
+          "knowledge_version": "workbench-reviewed-20261125-v3"
+        }
+      },
+      "calls": 3,
+      "attempts": 9,
+      "turn_attempts": 9,
+      "failed_connections": [],
+      "valid_cohort": 9,
+      "all_successes": 9,
+      "failure_rate": 0.0,
+      "effective_answer": {
+        "n": 9,
+        "p50_ms": 2293.7,
+        "p95_ms": 2536.5,
+        "min_ms": 1823.4,
+        "max_ms": 2536.5
+      },
+      "per_case": {
+        "guarantee": {
+          "n": 3,
+          "p50_ms": 2293.7,
+          "p95_ms": 2536.5,
+          "min_ms": 1951.1,
+          "max_ms": 2536.5
+        },
+        "identity": {
+          "n": 3,
+          "p50_ms": 1911.4,
+          "p95_ms": 2382.9,
+          "min_ms": 1823.4,
+          "max_ms": 2382.9
+        },
+        "source": {
+          "n": 3,
+          "p50_ms": 2301.3,
+          "p95_ms": 2502.1,
+          "min_ms": 1870.6,
+          "max_ms": 2502.1
+        }
+      },
+      "rows": [
+        {
+          "call": 1,
+          "case": "identity",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 1911.3999999985099,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 131,
+            "input_queue_wait": {
+              "n": 131,
+              "p50_ms": 0.03,
+              "p95_ms": 0.09,
+              "min_ms": 0.02,
+              "max_ms": 2.95
+            },
+            "input_receive_gap": {
+              "n": 131,
+              "p50_ms": 20.13,
+              "p95_ms": 23.63,
+              "min_ms": 13.9,
+              "max_ms": 31.04
+            },
+            "input_send_gap": {
+              "n": 131,
+              "p50_ms": 20.13,
+              "p95_ms": 23.61,
+              "min_ms": 13.79,
+              "max_ms": 31.03
+            },
+            "websocket_send": {
+              "n": 131,
+              "p50_ms": 0.16,
+              "p95_ms": 0.28,
+              "min_ms": 0.13,
+              "max_ms": 0.38
+            },
+            "websocket_lock_wait": {
+              "n": 131,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 451,
+            "server_received_last_voice_to_stopped_ms": 436.272,
+            "server_sent_last_voice_to_stopped_ms": 435.865,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 125.87,
+            "provider_audio_end_minus_sent_content_end_ms": 200,
+            "tts": {
+              "text_chars": 47,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 548.043,
+              "headers_to_first_audio_ms": 17.977,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.873
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 19.458
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 19.477
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 79.257
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 79.767
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 79.936
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 79.939
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 80.023
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 80.026
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 547.847
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 548.145
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 10005.406
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 10005.96
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 10007.047
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 484,
+              "queue_residence": {
+                "n": 484,
+                "p50_ms": 237.34,
+                "p95_ms": 255.17,
+                "min_ms": 20.12,
+                "max_ms": 271.25
+              },
+              "producer_backpressure": {
+                "n": 484,
+                "p50_ms": 19.99,
+                "p95_ms": 37.69,
+                "min_ms": 0.0,
+                "max_ms": 45.0
+              },
+              "first_frame_residence_ms": 20.117,
+              "schedule_lag": {
+                "n": 484,
+                "p50_ms": 0.0,
+                "p95_ms": 2.52,
+                "min_ms": 0.0,
+                "max_ms": 20.97
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 562.141,
+              "native_understanding_after_stop": 477.989,
+              "business_review_and_event_delivery": 54.073,
+              "speech_dispatch": 0.72,
+              "tts_first_pcm": 569.981,
+              "pcm_to_browser_observation": 246.495,
+              "business_accept": 13.65,
+              "pure_agent_decision": 2.07
+            }
+          }
+        },
+        {
+          "call": 1,
+          "case": "guarantee",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 1951.1000000014901,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 118,
+            "input_queue_wait": {
+              "n": 118,
+              "p50_ms": 0.03,
+              "p95_ms": 0.08,
+              "min_ms": 0.02,
+              "max_ms": 0.1
+            },
+            "input_receive_gap": {
+              "n": 118,
+              "p50_ms": 20.16,
+              "p95_ms": 30.44,
+              "min_ms": 5.06,
+              "max_ms": 34.0
+            },
+            "input_send_gap": {
+              "n": 118,
+              "p50_ms": 20.18,
+              "p95_ms": 30.44,
+              "min_ms": 5.06,
+              "max_ms": 33.99
+            },
+            "websocket_send": {
+              "n": 118,
+              "p50_ms": 0.16,
+              "p95_ms": 0.3,
+              "min_ms": 0.11,
+              "max_ms": 0.34
+            },
+            "websocket_lock_wait": {
+              "n": 118,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1138,
+            "server_received_last_voice_to_stopped_ms": 461.355,
+            "server_sent_last_voice_to_stopped_ms": 460.966,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 115.683,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 130,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 517.266,
+              "headers_to_first_audio_ms": 33.873,
+              "first_audio_to_pcm_ms": 0.006,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.344
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 3.057
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 3.068
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 84.169
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 84.671
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 85.293
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 85.299
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 85.55
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 85.559
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 517.052
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 517.373
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 26221.951
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 26222.245
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 26222.776
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 1296,
+              "queue_residence": {
+                "n": 1296,
+                "p50_ms": 237.23,
+                "p95_ms": 253.89,
+                "min_ms": 18.25,
+                "max_ms": 272.25
+              },
+              "producer_backpressure": {
+                "n": 1296,
+                "p50_ms": 20.06,
+                "p95_ms": 37.08,
+                "min_ms": 0.0,
+                "max_ms": 53.59
+              },
+              "first_frame_residence_ms": 18.253,
+              "schedule_lag": {
+                "n": 1296,
+                "p50_ms": 0.0,
+                "p95_ms": 3.0,
+                "min_ms": 0.0,
+                "max_ms": 24.23
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 577.038,
+              "native_understanding_after_stop": 454.807,
+              "business_review_and_event_delivery": 107.521,
+              "speech_dispatch": 1.985,
+              "tts_first_pcm": 556.283,
+              "pcm_to_browser_observation": 253.466,
+              "business_accept": 18.843,
+              "pure_agent_decision": 0.086
+            }
+          }
+        },
+        {
+          "call": 1,
+          "case": "source",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2502.10000000149,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 148,
+            "input_queue_wait": {
+              "n": 148,
+              "p50_ms": 0.03,
+              "p95_ms": 0.08,
+              "min_ms": 0.02,
+              "max_ms": 3.44
+            },
+            "input_receive_gap": {
+              "n": 148,
+              "p50_ms": 20.21,
+              "p95_ms": 24.47,
+              "min_ms": 0.63,
+              "max_ms": 50.73
+            },
+            "input_send_gap": {
+              "n": 148,
+              "p50_ms": 20.27,
+              "p95_ms": 24.48,
+              "min_ms": 0.56,
+              "max_ms": 50.8
+            },
+            "websocket_send": {
+              "n": 148,
+              "p50_ms": 0.17,
+              "p95_ms": 0.3,
+              "min_ms": 0.12,
+              "max_ms": 0.38
+            },
+            "websocket_lock_wait": {
+              "n": 148,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 2682,
+            "server_received_last_voice_to_stopped_ms": 605.799,
+            "server_sent_last_voice_to_stopped_ms": 605.568,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 119.168,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 78,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 776.418,
+              "headers_to_first_audio_ms": 139.388,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.029
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 292.478
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 292.494
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 419.573
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 420.155
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 425.288
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 425.293
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 425.783
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 425.788
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 776.271
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 776.487
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 16515.521
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 16517.323
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 16518.076
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 792,
+              "queue_residence": {
+                "n": 792,
+                "p50_ms": 237.19,
+                "p95_ms": 253.82,
+                "min_ms": 8.62,
+                "max_ms": 284.75
+              },
+              "producer_backpressure": {
+                "n": 792,
+                "p50_ms": 19.96,
+                "p95_ms": 36.96,
+                "min_ms": 0.0,
+                "max_ms": 78.52
+              },
+              "first_frame_residence_ms": 8.624,
+              "schedule_lag": {
+                "n": 792,
+                "p50_ms": 0.0,
+                "p95_ms": 2.47,
+                "min_ms": 0.0,
+                "max_ms": 47.8
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 724.967,
+              "native_understanding_after_stop": 490.178,
+              "business_review_and_event_delivery": 62.498,
+              "speech_dispatch": 0.968,
+              "tts_first_pcm": 920.268,
+              "pcm_to_browser_observation": 303.221,
+              "business_accept": 13.121,
+              "pure_agent_decision": 0.078
+            }
+          }
+        },
+        {
+          "call": 2,
+          "case": "identity",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2382.89999999851,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 139,
+            "input_queue_wait": {
+              "n": 139,
+              "p50_ms": 0.03,
+              "p95_ms": 0.09,
+              "min_ms": 0.01,
+              "max_ms": 3.5
+            },
+            "input_receive_gap": {
+              "n": 139,
+              "p50_ms": 20.1,
+              "p95_ms": 27.86,
+              "min_ms": 0.76,
+              "max_ms": 59.05
+            },
+            "input_send_gap": {
+              "n": 139,
+              "p50_ms": 20.17,
+              "p95_ms": 29.24,
+              "min_ms": 0.67,
+              "max_ms": 59.17
+            },
+            "websocket_send": {
+              "n": 139,
+              "p50_ms": 0.16,
+              "p95_ms": 0.33,
+              "min_ms": 0.09,
+              "max_ms": 0.49
+            },
+            "websocket_lock_wait": {
+              "n": 139,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 490,
+            "server_received_last_voice_to_stopped_ms": 586.938,
+            "server_sent_last_voice_to_stopped_ms": 586.707,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 126.126,
+            "provider_audio_end_minus_sent_content_end_ms": 200,
+            "tts": {
+              "text_chars": 47,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 733.261,
+              "headers_to_first_audio_ms": 0.411,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 0.853
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 170.831
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 170.849
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 212.477
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 213.225
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 213.491
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 213.495
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 213.724
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 213.729
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 733.102
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 733.364
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 10476.004
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 10476.541
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 10477.088
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 500,
+              "queue_residence": {
+                "n": 500,
+                "p50_ms": 237.45,
+                "p95_ms": 255.38,
+                "min_ms": 21.57,
+                "max_ms": 276.23
+              },
+              "producer_backpressure": {
+                "n": 500,
+                "p50_ms": 20.16,
+                "p95_ms": 39.38,
+                "min_ms": 0.0,
+                "max_ms": 60.44
+              },
+              "first_frame_residence_ms": 21.575,
+              "schedule_lag": {
+                "n": 500,
+                "p50_ms": 0.0,
+                "p95_ms": 4.59,
+                "min_ms": 0.0,
+                "max_ms": 23.26
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 713.064,
+              "native_understanding_after_stop": 483.64,
+              "business_review_and_event_delivery": 68.287,
+              "speech_dispatch": 1.866,
+              "tts_first_pcm": 736.728,
+              "pcm_to_browser_observation": 379.314,
+              "business_accept": 10.242,
+              "pure_agent_decision": 1.374
+            }
+          }
+        },
+        {
+          "call": 2,
+          "case": "guarantee",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2536.5,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 121,
+            "input_queue_wait": {
+              "n": 121,
+              "p50_ms": 0.03,
+              "p95_ms": 0.07,
+              "min_ms": 0.02,
+              "max_ms": 0.38
+            },
+            "input_receive_gap": {
+              "n": 121,
+              "p50_ms": 20.26,
+              "p95_ms": 23.68,
+              "min_ms": 0.88,
+              "max_ms": 37.97
+            },
+            "input_send_gap": {
+              "n": 121,
+              "p50_ms": 20.28,
+              "p95_ms": 23.71,
+              "min_ms": 0.85,
+              "max_ms": 37.99
+            },
+            "websocket_send": {
+              "n": 121,
+              "p50_ms": 0.17,
+              "p95_ms": 0.3,
+              "min_ms": 0.1,
+              "max_ms": 0.58
+            },
+            "websocket_lock_wait": {
+              "n": 121,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1216,
+            "server_received_last_voice_to_stopped_ms": 516.392,
+            "server_sent_last_voice_to_stopped_ms": 516.179,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 109.281,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 130,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 1051.143,
+              "headers_to_first_audio_ms": 22.698,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.945
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 101.534
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 101.547
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 362.066
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 362.587
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 362.737
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 362.74
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 362.822
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 362.825
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 1050.989
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 1051.233
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 27561.181
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 27561.522
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 27562.197
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 1336,
+              "queue_residence": {
+                "n": 1336,
+                "p50_ms": 237.51,
+                "p95_ms": 255.64,
+                "min_ms": 10.88,
+                "max_ms": 275.22
+              },
+              "producer_backpressure": {
+                "n": 1336,
+                "p50_ms": 20.2,
+                "p95_ms": 38.9,
+                "min_ms": 0.0,
+                "max_ms": 44.74
+              },
+              "first_frame_residence_ms": 10.877,
+              "schedule_lag": {
+                "n": 1336,
+                "p50_ms": 0.0,
+                "p95_ms": 3.32,
+                "min_ms": 0.0,
+                "max_ms": 21.08
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 625.673,
+              "native_understanding_after_stop": 458.285,
+              "business_review_and_event_delivery": 101.357,
+              "speech_dispatch": 1.067,
+              "tts_first_pcm": 1077.422,
+              "pcm_to_browser_observation": 272.695,
+              "business_accept": 11.698,
+              "pure_agent_decision": 0.086
+            }
+          }
+        },
+        {
+          "call": 2,
+          "case": "source",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 1870.5999999977648,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 144,
+            "input_queue_wait": {
+              "n": 144,
+              "p50_ms": 0.03,
+              "p95_ms": 0.09,
+              "min_ms": 0.02,
+              "max_ms": 3.76
+            },
+            "input_receive_gap": {
+              "n": 144,
+              "p50_ms": 19.9,
+              "p95_ms": 30.69,
+              "min_ms": 1.43,
+              "max_ms": 35.16
+            },
+            "input_send_gap": {
+              "n": 144,
+              "p50_ms": 19.91,
+              "p95_ms": 30.7,
+              "min_ms": 1.4,
+              "max_ms": 35.18
+            },
+            "websocket_send": {
+              "n": 144,
+              "p50_ms": 0.17,
+              "p95_ms": 0.34,
+              "min_ms": 0.12,
+              "max_ms": 0.45
+            },
+            "websocket_lock_wait": {
+              "n": 144,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 2836,
+            "server_received_last_voice_to_stopped_ms": 520.992,
+            "server_sent_last_voice_to_stopped_ms": 520.664,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 133.126,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 78,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 391.979,
+              "headers_to_first_audio_ms": 12.653,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 0.815
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 12.188
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 12.201
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 52.42
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 52.757
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 52.938
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 52.942
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 53.038
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 53.04
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 391.836
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 392.038
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 15591.14
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 15591.445
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 15592.38
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 772,
+              "queue_residence": {
+                "n": 772,
+                "p50_ms": 237.41,
+                "p95_ms": 254.92,
+                "min_ms": 25.19,
+                "max_ms": 267.61
+              },
+              "producer_backpressure": {
+                "n": 772,
+                "p50_ms": 20.18,
+                "p95_ms": 38.45,
+                "min_ms": 0.0,
+                "max_ms": 46.83
+              },
+              "first_frame_residence_ms": 25.185,
+              "schedule_lag": {
+                "n": 772,
+                "p50_ms": 0.0,
+                "p95_ms": 3.02,
+                "min_ms": 0.0,
+                "max_ms": 22.73
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 654.117,
+              "native_understanding_after_stop": 451.376,
+              "business_review_and_event_delivery": 50.719,
+              "speech_dispatch": 2.649,
+              "tts_first_pcm": 406.959,
+              "pcm_to_browser_observation": 304.779,
+              "business_accept": 12.443,
+              "pure_agent_decision": 0.08
+            }
+          }
+        },
+        {
+          "call": 3,
+          "case": "identity",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 1823.3999999985099,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 132,
+            "input_queue_wait": {
+              "n": 132,
+              "p50_ms": 0.03,
+              "p95_ms": 0.1,
+              "min_ms": 0.02,
+              "max_ms": 0.6
+            },
+            "input_receive_gap": {
+              "n": 132,
+              "p50_ms": 20.23,
+              "p95_ms": 32.01,
+              "min_ms": 0.59,
+              "max_ms": 43.98
+            },
+            "input_send_gap": {
+              "n": 132,
+              "p50_ms": 20.24,
+              "p95_ms": 32.03,
+              "min_ms": 0.5,
+              "max_ms": 44.06
+            },
+            "websocket_send": {
+              "n": 133,
+              "p50_ms": 0.17,
+              "p95_ms": 0.34,
+              "min_ms": 0.11,
+              "max_ms": 0.56
+            },
+            "websocket_lock_wait": {
+              "n": 133,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 439,
+            "server_received_last_voice_to_stopped_ms": 459.361,
+            "server_sent_last_voice_to_stopped_ms": 459.129,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 117.23,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 47,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 415.75,
+              "headers_to_first_audio_ms": 21.628,
+              "first_audio_to_pcm_ms": 0.003,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 0.839
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 11.596
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 11.614
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 68.884
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 69.285
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 69.484
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 69.489
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 69.586
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 69.589
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 415.592
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 415.832
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 9242.199
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 9242.756
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 9245.57
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 452,
+              "queue_residence": {
+                "n": 452,
+                "p50_ms": 239.26,
+                "p95_ms": 255.65,
+                "min_ms": 18.16,
+                "max_ms": 271.34
+              },
+              "producer_backpressure": {
+                "n": 452,
+                "p50_ms": 19.74,
+                "p95_ms": 39.93,
+                "min_ms": 0.0,
+                "max_ms": 45.53
+              },
+              "first_frame_residence_ms": 18.159,
+              "schedule_lag": {
+                "n": 452,
+                "p50_ms": 0.0,
+                "p95_ms": 7.09,
+                "min_ms": 0.0,
+                "max_ms": 19.39
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 576.591,
+              "native_understanding_after_stop": 502.113,
+              "business_review_and_event_delivery": 50.523,
+              "speech_dispatch": 2.087,
+              "tts_first_pcm": 440.45,
+              "pcm_to_browser_observation": 251.635,
+              "business_accept": 10.106,
+              "pure_agent_decision": 1.352
+            }
+          }
+        },
+        {
+          "call": 3,
+          "case": "guarantee",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2293.699999999255,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 119,
+            "input_queue_wait": {
+              "n": 119,
+              "p50_ms": 0.03,
+              "p95_ms": 0.07,
+              "min_ms": 0.02,
+              "max_ms": 2.51
+            },
+            "input_receive_gap": {
+              "n": 119,
+              "p50_ms": 20.14,
+              "p95_ms": 32.26,
+              "min_ms": 1.7,
+              "max_ms": 37.8
+            },
+            "input_send_gap": {
+              "n": 119,
+              "p50_ms": 20.12,
+              "p95_ms": 32.26,
+              "min_ms": 1.68,
+              "max_ms": 37.82
+            },
+            "websocket_send": {
+              "n": 119,
+              "p50_ms": 0.17,
+              "p95_ms": 0.31,
+              "min_ms": 0.12,
+              "max_ms": 0.94
+            },
+            "websocket_lock_wait": {
+              "n": 119,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1109,
+            "server_received_last_voice_to_stopped_ms": 490.225,
+            "server_sent_last_voice_to_stopped_ms": 489.92,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 107.884,
+            "provider_audio_end_minus_sent_content_end_ms": 200,
+            "tts": {
+              "text_chars": 130,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 807.518,
+              "headers_to_first_audio_ms": 1.137,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 0.812
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 107.916
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 107.93
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 167.709
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 168.057
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 168.211
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 168.215
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 168.327
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 168.33
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 807.402
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 807.575
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 25606.466
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 25606.688
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 25607.961
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 1252,
+              "queue_residence": {
+                "n": 1252,
+                "p50_ms": 239.33,
+                "p95_ms": 256.06,
+                "min_ms": 16.61,
+                "max_ms": 286.78
+              },
+              "producer_backpressure": {
+                "n": 1252,
+                "p50_ms": 19.9,
+                "p95_ms": 40.17,
+                "min_ms": 0.0,
+                "max_ms": 53.12
+              },
+              "first_frame_residence_ms": 16.609,
+              "schedule_lag": {
+                "n": 1252,
+                "p50_ms": 0.0,
+                "p95_ms": 6.67,
+                "min_ms": 0.0,
+                "max_ms": 44.15
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 598.109,
+              "native_understanding_after_stop": 579.272,
+              "business_review_and_event_delivery": 70.033,
+              "speech_dispatch": 0.599,
+              "tts_first_pcm": 811.441,
+              "pcm_to_browser_observation": 234.246,
+              "business_accept": 23.618,
+              "pure_agent_decision": 0.087
+            }
+          }
+        },
+        {
+          "call": 3,
+          "case": "source",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2301.300000000745,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 160,
+            "input_queue_wait": {
+              "n": 160,
+              "p50_ms": 0.03,
+              "p95_ms": 0.09,
+              "min_ms": 0.02,
+              "max_ms": 2.52
+            },
+            "input_receive_gap": {
+              "n": 160,
+              "p50_ms": 20.11,
+              "p95_ms": 26.69,
+              "min_ms": 0.98,
+              "max_ms": 51.84
+            },
+            "input_send_gap": {
+              "n": 160,
+              "p50_ms": 20.11,
+              "p95_ms": 26.73,
+              "min_ms": 0.94,
+              "max_ms": 52.07
+            },
+            "websocket_send": {
+              "n": 160,
+              "p50_ms": 0.16,
+              "p95_ms": 0.28,
+              "min_ms": 0.12,
+              "max_ms": 0.53
+            },
+            "websocket_lock_wait": {
+              "n": 160,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 2652,
+            "server_received_last_voice_to_stopped_ms": 864.771,
+            "server_sent_last_voice_to_stopped_ms": 864.518,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 132.046,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 78,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 552.726,
+              "headers_to_first_audio_ms": 36.696,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 0.78
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 1.963
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 1.974
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 99.889
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 100.353
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 100.838
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 100.843
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 101.051
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 101.056
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 552.602
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 552.783
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 16434.264
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 16435.12
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 16435.985
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 804,
+              "queue_residence": {
+                "n": 804,
+                "p50_ms": 238.28,
+                "p95_ms": 255.99,
+                "min_ms": 31.98,
+                "max_ms": 275.62
+              },
+              "producer_backpressure": {
+                "n": 804,
+                "p50_ms": 20.06,
+                "p95_ms": 40.07,
+                "min_ms": 0.0,
+                "max_ms": 47.13
+              },
+              "first_frame_residence_ms": 31.98,
+              "schedule_lag": {
+                "n": 804,
+                "p50_ms": 0.0,
+                "p95_ms": 3.92,
+                "min_ms": 0.0,
+                "max_ms": 21.71
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 996.817,
+              "native_understanding_after_stop": 188.681,
+              "business_review_and_event_delivery": 59.854,
+              "speech_dispatch": 1.343,
+              "tts_first_pcm": 592.723,
+              "pcm_to_browser_observation": 461.884,
+              "business_accept": 10.851,
+              "pure_agent_decision": 0.073
+            }
+          }
+        }
+      ],
+      "limitations": [
+        "Small A/B samples are not formal acceptance.",
+        "Queue and WebSocket timings are local observations; completed send is not provider acknowledgement.",
+        "Cross-process stage boundaries use explicit minimum-RTT clock calibration; total answer latency stays in browser.performance.",
+        "First PCM of the reviewed answer segment is not word-aligned onset of a specific answer sentence."
+      ]
+    },
+    {
+      "path": ".cache\\v04-latency-opt-20261125-ab300.json",
+      "sha256": "320570fc4196210717758700c47bf1b10cb08204cb4e33c8f60fd28e2ca128c4",
+      "metadata": {
+        "run_id": "v04-latency-opt-20261125-ab300",
+        "commit": "db9779d13dab2c87c79749b738e3cc63b5a6b216",
+        "knowledge_version": "workbench-reviewed-20261125-v3",
+        "case_set_sha256": "d071d54bca089bca6550e1690ac724888171a7102d69834af37f4408408315e0",
+        "code_variant": "opt-vad-300",
+        "provider_source_sha256": "2b9ed5ebc0f7f88d728a71527fbbe1dd61d12fb3c6bf6945ffacf5cfbcdd49b5",
+        "network_profile": "same Windows host/browser and aiortc loopback; real Beijing provider WAN; no TURN",
+        "client": "headless Chromium, shipped RealtimeVoice and AudioWorklet",
+        "measurement_method": "controlled_input_end_to_remote_pcm",
+        "input_end_definition": "last 10ms RMS>0.004 block in fixed synthetic WAV; AudioContext scheduled playback mapped to performance clock",
+        "planned_target_valid": 9,
+        "planned_target_per_case": 3,
+        "cohort_rule": "first planned quota of successful samples per case; extra identity setup retained separately; all attempts retained",
+        "business_writes": false,
+        "physical_speaker_measurement": false,
+        "audio": [
+          {
+            "id": "identity",
+            "name": "merchant-1.trimmed.wav",
+            "sha256": "05d2105402e9868524a8f4219332b6b03d6451b78c285d7f5e84b17703f14cb5",
+            "duration_ms": 1920,
+            "speech_end_ms": 1870
+          },
+          {
+            "id": "guarantee",
+            "name": "merchant-2.trimmed.wav",
+            "sha256": "5fa03e70c63e8ae403eae7509ac045be4d5c0535bd05625af9ec46430bead3c4",
+            "duration_ms": 1640,
+            "speech_end_ms": 1590
+          },
+          {
+            "id": "source",
+            "name": "merchant-source.trimmed.wav",
+            "sha256": "ba9e2ad040c8e38d3b2d6c225f87a45bf4c972ca824e91d99948551118aa170b",
+            "duration_ms": 2080,
+            "speech_end_ms": 2029.9999999999998
+          }
+        ],
+        "provider": {
+          "run_id": "v04-latency-opt-20261125-ab300",
+          "limits": {
+            "native_realtime_session": 20,
+            "native_realtime_turn": 62,
+            "tts": 100
+          },
+          "model": "qwen3.8-omni-flash-realtime",
+          "region": "cn-beijing",
+          "tts_model": "qwen-audio-3.1-tts-flash",
+          "voice": "longanhuan_v3.1",
+          "voice_writes": false,
+          "vad_silence_ms": 300,
+          "vad_threshold": 0.5,
+          "diagnostics": true,
+          "budget_id": "v04-latency-opt-20261125",
+          "server_clock": "perf_counter_ns",
+          "knowledge_version": "workbench-reviewed-20261125-v3"
+        }
+      },
+      "calls": 3,
+      "attempts": 9,
+      "turn_attempts": 9,
+      "failed_connections": [],
+      "valid_cohort": 9,
+      "all_successes": 9,
+      "failure_rate": 0.0,
+      "effective_answer": {
+        "n": 9,
+        "p50_ms": 2078.2,
+        "p95_ms": 2719.3,
+        "min_ms": 1792.4,
+        "max_ms": 2719.3
+      },
+      "per_case": {
+        "guarantee": {
+          "n": 3,
+          "p50_ms": 2078.2,
+          "p95_ms": 2719.3,
+          "min_ms": 2063.3,
+          "max_ms": 2719.3
+        },
+        "identity": {
+          "n": 3,
+          "p50_ms": 2225.2,
+          "p95_ms": 2535.6,
+          "min_ms": 1792.4,
+          "max_ms": 2535.6
+        },
+        "source": {
+          "n": 3,
+          "p50_ms": 2034.8,
+          "p95_ms": 2492.3,
+          "min_ms": 2020,
+          "max_ms": 2492.3
+        }
+      },
+      "rows": [
+        {
+          "call": 1,
+          "case": "identity",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2225.199999999255,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 133,
+            "input_queue_wait": {
+              "n": 133,
+              "p50_ms": 0.04,
+              "p95_ms": 0.25,
+              "min_ms": 0.02,
+              "max_ms": 0.72
+            },
+            "input_receive_gap": {
+              "n": 133,
+              "p50_ms": 19.78,
+              "p95_ms": 33.18,
+              "min_ms": 0.02,
+              "max_ms": 113.16
+            },
+            "input_send_gap": {
+              "n": 133,
+              "p50_ms": 19.8,
+              "p95_ms": 33.2,
+              "min_ms": 0.17,
+              "max_ms": 113.42
+            },
+            "websocket_send": {
+              "n": 133,
+              "p50_ms": 0.18,
+              "p95_ms": 0.29,
+              "min_ms": 0.07,
+              "max_ms": 0.36
+            },
+            "websocket_lock_wait": {
+              "n": 133,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 492,
+            "server_received_last_voice_to_stopped_ms": 492.419,
+            "server_sent_last_voice_to_stopped_ms": 492.153,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 98.499,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 47,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 683.704,
+              "headers_to_first_audio_ms": 3.293,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.176
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 2.706
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 2.721
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 79.025
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 79.401
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 79.572
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 79.576
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 79.673
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 79.675
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 683.55
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 683.781
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 10280.284
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 10280.58
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 10281.123
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 492,
+              "queue_residence": {
+                "n": 492,
+                "p50_ms": 239.43,
+                "p95_ms": 257.52,
+                "min_ms": 15.98,
+                "max_ms": 303.21
+              },
+              "producer_backpressure": {
+                "n": 492,
+                "p50_ms": 19.75,
+                "p95_ms": 40.6,
+                "min_ms": 0.0,
+                "max_ms": 82.74
+              },
+              "first_frame_residence_ms": 15.982,
+              "schedule_lag": {
+                "n": 492,
+                "p50_ms": 0.0,
+                "p95_ms": 6.6,
+                "min_ms": 0.0,
+                "max_ms": 52.45
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 590.918,
+              "native_understanding_after_stop": 599.195,
+              "business_review_and_event_delivery": 56.553,
+              "speech_dispatch": 0.932,
+              "tts_first_pcm": 689.995,
+              "pcm_to_browser_observation": 287.607,
+              "business_accept": 17.78,
+              "pure_agent_decision": 1.349
+            }
+          }
+        },
+        {
+          "call": 1,
+          "case": "guarantee",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2078.199999999255,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 112,
+            "input_queue_wait": {
+              "n": 112,
+              "p50_ms": 0.03,
+              "p95_ms": 0.11,
+              "min_ms": 0.02,
+              "max_ms": 1.85
+            },
+            "input_receive_gap": {
+              "n": 112,
+              "p50_ms": 20.0,
+              "p95_ms": 33.15,
+              "min_ms": 2.63,
+              "max_ms": 36.66
+            },
+            "input_send_gap": {
+              "n": 112,
+              "p50_ms": 20.0,
+              "p95_ms": 33.16,
+              "min_ms": 2.56,
+              "max_ms": 36.72
+            },
+            "websocket_send": {
+              "n": 112,
+              "p50_ms": 0.18,
+              "p95_ms": 0.29,
+              "min_ms": 0.12,
+              "max_ms": 0.7
+            },
+            "websocket_lock_wait": {
+              "n": 112,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.04
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1209,
+            "server_received_last_voice_to_stopped_ms": 322.659,
+            "server_sent_last_voice_to_stopped_ms": 322.427,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 116.39,
+            "provider_audio_end_minus_sent_content_end_ms": 200,
+            "tts": {
+              "text_chars": 130,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 707.315,
+              "headers_to_first_audio_ms": 0.572,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 2.411
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 4.889
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 4.902
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 78.602
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 79.301
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 79.677
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 79.682
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 79.812
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 79.815
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 707.138
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 707.406
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 26633.494
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 26633.887
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 26635.576
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 1296,
+              "queue_residence": {
+                "n": 1296,
+                "p50_ms": 239.32,
+                "p95_ms": 258.81,
+                "min_ms": 23.61,
+                "max_ms": 463.1
+              },
+              "producer_backpressure": {
+                "n": 1296,
+                "p50_ms": 19.61,
+                "p95_ms": 41.19,
+                "min_ms": 0.0,
+                "max_ms": 118.83
+              },
+              "first_frame_residence_ms": 23.612,
+              "schedule_lag": {
+                "n": 1296,
+                "p50_ms": 0.0,
+                "p95_ms": 7.62,
+                "min_ms": 0.0,
+                "max_ms": 88.36
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 439.049,
+              "native_understanding_after_stop": 486.454,
+              "business_review_and_event_delivery": 116.411,
+              "speech_dispatch": 1.954,
+              "tts_first_pcm": 712.157,
+              "pcm_to_browser_observation": 322.175,
+              "business_accept": 15.767,
+              "pure_agent_decision": 0.088
+            }
+          }
+        },
+        {
+          "call": 1,
+          "case": "source",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2034.800000000745,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 135,
+            "input_queue_wait": {
+              "n": 135,
+              "p50_ms": 0.03,
+              "p95_ms": 0.11,
+              "min_ms": 0.02,
+              "max_ms": 5.71
+            },
+            "input_receive_gap": {
+              "n": 135,
+              "p50_ms": 19.83,
+              "p95_ms": 23.72,
+              "min_ms": 14.41,
+              "max_ms": 26.44
+            },
+            "input_send_gap": {
+              "n": 135,
+              "p50_ms": 19.84,
+              "p95_ms": 23.85,
+              "min_ms": 11.25,
+              "max_ms": 28.62
+            },
+            "websocket_send": {
+              "n": 135,
+              "p50_ms": 0.18,
+              "p95_ms": 0.33,
+              "min_ms": 0.13,
+              "max_ms": 0.52
+            },
+            "websocket_lock_wait": {
+              "n": 135,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 2779,
+            "server_received_last_voice_to_stopped_ms": 363.741,
+            "server_sent_last_voice_to_stopped_ms": 363.465,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 117.224,
+            "provider_audio_end_minus_sent_content_end_ms": 240,
+            "tts": {
+              "text_chars": 78,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 599.516,
+              "headers_to_first_audio_ms": 7.206,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.4
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 13.994
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 14.008
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 58.855
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 59.383
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 59.56
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 59.563
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 59.649
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 59.651
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 599.333
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 599.605
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 15820.71
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 15821.254
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 15822.24
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 772,
+              "queue_residence": {
+                "n": 772,
+                "p50_ms": 239.43,
+                "p95_ms": 254.97,
+                "min_ms": 38.46,
+                "max_ms": 269.94
+              },
+              "producer_backpressure": {
+                "n": 772,
+                "p50_ms": 19.97,
+                "p95_ms": 37.95,
+                "min_ms": 0.0,
+                "max_ms": 47.7
+              },
+              "first_frame_residence_ms": 38.46,
+              "schedule_lag": {
+                "n": 772,
+                "p50_ms": 0.0,
+                "p95_ms": 6.18,
+                "min_ms": 0.0,
+                "max_ms": 14.38
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 480.965,
+              "native_understanding_after_stop": 467.04,
+              "business_review_and_event_delivery": 51.394,
+              "speech_dispatch": 1.914,
+              "tts_first_pcm": 610.275,
+              "pcm_to_browser_observation": 423.212,
+              "business_accept": 8.716,
+              "pure_agent_decision": 0.081
+            }
+          }
+        },
+        {
+          "call": 2,
+          "case": "identity",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2535.60000000149,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 130,
+            "input_queue_wait": {
+              "n": 130,
+              "p50_ms": 0.03,
+              "p95_ms": 0.06,
+              "min_ms": 0.02,
+              "max_ms": 0.09
+            },
+            "input_receive_gap": {
+              "n": 130,
+              "p50_ms": 20.03,
+              "p95_ms": 23.29,
+              "min_ms": 7.6,
+              "max_ms": 30.04
+            },
+            "input_send_gap": {
+              "n": 130,
+              "p50_ms": 20.01,
+              "p95_ms": 23.29,
+              "min_ms": 7.56,
+              "max_ms": 30.09
+            },
+            "websocket_send": {
+              "n": 130,
+              "p50_ms": 0.17,
+              "p95_ms": 0.29,
+              "min_ms": 0.13,
+              "max_ms": 0.42
+            },
+            "websocket_lock_wait": {
+              "n": 130,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 471,
+            "server_received_last_voice_to_stopped_ms": 396.524,
+            "server_sent_last_voice_to_stopped_ms": 396.135,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 126.324,
+            "provider_audio_end_minus_sent_content_end_ms": 200,
+            "tts": {
+              "text_chars": 47,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 600.691,
+              "headers_to_first_audio_ms": 207.756,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.699
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 115.578
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 115.596
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 155.48
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 156.161
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 156.435
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 156.441
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 156.59
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 156.595
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 600.473
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 600.798
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 10088.644
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 10089.038
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 10089.72
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 476,
+              "queue_residence": {
+                "n": 476,
+                "p50_ms": 237.8,
+                "p95_ms": 250.45,
+                "min_ms": 33.3,
+                "max_ms": 273.07
+              },
+              "producer_backpressure": {
+                "n": 476,
+                "p50_ms": 20.0,
+                "p95_ms": 33.76,
+                "min_ms": 0.0,
+                "max_ms": 43.11
+              },
+              "first_frame_residence_ms": 33.297,
+              "schedule_lag": {
+                "n": 476,
+                "p50_ms": 0.0,
+                "p95_ms": 1.77,
+                "min_ms": 0.0,
+                "max_ms": 20.35
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 522.848,
+              "native_understanding_after_stop": 892.364,
+              "business_review_and_event_delivery": 71.385,
+              "speech_dispatch": 3.662,
+              "tts_first_pcm": 811.809,
+              "pcm_to_browser_observation": 233.532,
+              "business_accept": 17.664,
+              "pure_agent_decision": 1.539
+            }
+          }
+        },
+        {
+          "call": 2,
+          "case": "guarantee",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2063.300000000745,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 114,
+            "input_queue_wait": {
+              "n": 114,
+              "p50_ms": 0.03,
+              "p95_ms": 0.09,
+              "min_ms": 0.02,
+              "max_ms": 3.89
+            },
+            "input_receive_gap": {
+              "n": 114,
+              "p50_ms": 20.13,
+              "p95_ms": 25.24,
+              "min_ms": 11.21,
+              "max_ms": 28.5
+            },
+            "input_send_gap": {
+              "n": 114,
+              "p50_ms": 20.12,
+              "p95_ms": 25.24,
+              "min_ms": 7.35,
+              "max_ms": 31.29
+            },
+            "websocket_send": {
+              "n": 114,
+              "p50_ms": 0.17,
+              "p95_ms": 0.3,
+              "min_ms": 0.11,
+              "max_ms": 0.42
+            },
+            "websocket_lock_wait": {
+              "n": 114,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1190,
+            "server_received_last_voice_to_stopped_ms": 380.101,
+            "server_sent_last_voice_to_stopped_ms": 379.818,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 106.879,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 130,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 634.04,
+              "headers_to_first_audio_ms": 67.323,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.088
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 4.155
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 4.167
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 182.645
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 183.168
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 183.343
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 183.346
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 183.431
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 183.434
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 633.904
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 634.096
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 27161.363
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 27162.219
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 27162.893
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 1336,
+              "queue_residence": {
+                "n": 1336,
+                "p50_ms": 239.11,
+                "p95_ms": 257.04,
+                "min_ms": 7.2,
+                "max_ms": 277.41
+              },
+              "producer_backpressure": {
+                "n": 1336,
+                "p50_ms": 19.88,
+                "p95_ms": 40.82,
+                "min_ms": 0.0,
+                "max_ms": 55.49
+              },
+              "first_frame_residence_ms": 7.2,
+              "schedule_lag": {
+                "n": 1336,
+                "p50_ms": 0.0,
+                "p95_ms": 4.47,
+                "min_ms": 0.0,
+                "max_ms": 22.74
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 486.98,
+              "native_understanding_after_stop": 490.476,
+              "business_review_and_event_delivery": 182.571,
+              "speech_dispatch": 2.32,
+              "tts_first_pcm": 705.465,
+              "pcm_to_browser_observation": 195.487,
+              "business_accept": 13.56,
+              "pure_agent_decision": 0.108
+            }
+          }
+        },
+        {
+          "call": 2,
+          "case": "source",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2020,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 138,
+            "input_queue_wait": {
+              "n": 138,
+              "p50_ms": 0.03,
+              "p95_ms": 0.08,
+              "min_ms": 0.02,
+              "max_ms": 0.44
+            },
+            "input_receive_gap": {
+              "n": 138,
+              "p50_ms": 19.83,
+              "p95_ms": 31.46,
+              "min_ms": 2.25,
+              "max_ms": 37.46
+            },
+            "input_send_gap": {
+              "n": 138,
+              "p50_ms": 19.81,
+              "p95_ms": 31.47,
+              "min_ms": 2.24,
+              "max_ms": 37.5
+            },
+            "websocket_send": {
+              "n": 138,
+              "p50_ms": 0.18,
+              "p95_ms": 0.31,
+              "min_ms": 0.13,
+              "max_ms": 0.45
+            },
+            "websocket_lock_wait": {
+              "n": 138,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 2797,
+            "server_received_last_voice_to_stopped_ms": 421.042,
+            "server_sent_last_voice_to_stopped_ms": 420.716,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 100.924,
+            "provider_audio_end_minus_sent_content_end_ms": 240,
+            "tts": {
+              "text_chars": 78,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 510.287,
+              "headers_to_first_audio_ms": 36.639,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 0.856
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 123.774
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 123.788
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 167.013
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 167.369
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 167.554
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 167.557
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 167.648
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 167.651
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 510.112
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 510.363
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 15755.474
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 15756.145
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 15758.089
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 772,
+              "queue_residence": {
+                "n": 772,
+                "p50_ms": 237.57,
+                "p95_ms": 254.34,
+                "min_ms": 26.46,
+                "max_ms": 273.82
+              },
+              "producer_backpressure": {
+                "n": 772,
+                "p50_ms": 20.04,
+                "p95_ms": 37.63,
+                "min_ms": 0.0,
+                "max_ms": 45.52
+              },
+              "first_frame_residence_ms": 26.463,
+              "schedule_lag": {
+                "n": 772,
+                "p50_ms": 0.0,
+                "p95_ms": 2.47,
+                "min_ms": 0.0,
+                "max_ms": 23.99
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 521.966,
+              "native_understanding_after_stop": 526.835,
+              "business_review_and_event_delivery": 42.805,
+              "speech_dispatch": 0.863,
+              "tts_first_pcm": 550.632,
+              "pcm_to_browser_observation": 376.899,
+              "business_accept": 8.679,
+              "pure_agent_decision": 0.078
+            }
+          }
+        },
+        {
+          "call": 3,
+          "case": "identity",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 1792.4000000022352,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 128,
+            "input_queue_wait": {
+              "n": 128,
+              "p50_ms": 0.04,
+              "p95_ms": 0.11,
+              "min_ms": 0.02,
+              "max_ms": 1.76
+            },
+            "input_receive_gap": {
+              "n": 128,
+              "p50_ms": 19.87,
+              "p95_ms": 30.92,
+              "min_ms": 0.44,
+              "max_ms": 51.15
+            },
+            "input_send_gap": {
+              "n": 128,
+              "p50_ms": 19.87,
+              "p95_ms": 30.95,
+              "min_ms": 0.4,
+              "max_ms": 51.22
+            },
+            "websocket_send": {
+              "n": 128,
+              "p50_ms": 0.2,
+              "p95_ms": 0.41,
+              "min_ms": 0.1,
+              "max_ms": 0.56
+            },
+            "websocket_lock_wait": {
+              "n": 128,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 463,
+            "server_received_last_voice_to_stopped_ms": 374.483,
+            "server_sent_last_voice_to_stopped_ms": 374.184,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 108.723,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 47,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 425.831,
+              "headers_to_first_audio_ms": 35.052,
+              "first_audio_to_pcm_ms": 0.005,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 0.825
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 9.559
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 9.576
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 46.638
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 47.837
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 48.011
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 48.015
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 48.102
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 48.105
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 425.693
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 425.904
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 9743.672
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 9744.075
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 9747.82
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 476,
+              "queue_residence": {
+                "n": 476,
+                "p50_ms": 239.53,
+                "p95_ms": 253.33,
+                "min_ms": 26.87,
+                "max_ms": 274.0
+              },
+              "producer_backpressure": {
+                "n": 476,
+                "p50_ms": 19.86,
+                "p95_ms": 37.02,
+                "min_ms": 0.0,
+                "max_ms": 47.01
+              },
+              "first_frame_residence_ms": 26.871,
+              "schedule_lag": {
+                "n": 476,
+                "p50_ms": 0.0,
+                "p95_ms": 6.8,
+                "min_ms": 0.0,
+                "max_ms": 15.04
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 483.206,
+              "native_understanding_after_stop": 466.109,
+              "business_review_and_event_delivery": 58.551,
+              "speech_dispatch": 1.454,
+              "tts_first_pcm": 464.078,
+              "pcm_to_browser_observation": 319.002,
+              "business_accept": 14.633,
+              "pure_agent_decision": 1.43
+            }
+          }
+        },
+        {
+          "call": 3,
+          "case": "guarantee",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2719.300000000745,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 114,
+            "input_queue_wait": {
+              "n": 114,
+              "p50_ms": 0.03,
+              "p95_ms": 0.15,
+              "min_ms": 0.02,
+              "max_ms": 2.56
+            },
+            "input_receive_gap": {
+              "n": 114,
+              "p50_ms": 20.01,
+              "p95_ms": 24.12,
+              "min_ms": 3.98,
+              "max_ms": 28.36
+            },
+            "input_send_gap": {
+              "n": 114,
+              "p50_ms": 20.05,
+              "p95_ms": 24.14,
+              "min_ms": 3.94,
+              "max_ms": 28.37
+            },
+            "websocket_send": {
+              "n": 114,
+              "p50_ms": 0.18,
+              "p95_ms": 0.31,
+              "min_ms": 0.12,
+              "max_ms": 0.4
+            },
+            "websocket_lock_wait": {
+              "n": 114,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1155,
+            "server_received_last_voice_to_stopped_ms": 350.866,
+            "server_sent_last_voice_to_stopped_ms": 350.555,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 123.917,
+            "provider_audio_end_minus_sent_content_end_ms": 200,
+            "tts": {
+              "text_chars": 130,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 594.765,
+              "headers_to_first_audio_ms": 0.415,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.617
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 14.71
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 14.724
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 117.15
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 117.655
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 117.832
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 117.836
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 117.925
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 117.928
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 594.648
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 594.824
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 24744.112
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 24744.674
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 24747.744
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 1220,
+              "queue_residence": {
+                "n": 1220,
+                "p50_ms": 239.17,
+                "p95_ms": 254.89,
+                "min_ms": 13.63,
+                "max_ms": 272.7
+              },
+              "producer_backpressure": {
+                "n": 1220,
+                "p50_ms": 19.99,
+                "p95_ms": 36.56,
+                "min_ms": 0.0,
+                "max_ms": 51.68
+              },
+              "first_frame_residence_ms": 13.633,
+              "schedule_lag": {
+                "n": 1220,
+                "p50_ms": 0.0,
+                "p95_ms": 8.51,
+                "min_ms": 0.0,
+                "max_ms": 19.08
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 474.783,
+              "native_understanding_after_stop": 1285.842,
+              "business_review_and_event_delivery": 93.354,
+              "speech_dispatch": 3.088,
+              "tts_first_pcm": 599.722,
+              "pcm_to_browser_observation": 262.511,
+              "business_accept": 9.872,
+              "pure_agent_decision": 0.081
+            }
+          }
+        },
+        {
+          "call": 3,
+          "case": "source",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2492.300000000745,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 136,
+            "input_queue_wait": {
+              "n": 136,
+              "p50_ms": 0.03,
+              "p95_ms": 0.12,
+              "min_ms": 0.02,
+              "max_ms": 2.2
+            },
+            "input_receive_gap": {
+              "n": 136,
+              "p50_ms": 20.1,
+              "p95_ms": 30.79,
+              "min_ms": 1.24,
+              "max_ms": 38.35
+            },
+            "input_send_gap": {
+              "n": 136,
+              "p50_ms": 20.13,
+              "p95_ms": 30.79,
+              "min_ms": 1.09,
+              "max_ms": 38.49
+            },
+            "websocket_send": {
+              "n": 136,
+              "p50_ms": 0.17,
+              "p95_ms": 0.32,
+              "min_ms": 0.09,
+              "max_ms": 0.72
+            },
+            "websocket_lock_wait": {
+              "n": 136,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 2679,
+            "server_received_last_voice_to_stopped_ms": 362.141,
+            "server_sent_last_voice_to_stopped_ms": 361.86,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 111.355,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 78,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 895.595,
+              "headers_to_first_audio_ms": 4.049,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 1.03
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 95.416
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 95.432
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 290.219
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 290.569
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 290.738
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 290.741
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 290.829
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 290.832
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 895.442
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 895.664
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 15949.2
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 15949.524
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 15950.29
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 764,
+              "queue_residence": {
+                "n": 764,
+                "p50_ms": 238.22,
+                "p95_ms": 252.16,
+                "min_ms": 17.27,
+                "max_ms": 272.95
+              },
+              "producer_backpressure": {
+                "n": 764,
+                "p50_ms": 19.95,
+                "p95_ms": 35.67,
+                "min_ms": 0.0,
+                "max_ms": 47.0
+              },
+              "first_frame_residence_ms": 17.272,
+              "schedule_lag": {
+                "n": 764,
+                "p50_ms": 0.0,
+                "p95_ms": 3.43,
+                "min_ms": 0.0,
+                "max_ms": 21.02
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 473.496,
+              "native_understanding_after_stop": 637.4,
+              "business_review_and_event_delivery": 95.365,
+              "speech_dispatch": 1.804,
+              "tts_first_pcm": 902.303,
+              "pcm_to_browser_observation": 381.933,
+              "business_accept": 39.549,
+              "pure_agent_decision": 0.09
+            }
+          }
+        }
+      ],
+      "limitations": [
+        "Small A/B samples are not formal acceptance.",
+        "Queue and WebSocket timings are local observations; completed send is not provider acknowledgement.",
+        "Cross-process stage boundaries use explicit minimum-RTT clock calibration; total answer latency stays in browser.performance.",
+        "First PCM of the reviewed answer segment is not word-aligned onset of a specific answer sentence."
+      ]
+    },
+    {
+      "path": ".cache\\v04-latency-opt-20261125-natural400.json",
+      "sha256": "9a397d9d13963d74cecc4add5c1c04a8547f6d43e26b02e5f3baec9e5aef40bc",
+      "metadata": {
+        "run_id": "v04-latency-opt-20261125-natural400",
+        "commit": "70ac2cd99071feea63f8e02ff00980f1e898081b",
+        "knowledge_version": "workbench-reviewed-20261125-v3",
+        "case_set_sha256": "f7b7324c691e541f555dbeecb5ee353788b41e26f2ba6f35f1da1a0ccae8b8ed",
+        "code_variant": "opt-vad-400",
+        "provider_source_sha256": "2b9ed5ebc0f7f88d728a71527fbbe1dd61d12fb3c6bf6945ffacf5cfbcdd49b5",
+        "network_profile": "same Windows host/browser and aiortc loopback; real Beijing provider WAN; no TURN",
+        "client": "headless Chromium, shipped RealtimeVoice and AudioWorklet",
+        "measurement_method": "controlled_input_end_to_remote_pcm",
+        "input_end_definition": "last 10ms RMS>0.004 block in fixed synthetic WAV; AudioContext scheduled playback mapped to performance clock",
+        "planned_target_valid": 4,
+        "planned_target_per_case": 0,
+        "cohort_rule": "first planned quota of successful samples per case; extra identity setup retained separately; all attempts retained",
+        "business_writes": false,
+        "physical_speaker_measurement": false,
+        "audio": [
+          {
+            "id": "identity",
+            "name": "E:\\桌面文件\\开发\\人工智能＋\\tmp\\v04-business-backend\\.cache\\ddl-opt\\audio\\identity-pause-350.wav",
+            "expect_transcript_regex": "我是演示商家[一1].*联系人",
+            "sha256": "077ee22fe45044fbc6eec5990ba2869a0480459e23eb53f77783492387f0df48",
+            "duration_ms": 3738.367346938776,
+            "speech_end_ms": 2956.689342403628
+          },
+          {
+            "id": "identity",
+            "name": "E:\\桌面文件\\开发\\人工智能＋\\tmp\\v04-business-backend\\.cache\\ddl-opt\\audio\\identity-pause-150.wav",
+            "expect_transcript_regex": "我是演示商家[一1].*联系人",
+            "sha256": "66e6b3777e23a59efc38df31be202d88e75903b69614db93a3f5fb846a91840f",
+            "duration_ms": 3538.3673469387754,
+            "speech_end_ms": 2756.235827664399
+          },
+          {
+            "id": "source",
+            "name": "merchant-source.trimmed.wav",
+            "allow_barge_after": true,
+            "sha256": "ba9e2ad040c8e38d3b2d6c225f87a45bf4c972ca824e91d99948551118aa170b",
+            "duration_ms": 2080,
+            "speech_end_ms": 2029.9999999999998
+          },
+          {
+            "id": "guarantee",
+            "name": "merchant-2.trimmed.wav",
+            "expect_barge_in": true,
+            "sha256": "5fa03e70c63e8ae403eae7509ac045be4d5c0535bd05625af9ec46430bead3c4",
+            "duration_ms": 1640,
+            "speech_end_ms": 1590
+          }
+        ],
+        "provider": {
+          "run_id": "v04-latency-opt-20261125-natural400",
+          "limits": {
+            "native_realtime_session": 20,
+            "native_realtime_turn": 62,
+            "tts": 100
+          },
+          "model": "qwen3.8-omni-flash-realtime",
+          "region": "cn-beijing",
+          "tts_model": "qwen-audio-3.1-tts-flash",
+          "voice": "longanhuan_v3.1",
+          "voice_writes": false,
+          "vad_silence_ms": 400,
+          "vad_threshold": 0.5,
+          "diagnostics": true,
+          "tts_drain_enabled": false,
+          "budget_id": "v04-latency-opt-20261125",
+          "server_clock": "perf_counter_ns",
+          "knowledge_version": "workbench-reviewed-20261125-v3"
+        }
+      },
+      "calls": 1,
+      "attempts": 1,
+      "turn_attempts": 1,
+      "failed_connections": [],
+      "valid_cohort": 0,
+      "all_successes": 0,
+      "failure_rate": 1.0,
+      "effective_answer": {
+        "n": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "min_ms": null,
+        "max_ms": null
+      },
+      "per_case": {
+        "identity": {
+          "n": 0,
+          "p50_ms": null,
+          "p95_ms": null,
+          "min_ms": null,
+          "max_ms": null
+        }
+      },
+      "rows": [
+        {
+          "call": 1,
+          "case": "identity",
+          "status": "failed",
+          "cohort": true,
+          "failure": "page.waitForFunction: Timeout 16000ms exceeded.",
+          "effective_answer_ms": null,
+          "business_valid": null,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 186,
+            "input_queue_wait": {
+              "n": 186,
+              "p50_ms": 0.03,
+              "p95_ms": 0.09,
+              "min_ms": 0.02,
+              "max_ms": 3.47
+            },
+            "input_receive_gap": {
+              "n": 186,
+              "p50_ms": 20.13,
+              "p95_ms": 30.85,
+              "min_ms": 5.43,
+              "max_ms": 34.26
+            },
+            "input_send_gap": {
+              "n": 186,
+              "p50_ms": 20.18,
+              "p95_ms": 30.86,
+              "min_ms": 5.28,
+              "max_ms": 34.29
+            },
+            "websocket_send": {
+              "n": 186,
+              "p50_ms": 0.18,
+              "p95_ms": 0.37,
+              "min_ms": 0.1,
+              "max_ms": 0.63
+            },
+            "websocket_lock_wait": {
+              "n": 186,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 505,
+            "server_received_last_voice_to_stopped_ms": 479.47,
+            "server_sent_last_voice_to_stopped_ms": 479.249,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 96.643,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "stages_ms": {
+              "input_transport_vad_return": 576.113
+            }
+          }
+        }
+      ],
+      "limitations": [
+        "Small A/B samples are not formal acceptance.",
+        "Queue and WebSocket timings are local observations; completed send is not provider acknowledgement.",
+        "Cross-process stage boundaries use explicit minimum-RTT clock calibration; total answer latency stays in browser.performance.",
+        "First PCM of the reviewed answer segment is not word-aligned onset of a specific answer sentence."
+      ]
+    },
+    {
+      "path": ".cache\\v04-latency-opt-20261125-natural300.json",
+      "sha256": "bf801ecee0fc84b8b2b85777253aea1dae818aac959bfb18ccb25790f7468295",
+      "metadata": {
+        "run_id": "v04-latency-opt-20261125-natural300",
+        "commit": "70ac2cd99071feea63f8e02ff00980f1e898081b",
+        "knowledge_version": "workbench-reviewed-20261125-v3",
+        "case_set_sha256": "f7b7324c691e541f555dbeecb5ee353788b41e26f2ba6f35f1da1a0ccae8b8ed",
+        "code_variant": "opt-vad-300",
+        "provider_source_sha256": "2b9ed5ebc0f7f88d728a71527fbbe1dd61d12fb3c6bf6945ffacf5cfbcdd49b5",
+        "network_profile": "same Windows host/browser and aiortc loopback; real Beijing provider WAN; no TURN",
+        "client": "headless Chromium, shipped RealtimeVoice and AudioWorklet",
+        "measurement_method": "controlled_input_end_to_remote_pcm",
+        "input_end_definition": "last 10ms RMS>0.004 block in fixed synthetic WAV; AudioContext scheduled playback mapped to performance clock",
+        "planned_target_valid": 4,
+        "planned_target_per_case": 0,
+        "cohort_rule": "first planned quota of successful samples per case; extra identity setup retained separately; all attempts retained",
+        "business_writes": false,
+        "physical_speaker_measurement": false,
+        "audio": [
+          {
+            "id": "identity",
+            "name": "E:\\桌面文件\\开发\\人工智能＋\\tmp\\v04-business-backend\\.cache\\ddl-opt\\audio\\identity-pause-350.wav",
+            "expect_transcript_regex": "我是演示商家[一1].*联系人",
+            "sha256": "077ee22fe45044fbc6eec5990ba2869a0480459e23eb53f77783492387f0df48",
+            "duration_ms": 3738.367346938776,
+            "speech_end_ms": 2956.689342403628
+          },
+          {
+            "id": "identity",
+            "name": "E:\\桌面文件\\开发\\人工智能＋\\tmp\\v04-business-backend\\.cache\\ddl-opt\\audio\\identity-pause-150.wav",
+            "expect_transcript_regex": "我是演示商家[一1].*联系人",
+            "sha256": "66e6b3777e23a59efc38df31be202d88e75903b69614db93a3f5fb846a91840f",
+            "duration_ms": 3538.3673469387754,
+            "speech_end_ms": 2756.235827664399
+          },
+          {
+            "id": "source",
+            "name": "merchant-source.trimmed.wav",
+            "allow_barge_after": true,
+            "sha256": "ba9e2ad040c8e38d3b2d6c225f87a45bf4c972ca824e91d99948551118aa170b",
+            "duration_ms": 2080,
+            "speech_end_ms": 2029.9999999999998
+          },
+          {
+            "id": "guarantee",
+            "name": "merchant-2.trimmed.wav",
+            "expect_barge_in": true,
+            "sha256": "5fa03e70c63e8ae403eae7509ac045be4d5c0535bd05625af9ec46430bead3c4",
+            "duration_ms": 1640,
+            "speech_end_ms": 1590
+          }
+        ],
+        "provider": {
+          "run_id": "v04-latency-opt-20261125-natural300",
+          "limits": {
+            "native_realtime_session": 20,
+            "native_realtime_turn": 62,
+            "tts": 100
+          },
+          "model": "qwen3.8-omni-flash-realtime",
+          "region": "cn-beijing",
+          "tts_model": "qwen-audio-3.1-tts-flash",
+          "voice": "longanhuan_v3.1",
+          "voice_writes": false,
+          "vad_silence_ms": 300,
+          "vad_threshold": 0.5,
+          "diagnostics": true,
+          "tts_drain_enabled": false,
+          "budget_id": "v04-latency-opt-20261125",
+          "server_clock": "perf_counter_ns",
+          "knowledge_version": "workbench-reviewed-20261125-v3"
+        }
+      },
+      "calls": 1,
+      "attempts": 2,
+      "turn_attempts": 2,
+      "failed_connections": [],
+      "valid_cohort": 0,
+      "all_successes": 0,
+      "failure_rate": 1.0,
+      "effective_answer": {
+        "n": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "min_ms": null,
+        "max_ms": null
+      },
+      "per_case": {
+        "identity": {
+          "n": 0,
+          "p50_ms": null,
+          "p95_ms": null,
+          "min_ms": null,
+          "max_ms": null
+        }
+      },
+      "rows": [
+        {
+          "call": 1,
+          "case": "identity",
+          "status": "invalid_business_answer",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 1987.010657595627,
+          "business_valid": false,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 187,
+            "input_queue_wait": {
+              "n": 187,
+              "p50_ms": 0.04,
+              "p95_ms": 0.09,
+              "min_ms": 0.02,
+              "max_ms": 1.92
+            },
+            "input_receive_gap": {
+              "n": 187,
+              "p50_ms": 19.94,
+              "p95_ms": 23.66,
+              "min_ms": 3.24,
+              "max_ms": 30.71
+            },
+            "input_send_gap": {
+              "n": 187,
+              "p50_ms": 19.96,
+              "p95_ms": 23.9,
+              "min_ms": 3.24,
+              "max_ms": 30.71
+            },
+            "websocket_send": {
+              "n": 187,
+              "p50_ms": 0.18,
+              "p95_ms": 0.32,
+              "min_ms": 0.12,
+              "max_ms": 0.63
+            },
+            "websocket_lock_wait": {
+              "n": 187,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.02
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 528,
+            "server_received_last_voice_to_stopped_ms": 484.28,
+            "server_sent_last_voice_to_stopped_ms": 484.045,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 100.357,
+            "provider_audio_end_minus_sent_content_end_ms": 240,
+            "tts": {
+              "text_chars": 32,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 353.083,
+              "headers_to_first_audio_ms": 113.611,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 0.863
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 2.176
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 2.191
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 49.852
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 50.525
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 50.83
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 50.836
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 51.121
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 51.127
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 352.932
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 353.154
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 6543.569
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 6543.844
+                },
+                {
+                  "name": "http11.receive_response_body.failed",
+                  "since_request_ms": 6544.415
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 316,
+              "queue_residence": {
+                "n": 316,
+                "p50_ms": 239.07,
+                "p95_ms": 251.72,
+                "min_ms": 23.39,
+                "max_ms": 269.94
+              },
+              "producer_backpressure": {
+                "n": 316,
+                "p50_ms": 19.84,
+                "p95_ms": 35.17,
+                "min_ms": 0.0,
+                "max_ms": 46.21
+              },
+              "first_frame_residence_ms": 23.394,
+              "schedule_lag": {
+                "n": 316,
+                "p50_ms": 0.0,
+                "p95_ms": 2.17,
+                "min_ms": 0.0,
+                "max_ms": 17.12
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 584.637,
+              "native_understanding_after_stop": 615.763,
+              "business_review_and_event_delivery": 51.648,
+              "speech_dispatch": 1.936,
+              "tts_first_pcm": 473.342,
+              "pcm_to_browser_observation": 259.684,
+              "business_accept": 14.894,
+              "pure_agent_decision": 0.049
+            }
+          }
+        },
+        {
+          "call": 1,
+          "case": "identity",
+          "status": "failed",
+          "cohort": true,
+          "failure": "page.waitForFunction: Timeout 16000ms exceeded.",
+          "effective_answer_ms": null,
+          "business_valid": null,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 175,
+            "input_queue_wait": {
+              "n": 175,
+              "p50_ms": 0.03,
+              "p95_ms": 0.12,
+              "min_ms": 0.02,
+              "max_ms": 0.27
+            },
+            "input_receive_gap": {
+              "n": 175,
+              "p50_ms": 20.02,
+              "p95_ms": 30.64,
+              "min_ms": 4.59,
+              "max_ms": 35.41
+            },
+            "input_send_gap": {
+              "n": 175,
+              "p50_ms": 19.99,
+              "p95_ms": 30.61,
+              "min_ms": 4.54,
+              "max_ms": 35.46
+            },
+            "websocket_send": {
+              "n": 175,
+              "p50_ms": 0.18,
+              "p95_ms": 0.37,
+              "min_ms": 0.11,
+              "max_ms": 0.47
+            },
+            "websocket_lock_wait": {
+              "n": 175,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1106,
+            "server_received_last_voice_to_stopped_ms": 431.621,
+            "server_sent_last_voice_to_stopped_ms": 431.433,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 100.275,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "stages_ms": {
+              "input_transport_vad_return": 531.896
+            }
+          }
+        }
+      ],
+      "limitations": [
+        "Small A/B samples are not formal acceptance.",
+        "Queue and WebSocket timings are local observations; completed send is not provider acknowledgement.",
+        "Cross-process stage boundaries use explicit minimum-RTT clock calibration; total answer latency stays in browser.performance.",
+        "First PCM of the reviewed answer segment is not word-aligned onset of a specific answer sentence."
+      ]
+    },
+    {
+      "path": ".cache\\v04-latency-opt-20261125-barge400.json",
+      "sha256": "acb777930cd144fe1838ce616c4aa7dc7dc89e0bc4f46b21121ebc764fc83ab9",
+      "metadata": {
+        "run_id": "v04-latency-opt-20261125-barge400",
+        "commit": "3734eef05f992cd012d4256387452244f9e82e32",
+        "knowledge_version": "workbench-reviewed-20261125-v3",
+        "case_set_sha256": "0cb4cb0634ac75c0815c84b74cadd607cc325e30a509976813ae9884e28c4432",
+        "code_variant": "opt-vad-400",
+        "provider_source_sha256": "2b9ed5ebc0f7f88d728a71527fbbe1dd61d12fb3c6bf6945ffacf5cfbcdd49b5",
+        "network_profile": "same Windows host/browser and aiortc loopback; real Beijing provider WAN; no TURN",
+        "client": "headless Chromium, shipped RealtimeVoice and AudioWorklet",
+        "measurement_method": "controlled_input_end_to_remote_pcm",
+        "input_end_definition": "last 10ms RMS>0.004 block in fixed synthetic WAV; AudioContext scheduled playback mapped to performance clock",
+        "planned_target_valid": 3,
+        "planned_target_per_case": 0,
+        "cohort_rule": "first planned quota of successful samples per case; extra identity setup retained separately; all attempts retained",
+        "business_writes": false,
+        "physical_speaker_measurement": false,
+        "audio": [
+          {
+            "id": "identity",
+            "name": "merchant-1.trimmed.wav",
+            "sha256": "05d2105402e9868524a8f4219332b6b03d6451b78c285d7f5e84b17703f14cb5",
+            "duration_ms": 1920,
+            "speech_end_ms": 1870
+          },
+          {
+            "id": "source",
+            "name": "merchant-source.trimmed.wav",
+            "allow_barge_after": true,
+            "sha256": "ba9e2ad040c8e38d3b2d6c225f87a45bf4c972ca824e91d99948551118aa170b",
+            "duration_ms": 2080,
+            "speech_end_ms": 2029.9999999999998
+          },
+          {
+            "id": "guarantee",
+            "name": "merchant-2.trimmed.wav",
+            "expect_barge_in": true,
+            "sha256": "5fa03e70c63e8ae403eae7509ac045be4d5c0535bd05625af9ec46430bead3c4",
+            "duration_ms": 1640,
+            "speech_end_ms": 1590
+          }
+        ],
+        "provider": {
+          "run_id": "v04-latency-opt-20261125-barge400",
+          "limits": {
+            "native_realtime_session": 20,
+            "native_realtime_turn": 62,
+            "tts": 100
+          },
+          "model": "qwen3.8-omni-flash-realtime",
+          "region": "cn-beijing",
+          "tts_model": "qwen-audio-3.1-tts-flash",
+          "voice": "longanhuan_v3.1",
+          "voice_writes": false,
+          "vad_silence_ms": 400,
+          "vad_threshold": 0.5,
+          "diagnostics": true,
+          "tts_drain_enabled": true,
+          "budget_id": "v04-latency-opt-20261125",
+          "server_clock": "perf_counter_ns",
+          "knowledge_version": "workbench-reviewed-20261125-v3"
+        }
+      },
+      "calls": 1,
+      "attempts": 3,
+      "turn_attempts": 3,
+      "failed_connections": [],
+      "valid_cohort": 3,
+      "all_successes": 3,
+      "failure_rate": 0.0,
+      "effective_answer": {
+        "n": 3,
+        "p50_ms": 2115.8,
+        "p95_ms": 2201.1,
+        "min_ms": 1760.3,
+        "max_ms": 2201.1
+      },
+      "per_case": {
+        "guarantee": {
+          "n": 1,
+          "p50_ms": 2201.1,
+          "p95_ms": 2201.1,
+          "min_ms": 2201.1,
+          "max_ms": 2201.1
+        },
+        "identity": {
+          "n": 1,
+          "p50_ms": 1760.3,
+          "p95_ms": 1760.3,
+          "min_ms": 1760.3,
+          "max_ms": 1760.3
+        },
+        "source": {
+          "n": 1,
+          "p50_ms": 2115.8,
+          "p95_ms": 2115.8,
+          "min_ms": 2115.8,
+          "max_ms": 2115.8
+        }
+      },
+      "rows": [
+        {
+          "call": 1,
+          "case": "identity",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 1760.300000000745,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 133,
+            "input_queue_wait": {
+              "n": 133,
+              "p50_ms": 0.03,
+              "p95_ms": 0.08,
+              "min_ms": 0.02,
+              "max_ms": 2.21
+            },
+            "input_receive_gap": {
+              "n": 133,
+              "p50_ms": 19.93,
+              "p95_ms": 33.3,
+              "min_ms": 0.97,
+              "max_ms": 39.43
+            },
+            "input_send_gap": {
+              "n": 133,
+              "p50_ms": 19.97,
+              "p95_ms": 33.32,
+              "min_ms": 0.89,
+              "max_ms": 39.6
+            },
+            "websocket_send": {
+              "n": 133,
+              "p50_ms": 0.16,
+              "p95_ms": 0.34,
+              "min_ms": 0.11,
+              "max_ms": 0.46
+            },
+            "websocket_lock_wait": {
+              "n": 133,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 461,
+            "server_received_last_voice_to_stopped_ms": 481.767,
+            "server_sent_last_voice_to_stopped_ms": 481.541,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 113.319,
+            "provider_audio_end_minus_sent_content_end_ms": 200,
+            "tts": {
+              "text_chars": 47,
+              "connection_reused_observed": true,
+              "request_to_headers_ms": 385.879,
+              "headers_to_first_audio_ms": 0.623,
+              "first_audio_to_pcm_ms": 0.003,
+              "http_events": [
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 0.83
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 2.945
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 2.95
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 3.155
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 3.158
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 385.641
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 386.0
+                },
+                {
+                  "name": "http11.receive_response_body.complete",
+                  "since_request_ms": 9743.321
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 9743.607
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 9743.781
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 480,
+              "queue_residence": {
+                "n": 480,
+                "p50_ms": 239.08,
+                "p95_ms": 252.53,
+                "min_ms": 7.54,
+                "max_ms": 278.56
+              },
+              "producer_backpressure": {
+                "n": 480,
+                "p50_ms": 19.99,
+                "p95_ms": 34.49,
+                "min_ms": 0.0,
+                "max_ms": 50.65
+              },
+              "first_frame_residence_ms": 7.538,
+              "schedule_lag": {
+                "n": 480,
+                "p50_ms": 0.0,
+                "p95_ms": 5.15,
+                "min_ms": 0.0,
+                "max_ms": 27.43
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 595.085,
+              "native_understanding_after_stop": 475.216,
+              "business_review_and_event_delivery": 64.777,
+              "speech_dispatch": 1.938,
+              "tts_first_pcm": 389.491,
+              "pcm_to_browser_observation": 233.793,
+              "business_accept": 20.085,
+              "pure_agent_decision": 1.93
+            }
+          }
+        },
+        {
+          "call": 1,
+          "case": "source",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2115.800000000745,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 142,
+            "input_queue_wait": {
+              "n": 142,
+              "p50_ms": 0.03,
+              "p95_ms": 0.07,
+              "min_ms": 0.02,
+              "max_ms": 0.15
+            },
+            "input_receive_gap": {
+              "n": 142,
+              "p50_ms": 20.1,
+              "p95_ms": 30.56,
+              "min_ms": 4.1,
+              "max_ms": 34.97
+            },
+            "input_send_gap": {
+              "n": 142,
+              "p50_ms": 20.1,
+              "p95_ms": 30.61,
+              "min_ms": 4.08,
+              "max_ms": 34.99
+            },
+            "websocket_send": {
+              "n": 142,
+              "p50_ms": 0.17,
+              "p95_ms": 0.34,
+              "min_ms": 0.11,
+              "max_ms": 0.42
+            },
+            "websocket_lock_wait": {
+              "n": 142,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.01
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1162,
+            "server_received_last_voice_to_stopped_ms": 456.75,
+            "server_sent_last_voice_to_stopped_ms": 456.484,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 131.789,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 78,
+              "connection_reused_observed": true,
+              "request_to_headers_ms": 472.882,
+              "headers_to_first_audio_ms": 104.658,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 4.504
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 5.01
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 5.016
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 5.495
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 5.509
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 472.647
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 472.963
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 17,
+              "queue_residence": {
+                "n": 17,
+                "p50_ms": 182.03,
+                "p95_ms": 241.92,
+                "min_ms": 21.93,
+                "max_ms": 241.92
+              },
+              "producer_backpressure": {
+                "n": 17,
+                "p50_ms": 0.0,
+                "p95_ms": 22.43,
+                "min_ms": 0.0,
+                "max_ms": 22.43
+              },
+              "first_frame_residence_ms": 21.928,
+              "schedule_lag": {
+                "n": 17,
+                "p50_ms": 0.0,
+                "p95_ms": 1.68,
+                "min_ms": 0.0,
+                "max_ms": 1.68
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 588.54,
+              "native_understanding_after_stop": 490.801,
+              "business_review_and_event_delivery": 95.024,
+              "speech_dispatch": 3.74,
+              "tts_first_pcm": 590.004,
+              "pcm_to_browser_observation": 347.691,
+              "business_accept": 10.847,
+              "pure_agent_decision": 0.084
+            }
+          }
+        },
+        {
+          "call": 1,
+          "case": "guarantee",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2201.099999997765,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 117,
+            "input_queue_wait": {
+              "n": 117,
+              "p50_ms": 0.03,
+              "p95_ms": 0.14,
+              "min_ms": 0.02,
+              "max_ms": 0.27
+            },
+            "input_receive_gap": {
+              "n": 117,
+              "p50_ms": 19.95,
+              "p95_ms": 30.61,
+              "min_ms": 1.67,
+              "max_ms": 37.18
+            },
+            "input_send_gap": {
+              "n": 117,
+              "p50_ms": 19.96,
+              "p95_ms": 30.61,
+              "min_ms": 1.49,
+              "max_ms": 37.36
+            },
+            "websocket_send": {
+              "n": 117,
+              "p50_ms": 0.18,
+              "p95_ms": 0.37,
+              "min_ms": 0.1,
+              "max_ms": 0.58
+            },
+            "websocket_lock_wait": {
+              "n": 117,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.23
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1370,
+            "server_received_last_voice_to_stopped_ms": 439.579,
+            "server_sent_last_voice_to_stopped_ms": 439.321,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 106.487,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 130,
+              "connection_reused_observed": false,
+              "request_to_headers_ms": 693.929,
+              "headers_to_first_audio_ms": 33.343,
+              "first_audio_to_pcm_ms": 0.005,
+              "http_events": [
+                {
+                  "name": "connection.connect_tcp.started",
+                  "since_request_ms": 0.994
+                },
+                {
+                  "name": "connection.connect_tcp.complete",
+                  "since_request_ms": 3.851
+                },
+                {
+                  "name": "connection.start_tls.started",
+                  "since_request_ms": 3.866
+                },
+                {
+                  "name": "connection.start_tls.complete",
+                  "since_request_ms": 256.639
+                },
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 257.386
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 257.737
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 257.744
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 257.94
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 257.945
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 693.814
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 693.988
+                },
+                {
+                  "name": "http11.receive_response_body.complete",
+                  "since_request_ms": 26013.036
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 26013.339
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 26013.465
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 1276,
+              "queue_residence": {
+                "n": 1276,
+                "p50_ms": 238.6,
+                "p95_ms": 253.74,
+                "min_ms": 22.09,
+                "max_ms": 276.67
+              },
+              "producer_backpressure": {
+                "n": 1276,
+                "p50_ms": 19.94,
+                "p95_ms": 35.73,
+                "min_ms": 0.0,
+                "max_ms": 49.46
+              },
+              "first_frame_residence_ms": 22.087,
+              "schedule_lag": {
+                "n": 1276,
+                "p50_ms": 0.0,
+                "p95_ms": 5.55,
+                "min_ms": 0.0,
+                "max_ms": 22.06
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 546.066,
+              "native_understanding_after_stop": 517.912,
+              "business_review_and_event_delivery": 45.755,
+              "speech_dispatch": 1.34,
+              "tts_first_pcm": 732.483,
+              "pcm_to_browser_observation": 357.545,
+              "business_accept": 9.267,
+              "pure_agent_decision": 0.113
+            }
+          }
+        }
+      ],
+      "limitations": [
+        "Small A/B samples are not formal acceptance.",
+        "Queue and WebSocket timings are local observations; completed send is not provider acknowledgement.",
+        "Cross-process stage boundaries use explicit minimum-RTT clock calibration; total answer latency stays in browser.performance.",
+        "First PCM of the reviewed answer segment is not word-aligned onset of a specific answer sentence."
+      ]
+    },
+    {
+      "path": ".cache\\v04-latency-opt-20261125-diagnostic.json",
+      "sha256": "2adcd57f98d613cfd94fcb2b3b752d94dd6d4735efde0afcb933c49cef552890",
+      "metadata": {
+        "run_id": "v04-latency-opt-20261125-diagnostic",
+        "commit": "84a3a3161c4eb5a135841652f9351665f900a755",
+        "knowledge_version": "workbench-reviewed-20261125-v3",
+        "case_set_sha256": "d071d54bca089bca6550e1690ac724888171a7102d69834af37f4408408315e0",
+        "code_variant": "opt-vad-400",
+        "provider_source_sha256": "0ccf38a383c6d26887dc33124a164358c43e148f519d7cd075090aa82807219e",
+        "network_profile": "same Windows host/browser and aiortc loopback; real Beijing provider WAN; no TURN",
+        "client": "headless Chromium, shipped RealtimeVoice and AudioWorklet",
+        "measurement_method": "controlled_input_end_to_remote_pcm",
+        "input_end_definition": "last 10ms RMS>0.004 block in fixed synthetic WAV; AudioContext scheduled playback mapped to performance clock",
+        "planned_target_valid": 9,
+        "planned_target_per_case": 3,
+        "cohort_rule": "first planned quota of successful samples per case; extra identity setup retained separately; all attempts retained",
+        "business_writes": false,
+        "physical_speaker_measurement": false,
+        "audio": [
+          {
+            "id": "identity",
+            "name": "merchant-1.trimmed.wav",
+            "sha256": "05d2105402e9868524a8f4219332b6b03d6451b78c285d7f5e84b17703f14cb5",
+            "duration_ms": 1920,
+            "speech_end_ms": 1870
+          },
+          {
+            "id": "guarantee",
+            "name": "merchant-2.trimmed.wav",
+            "sha256": "5fa03e70c63e8ae403eae7509ac045be4d5c0535bd05625af9ec46430bead3c4",
+            "duration_ms": 1640,
+            "speech_end_ms": 1590
+          },
+          {
+            "id": "source",
+            "name": "merchant-source.trimmed.wav",
+            "sha256": "ba9e2ad040c8e38d3b2d6c225f87a45bf4c972ca824e91d99948551118aa170b",
+            "duration_ms": 2080,
+            "speech_end_ms": 2029.9999999999998
+          }
+        ],
+        "provider": {
+          "run_id": "v04-latency-opt-20261125-diagnostic",
+          "limits": {
+            "native_realtime_session": 24,
+            "native_realtime_turn": 74,
+            "tts": 100
+          },
+          "model": "qwen3.8-omni-flash-realtime",
+          "region": "cn-beijing",
+          "tts_model": "qwen-audio-3.1-tts-flash",
+          "voice": "longanhuan_v3.1",
+          "voice_writes": false,
+          "vad_silence_ms": 400,
+          "vad_threshold": 0.5,
+          "diagnostics": true,
+          "tts_drain_enabled": true,
+          "budget_id": "v04-latency-opt-20261125",
+          "server_clock": "perf_counter_ns",
+          "knowledge_version": "workbench-reviewed-20261125-v3"
+        }
+      },
+      "calls": 2,
+      "attempts": 4,
+      "turn_attempts": 4,
+      "failed_connections": [],
+      "valid_cohort": 3,
+      "all_successes": 3,
+      "failure_rate": 0.25,
+      "effective_answer": {
+        "n": 3,
+        "p50_ms": 1883.9,
+        "p95_ms": 2061.8,
+        "min_ms": 1864.8,
+        "max_ms": 2061.8
+      },
+      "per_case": {
+        "guarantee": {
+          "n": 1,
+          "p50_ms": 1864.8,
+          "p95_ms": 1864.8,
+          "min_ms": 1864.8,
+          "max_ms": 1864.8
+        },
+        "identity": {
+          "n": 1,
+          "p50_ms": 2061.8,
+          "p95_ms": 2061.8,
+          "min_ms": 2061.8,
+          "max_ms": 2061.8
+        },
+        "source": {
+          "n": 1,
+          "p50_ms": 1883.9,
+          "p95_ms": 1883.9,
+          "min_ms": 1883.9,
+          "max_ms": 1883.9
+        }
+      },
+      "rows": [
+        {
+          "call": 1,
+          "case": "identity",
+          "status": "failed",
+          "cohort": true,
+          "failure": "page.waitForFunction: Timeout 16000ms exceeded.",
+          "effective_answer_ms": null,
+          "business_valid": null,
+          "diagnostic": {
+            "gateway_pings": [],
+            "input_frames": 498,
+            "input_queue_wait": {
+              "n": 498,
+              "p50_ms": 0.03,
+              "p95_ms": 0.08,
+              "min_ms": 0.02,
+              "max_ms": 3.91
+            },
+            "input_receive_gap": {
+              "n": 498,
+              "p50_ms": 20.01,
+              "p95_ms": 29.51,
+              "min_ms": 2.87,
+              "max_ms": 37.73
+            },
+            "input_send_gap": {
+              "n": 498,
+              "p50_ms": 20.02,
+              "p95_ms": 29.52,
+              "min_ms": 2.8,
+              "max_ms": 37.8
+            },
+            "websocket_send": {
+              "n": 498,
+              "p50_ms": 0.18,
+              "p95_ms": 0.35,
+              "min_ms": 0.12,
+              "max_ms": 0.95
+            },
+            "websocket_lock_wait": {
+              "n": 498,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.02
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "stages_ms": {}
+          }
+        },
+        {
+          "call": 2,
+          "case": "identity",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 2061.800000000745,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [
+              {
+                "at_ms": 23469226.0315,
+                "kind": "gateway_ping",
+                "rtt_ms": 221.84479999914765,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23472239.6353,
+                "kind": "gateway_ping",
+                "rtt_ms": 13.40149999782443,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23475243.1227,
+                "kind": "gateway_ping",
+                "rtt_ms": 15.01070000231266,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23478490.0419,
+                "kind": "gateway_ping",
+                "rtt_ms": 264.2888000011444,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23481519.917,
+                "kind": "gateway_ping",
+                "rtt_ms": 42.973299998790026,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23484610.0778,
+                "kind": "gateway_ping",
+                "rtt_ms": 103.5434999987483,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23487678.2463,
+                "kind": "gateway_ping",
+                "rtt_ms": 74.81520000100136,
+                "status": "pong"
+              }
+            ],
+            "input_frames": 132,
+            "input_queue_wait": {
+              "n": 132,
+              "p50_ms": 0.03,
+              "p95_ms": 0.08,
+              "min_ms": 0.02,
+              "max_ms": 0.16
+            },
+            "input_receive_gap": {
+              "n": 132,
+              "p50_ms": 19.89,
+              "p95_ms": 23.3,
+              "min_ms": 11.48,
+              "max_ms": 31.8
+            },
+            "input_send_gap": {
+              "n": 132,
+              "p50_ms": 19.89,
+              "p95_ms": 23.3,
+              "min_ms": 11.45,
+              "max_ms": 31.79
+            },
+            "websocket_send": {
+              "n": 132,
+              "p50_ms": 0.17,
+              "p95_ms": 0.35,
+              "min_ms": 0.11,
+              "max_ms": 0.4
+            },
+            "websocket_lock_wait": {
+              "n": 132,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 459,
+            "server_received_last_voice_to_stopped_ms": 450.594,
+            "server_sent_last_voice_to_stopped_ms": 450.256,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 127.269,
+            "provider_audio_end_minus_sent_content_end_ms": 200,
+            "tts": {
+              "text_chars": 47,
+              "connection_reused_observed": true,
+              "request_to_headers_ms": 628.927,
+              "headers_to_first_audio_ms": 109.935,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 1.284
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 1.491
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 1.496
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 1.643
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 1.647
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 628.667
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 629.013
+                },
+                {
+                  "name": "http11.receive_response_body.complete",
+                  "since_request_ms": 9938.099
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 9938.405
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 9938.658
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 472,
+              "queue_residence": {
+                "n": 472,
+                "p50_ms": 239.03,
+                "p95_ms": 255.79,
+                "min_ms": 15.02,
+                "max_ms": 269.62
+              },
+              "producer_backpressure": {
+                "n": 472,
+                "p50_ms": 19.89,
+                "p95_ms": 37.62,
+                "min_ms": 0.0,
+                "max_ms": 44.37
+              },
+              "first_frame_residence_ms": 15.017,
+              "schedule_lag": {
+                "n": 472,
+                "p50_ms": 0.0,
+                "p95_ms": 7.8,
+                "min_ms": 0.0,
+                "max_ms": 20.45
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 577.862,
+              "native_understanding_after_stop": 448.29,
+              "business_review_and_event_delivery": 56.192,
+              "speech_dispatch": 2.719,
+              "tts_first_pcm": 742.691,
+              "pcm_to_browser_observation": 234.047,
+              "business_accept": 12.896,
+              "pure_agent_decision": 1.517
+            }
+          }
+        },
+        {
+          "call": 2,
+          "case": "guarantee",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 1864.800000000745,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [
+              {
+                "at_ms": 23469226.0315,
+                "kind": "gateway_ping",
+                "rtt_ms": 221.84479999914765,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23472239.6353,
+                "kind": "gateway_ping",
+                "rtt_ms": 13.40149999782443,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23475243.1227,
+                "kind": "gateway_ping",
+                "rtt_ms": 15.01070000231266,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23478490.0419,
+                "kind": "gateway_ping",
+                "rtt_ms": 264.2888000011444,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23481519.917,
+                "kind": "gateway_ping",
+                "rtt_ms": 42.973299998790026,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23484610.0778,
+                "kind": "gateway_ping",
+                "rtt_ms": 103.5434999987483,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23487678.2463,
+                "kind": "gateway_ping",
+                "rtt_ms": 74.81520000100136,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23490823.6152,
+                "kind": "gateway_ping",
+                "rtt_ms": 131.7089999988675,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23493821.9168,
+                "kind": "gateway_ping",
+                "rtt_ms": 14.479100000113249,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23496987.3964,
+                "kind": "gateway_ping",
+                "rtt_ms": 181.07719999924302,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23500084.3154,
+                "kind": "gateway_ping",
+                "rtt_ms": 110.29719999805093,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23503107.6638,
+                "kind": "gateway_ping",
+                "rtt_ms": 19.31989999860525,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23506434.6877,
+                "kind": "gateway_ping",
+                "rtt_ms": 330.7800999991596,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23509448.4798,
+                "kind": "gateway_ping",
+                "rtt_ms": 13.922100000083447,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23512867.728,
+                "kind": "gateway_ping",
+                "rtt_ms": 418.59559999778867,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23516871.7069,
+                "kind": "gateway_ping",
+                "rtt_ms": 1005.7856999970973,
+                "status": "pong"
+              }
+            ],
+            "input_frames": 117,
+            "input_queue_wait": {
+              "n": 117,
+              "p50_ms": 0.03,
+              "p95_ms": 0.06,
+              "min_ms": 0.02,
+              "max_ms": 0.26
+            },
+            "input_receive_gap": {
+              "n": 117,
+              "p50_ms": 19.97,
+              "p95_ms": 30.94,
+              "min_ms": 4.61,
+              "max_ms": 34.61
+            },
+            "input_send_gap": {
+              "n": 117,
+              "p50_ms": 19.97,
+              "p95_ms": 31.17,
+              "min_ms": 4.57,
+              "max_ms": 34.61
+            },
+            "websocket_send": {
+              "n": 117,
+              "p50_ms": 0.18,
+              "p95_ms": 0.33,
+              "min_ms": 0.1,
+              "max_ms": 0.71
+            },
+            "websocket_lock_wait": {
+              "n": 117,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 1143,
+            "server_received_last_voice_to_stopped_ms": 448.422,
+            "server_sent_last_voice_to_stopped_ms": 448.168,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 117.575,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 130,
+              "connection_reused_observed": true,
+              "request_to_headers_ms": 404.184,
+              "headers_to_first_audio_ms": 0.26,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 1.109
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 1.279
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 1.282
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 1.369
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 1.371
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 404.066
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 404.245
+                },
+                {
+                  "name": "http11.receive_response_body.complete",
+                  "since_request_ms": 25138.007
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 25138.309
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 25138.539
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 1248,
+              "queue_residence": {
+                "n": 1248,
+                "p50_ms": 239.05,
+                "p95_ms": 255.11,
+                "min_ms": 31.35,
+                "max_ms": 277.32
+              },
+              "producer_backpressure": {
+                "n": 1248,
+                "p50_ms": 19.9,
+                "p95_ms": 36.78,
+                "min_ms": 0.0,
+                "max_ms": 75.87
+              },
+              "first_frame_residence_ms": 31.348,
+              "schedule_lag": {
+                "n": 1248,
+                "p50_ms": 0.0,
+                "p95_ms": 5.71,
+                "min_ms": 0.0,
+                "max_ms": 36.84
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 565.996,
+              "native_understanding_after_stop": 574.067,
+              "business_review_and_event_delivery": 54.594,
+              "speech_dispatch": 2.651,
+              "tts_first_pcm": 407.806,
+              "pcm_to_browser_observation": 259.685,
+              "business_accept": 9.288,
+              "pure_agent_decision": 0.084
+            }
+          }
+        },
+        {
+          "call": 2,
+          "case": "source",
+          "status": "success",
+          "cohort": true,
+          "failure": null,
+          "effective_answer_ms": 1883.9000000022352,
+          "business_valid": true,
+          "diagnostic": {
+            "gateway_pings": [
+              {
+                "at_ms": 23469226.0315,
+                "kind": "gateway_ping",
+                "rtt_ms": 221.84479999914765,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23472239.6353,
+                "kind": "gateway_ping",
+                "rtt_ms": 13.40149999782443,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23475243.1227,
+                "kind": "gateway_ping",
+                "rtt_ms": 15.01070000231266,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23478490.0419,
+                "kind": "gateway_ping",
+                "rtt_ms": 264.2888000011444,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23481519.917,
+                "kind": "gateway_ping",
+                "rtt_ms": 42.973299998790026,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23484610.0778,
+                "kind": "gateway_ping",
+                "rtt_ms": 103.5434999987483,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23487678.2463,
+                "kind": "gateway_ping",
+                "rtt_ms": 74.81520000100136,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23490823.6152,
+                "kind": "gateway_ping",
+                "rtt_ms": 131.7089999988675,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23493821.9168,
+                "kind": "gateway_ping",
+                "rtt_ms": 14.479100000113249,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23496987.3964,
+                "kind": "gateway_ping",
+                "rtt_ms": 181.07719999924302,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23500084.3154,
+                "kind": "gateway_ping",
+                "rtt_ms": 110.29719999805093,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23503107.6638,
+                "kind": "gateway_ping",
+                "rtt_ms": 19.31989999860525,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23506434.6877,
+                "kind": "gateway_ping",
+                "rtt_ms": 330.7800999991596,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23509448.4798,
+                "kind": "gateway_ping",
+                "rtt_ms": 13.922100000083447,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23512867.728,
+                "kind": "gateway_ping",
+                "rtt_ms": 418.59559999778867,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23516871.7069,
+                "kind": "gateway_ping",
+                "rtt_ms": 1005.7856999970973,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23519878.938,
+                "kind": "gateway_ping",
+                "rtt_ms": 23.278299998492002,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23522934.0983,
+                "kind": "gateway_ping",
+                "rtt_ms": 66.08730000257492,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23525951.6083,
+                "kind": "gateway_ping",
+                "rtt_ms": 21.471400000154972,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23528992.0836,
+                "kind": "gateway_ping",
+                "rtt_ms": 63.217100001871586,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23532009.4939,
+                "kind": "gateway_ping",
+                "rtt_ms": 22.549400001764297,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23535047.8168,
+                "kind": "gateway_ping",
+                "rtt_ms": 41.29690000042319,
+                "status": "pong"
+              },
+              {
+                "at_ms": 23538059.3995,
+                "kind": "gateway_ping",
+                "rtt_ms": 16.540100000798702,
+                "status": "pong"
+              }
+            ],
+            "input_frames": 142,
+            "input_queue_wait": {
+              "n": 142,
+              "p50_ms": 0.03,
+              "p95_ms": 0.06,
+              "min_ms": 0.02,
+              "max_ms": 0.12
+            },
+            "input_receive_gap": {
+              "n": 142,
+              "p50_ms": 19.99,
+              "p95_ms": 24.51,
+              "min_ms": 7.22,
+              "max_ms": 39.5
+            },
+            "input_send_gap": {
+              "n": 142,
+              "p50_ms": 20.01,
+              "p95_ms": 24.51,
+              "min_ms": 7.2,
+              "max_ms": 39.53
+            },
+            "websocket_send": {
+              "n": 142,
+              "p50_ms": 0.18,
+              "p95_ms": 0.31,
+              "min_ms": 0.11,
+              "max_ms": 0.47
+            },
+            "websocket_lock_wait": {
+              "n": 142,
+              "p50_ms": 0.0,
+              "p95_ms": 0.0,
+              "min_ms": 0.0,
+              "max_ms": 0.0
+            },
+            "probe_dropped": {
+              "session": 0,
+              "provider": 0,
+              "tts": 0,
+              "output": 0
+            },
+            "server_last_voiced_sequence": 2634,
+            "server_received_last_voice_to_stopped_ms": 493.827,
+            "server_sent_last_voice_to_stopped_ms": 493.524,
+            "last_voiced_receive_relative_to_calibrated_browser_end_ms": 129.381,
+            "provider_audio_end_minus_sent_content_end_ms": 220,
+            "tts": {
+              "text_chars": 78,
+              "connection_reused_observed": true,
+              "request_to_headers_ms": 421.358,
+              "headers_to_first_audio_ms": 21.427,
+              "first_audio_to_pcm_ms": 0.002,
+              "http_events": [
+                {
+                  "name": "http11.send_request_headers.started",
+                  "since_request_ms": 0.693
+                },
+                {
+                  "name": "http11.send_request_headers.complete",
+                  "since_request_ms": 0.855
+                },
+                {
+                  "name": "http11.send_request_body.started",
+                  "since_request_ms": 0.858
+                },
+                {
+                  "name": "http11.send_request_body.complete",
+                  "since_request_ms": 0.941
+                },
+                {
+                  "name": "http11.receive_response_headers.started",
+                  "since_request_ms": 0.943
+                },
+                {
+                  "name": "http11.receive_response_headers.complete",
+                  "since_request_ms": 421.212
+                },
+                {
+                  "name": "http11.receive_response_body.started",
+                  "since_request_ms": 421.426
+                },
+                {
+                  "name": "http11.receive_response_body.complete",
+                  "since_request_ms": 15547.335
+                },
+                {
+                  "name": "http11.response_closed.started",
+                  "since_request_ms": 15547.877
+                },
+                {
+                  "name": "http11.response_closed.complete",
+                  "since_request_ms": 15547.96
+                }
+              ],
+              "errors": []
+            },
+            "output": {
+              "sent_frames": 764,
+              "queue_residence": {
+                "n": 764,
+                "p50_ms": 239.04,
+                "p95_ms": 254.48,
+                "min_ms": 17.36,
+                "max_ms": 268.44
+              },
+              "producer_backpressure": {
+                "n": 764,
+                "p50_ms": 19.85,
+                "p95_ms": 36.11,
+                "min_ms": 0.0,
+                "max_ms": 54.02
+              },
+              "first_frame_residence_ms": 17.362,
+              "schedule_lag": {
+                "n": 764,
+                "p50_ms": 0.0,
+                "p95_ms": 6.12,
+                "min_ms": 0.0,
+                "max_ms": 21.59
+              }
+            },
+            "stages_ms": {
+              "input_transport_vad_return": 623.209,
+              "native_understanding_after_stop": 434.55,
+              "business_review_and_event_delivery": 47.848,
+              "speech_dispatch": 1.305,
+              "tts_first_pcm": 445.192,
+              "pcm_to_browser_observation": 331.796,
+              "business_accept": 10.099,
+              "pure_agent_decision": 0.079
+            }
+          }
+        }
+      ],
+      "limitations": [
+        "Small A/B samples are not formal acceptance.",
+        "Queue and WebSocket timings are local observations; completed send is not provider acknowledgement.",
+        "Cross-process stage boundaries use explicit minimum-RTT clock calibration; total answer latency stays in browser.performance.",
+        "First PCM of the reviewed answer segment is not word-aligned onset of a specific answer sentence."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,221 @@
+{
+  "code_commit": "70ac2cd",
+  "component_only": true,
+  "played_audio": false,
+  "attempts": 12,
+  "rows": [
+    {
+      "case": "identity",
+      "drain_enabled": false,
+      "within_pair": 1,
+      "text_sha256": "fdd2cb844bc74e44178f12043bc66f327c2333e3ea120d7c585a5d152ef62a23",
+      "text_chars": 47,
+      "status": "success",
+      "first_pcm_ms": 718.6981,
+      "total_ms": 2384.3236,
+      "pcm_bytes": 468480,
+      "connection_reused_observed": false,
+      "tail_drained": []
+    },
+    {
+      "case": "identity",
+      "drain_enabled": false,
+      "within_pair": 2,
+      "text_sha256": "fdd2cb844bc74e44178f12043bc66f327c2333e3ea120d7c585a5d152ef62a23",
+      "text_chars": 47,
+      "status": "success",
+      "first_pcm_ms": 389.5107,
+      "total_ms": 1450.0591,
+      "pcm_bytes": 460800,
+      "connection_reused_observed": false,
+      "tail_drained": []
+    },
+    {
+      "case": "identity",
+      "drain_enabled": true,
+      "within_pair": 1,
+      "text_sha256": "fdd2cb844bc74e44178f12043bc66f327c2333e3ea120d7c585a5d152ef62a23",
+      "text_chars": 47,
+      "status": "success",
+      "first_pcm_ms": 828.4647,
+      "total_ms": 2283.3332,
+      "pcm_bytes": 460800,
+      "connection_reused_observed": false,
+      "tail_drained": [
+        {
+          "event": "tts_tail_drained",
+          "at_ns": 22397147431200,
+          "request_id": "3bbad0f5-e153-4e0d-ae38-261b2b0b85df",
+          "eof": true,
+          "duration_ns": 612600
+        }
+      ]
+    },
+    {
+      "case": "identity",
+      "drain_enabled": true,
+      "within_pair": 2,
+      "text_sha256": "fdd2cb844bc74e44178f12043bc66f327c2333e3ea120d7c585a5d152ef62a23",
+      "text_chars": 47,
+      "status": "success",
+      "first_pcm_ms": 610.5063,
+      "total_ms": 989.0974,
+      "pcm_bytes": 433920,
+      "connection_reused_observed": true,
+      "tail_drained": [
+        {
+          "event": "tts_tail_drained",
+          "at_ns": 22398137872800,
+          "request_id": "875ca23f-f617-4bd6-968c-901cfcdd92dd",
+          "eof": true,
+          "duration_ns": 712200
+        }
+      ]
+    },
+    {
+      "case": "guarantee",
+      "drain_enabled": true,
+      "within_pair": 1,
+      "text_sha256": "dc02e1db4dd5f1eab7c332939d19f16d52e48f613e25d595a3e223381c955dfe",
+      "text_chars": 130,
+      "status": "success",
+      "first_pcm_ms": 625.9077,
+      "total_ms": 2979.9521,
+      "pcm_bytes": 1224960,
+      "connection_reused_observed": false,
+      "tail_drained": [
+        {
+          "event": "tts_tail_drained",
+          "at_ns": 22401130587200,
+          "request_id": "96762a82-2128-4953-83a2-6628d45c030d",
+          "eof": true,
+          "duration_ns": 617600
+        }
+      ]
+    },
+    {
+      "case": "guarantee",
+      "drain_enabled": true,
+      "within_pair": 2,
+      "text_sha256": "dc02e1db4dd5f1eab7c332939d19f16d52e48f613e25d595a3e223381c955dfe",
+      "text_chars": 130,
+      "status": "success",
+      "first_pcm_ms": 433.2141,
+      "total_ms": 2357.3603,
+      "pcm_bytes": 1224960,
+      "connection_reused_observed": true,
+      "tail_drained": [
+        {
+          "event": "tts_tail_drained",
+          "at_ns": 22403489667500,
+          "request_id": "8caa1226-fe5b-41bb-a326-0a22bb2e0825",
+          "eof": true,
+          "duration_ns": 1237300
+        }
+      ]
+    },
+    {
+      "case": "guarantee",
+      "drain_enabled": false,
+      "within_pair": 1,
+      "text_sha256": "dc02e1db4dd5f1eab7c332939d19f16d52e48f613e25d595a3e223381c955dfe",
+      "text_chars": 130,
+      "status": "success",
+      "first_pcm_ms": 841.9941,
+      "total_ms": 2672.9986,
+      "pcm_bytes": 1224960,
+      "connection_reused_observed": false,
+      "tail_drained": []
+    },
+    {
+      "case": "guarantee",
+      "drain_enabled": false,
+      "within_pair": 2,
+      "text_sha256": "dc02e1db4dd5f1eab7c332939d19f16d52e48f613e25d595a3e223381c955dfe",
+      "text_chars": 130,
+      "status": "success",
+      "first_pcm_ms": 499.9578,
+      "total_ms": 2585.052,
+      "pcm_bytes": 1209600,
+      "connection_reused_observed": false,
+      "tail_drained": []
+    },
+    {
+      "case": "source",
+      "drain_enabled": false,
+      "within_pair": 1,
+      "text_sha256": "f0d2ef61aa759c995f7c2a39cf5dac2f15eba0c8a3c0f21d85646437ebd7f700",
+      "text_chars": 78,
+      "status": "success",
+      "first_pcm_ms": 872.205,
+      "total_ms": 4118.9448,
+      "pcm_bytes": 721920,
+      "connection_reused_observed": false,
+      "tail_drained": []
+    },
+    {
+      "case": "source",
+      "drain_enabled": false,
+      "within_pair": 2,
+      "text_sha256": "f0d2ef61aa759c995f7c2a39cf5dac2f15eba0c8a3c0f21d85646437ebd7f700",
+      "text_chars": 78,
+      "status": "success",
+      "first_pcm_ms": 757.2879,
+      "total_ms": 2123.4481,
+      "pcm_bytes": 752640,
+      "connection_reused_observed": false,
+      "tail_drained": []
+    },
+    {
+      "case": "source",
+      "drain_enabled": true,
+      "within_pair": 1,
+      "text_sha256": "f0d2ef61aa759c995f7c2a39cf5dac2f15eba0c8a3c0f21d85646437ebd7f700",
+      "text_chars": 78,
+      "status": "success",
+      "first_pcm_ms": 563.9821,
+      "total_ms": 2369.6655,
+      "pcm_bytes": 733440,
+      "connection_reused_observed": false,
+      "tail_drained": [
+        {
+          "event": "tts_tail_drained",
+          "at_ns": 22417420968300,
+          "request_id": "94d7329e-b9ad-4a5d-90db-c62134a45a82",
+          "eof": true,
+          "duration_ns": 807200
+        }
+      ]
+    },
+    {
+      "case": "source",
+      "drain_enabled": true,
+      "within_pair": 2,
+      "text_sha256": "f0d2ef61aa759c995f7c2a39cf5dac2f15eba0c8a3c0f21d85646437ebd7f700",
+      "text_chars": 78,
+      "status": "success",
+      "first_pcm_ms": 443.7346,
+      "total_ms": 2040.1585,
+      "pcm_bytes": 714240,
+      "connection_reused_observed": true,
+      "tail_drained": [
+        {
+          "event": "tts_tail_drained",
+          "at_ns": 22419463690700,
+          "request_id": "b7f826f6-314b-4751-9d85-d222c92d8dda",
+          "eof": true,
+          "duration_ns": 1590500
+        }
+      ]
+    }
+  ],
+  "median_first_pcm_ms": {
+    "False": 737.9929999999999,
+    "True": 587.2442
+  },
+  "limits": [
+    "12 requests only; no RTC end-to-end claim.",
+    "One short-text pair is slower despite successful reuse; network/provider variability remains.",
+    "Text and PCM order are unchanged; no audio cache, segmentation or retries used."
+  ]
+}
