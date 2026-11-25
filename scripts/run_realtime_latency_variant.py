@@ -33,7 +33,7 @@ def main():
       try:sock.bind(('127.0.0.1',18765))
       except OSError:raise SystemExit('18765 occupied; no existing process stopped')
     client=urllib.request.build_opener(urllib.request.ProxyHandler({}))
-    code="import sys;sys.path.insert(0,'scripts');import uvicorn;from measure_realtime_app import app;server=uvicorn.Server(uvicorn.Config(app,host='127.0.0.1',port=18765,access_log=False));app.state.measurement_server=server;server.run()"
+    code="import sys;sys.path.insert(0,'scripts');import uvicorn;from measure_realtime_app import app;server=uvicorn.Server(uvicorn.Config(app,host='127.0.0.1',port=18765,access_log=False,timeout_graceful_shutdown=5));app.state.measurement_server=server;server.run()"
     with (cache/(args.phase+'.server.log')).open('a',encoding='utf-8') as log:
       server=subprocess.Popen([sys.executable,'-c',code],cwd=ROOT,env=env,stdout=log,stderr=subprocess.STDOUT)
       try:
@@ -50,7 +50,7 @@ def main():
         if result.returncode:raise SystemExit(result.returncode)
       finally:
         try:
-          req=urllib.request.Request('http://127.0.0.1:18765/eval/stop',data=b'',headers={'X-Latency-Token':token})
+          req=urllib.request.Request('http://127.0.0.1:18765/eval/stop',data=b'',headers={'X-Latency-Token':token,'Origin':'http://127.0.0.1:18765','X-Requested-With':'zhiyu','Content-Type':'application/json'})
           client.open(req,timeout=3).close()
         except OSError:pass
         try:server.wait(timeout=12)
