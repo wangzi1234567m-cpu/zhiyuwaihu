@@ -82,6 +82,26 @@ class MeasuredInput(NativeInput):
             trace(self.sid,'provider_open_failure',error_type=type(error).__name__)
             raise
         trace(self.sid, 'provider_open_ready')
+        if RUN.endswith('-diagnostic'):
+            self.ping_task=asyncio.create_task(self.gateway_ping())
+
+    async def gateway_ping(self):
+        while self.ws is not None:
+            started=ms()
+            try:
+                pong=await self.ws.ping()
+                await asyncio.wait_for(pong,2)
+                trace(self.sid,'gateway_ping',rtt_ms=ms()-started,status='pong')
+            except asyncio.CancelledError:raise
+            except Exception as error:
+                trace(self.sid,'gateway_ping',status='failed',error_type=type(error).__name__)
+            await asyncio.sleep(3)
+
+    async def close(self):
+        task=getattr(self,'ping_task',None)
+        if task:
+            task.cancel();await asyncio.gather(task,return_exceptions=True)
+        await super().close()
 
     async def receive(self):
         # Same decode/error semantics as NativeInput.receive; retain safe metadata.
